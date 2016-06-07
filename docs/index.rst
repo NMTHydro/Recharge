@@ -9,10 +9,11 @@ Welcome to Recharge's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    quick_start
    install
+   style_guide
 
 
 Indices and tables
