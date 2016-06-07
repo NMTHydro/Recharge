@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    quick_start
+   install
 
 
 Indices and tables
