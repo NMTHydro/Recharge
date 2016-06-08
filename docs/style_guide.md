@@ -29,6 +29,21 @@ xMax = 102
 DEBUG = True
 ```
 
+- use single quotes for strings
+
+```python
+msg = 'Hello world'
+```
+
+- use triple double quotes for doc strings
+
+```
+def foobar():
+    """
+    this is a docstring
+    """
+```
+
 Pycharm Template
 ----------------
 
