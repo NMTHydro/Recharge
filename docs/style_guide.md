@@ -16,11 +16,12 @@ def foobar():
 class FooBar:
 ```
 
-- variables must start with lowercase
+- variables should be all lowercase
 
 ```python
 x = 10
-xMax = 102
+xmax = 102
+x_min =0
 ```
 
 - global variables all UPPERCASE
@@ -54,6 +55,20 @@ DO NOT USE
 
 ```
 import numpy as np
+```
+
+
+- multiline list, dict, tuples
+
+```
+x = [1,2,3,
+     4,5,6]
+     
+d = {'a': 1,
+     'b': 2}
+     
+t= (1,2,
+    3,4)
 ```
 
 Pycharm Template

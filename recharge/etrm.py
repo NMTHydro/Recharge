@@ -36,6 +36,44 @@ S = 480
 E = 940
 
 
+def tif_path(root, name):
+    """
+
+    :param root:
+    :param name:
+    :return:
+    """
+    if not name.endswith('.tif'):
+        name = '{}.tif'.format(name)
+
+    path = os.path.join(root, name)
+    return path
+
+
+def tif_params(root, name, band=1):
+    """
+
+    :param root:
+    :param name:
+    :param band:
+    :return:
+    """
+    path = tif_path(root, name)
+    obj = gdal.Open(path)
+    band = obj.GetRasterBand(band)
+    d = {'cols': obj.RasterXSize, 'rows': obj.RasterYSize,
+         'bands': obj.RasterCount,
+         'band': band,
+         'projection': obj.GetProjection(),
+         'geo_transform': obj.GetGeoTransform(),
+         'datatype': band.DataType}
+
+    # probably not necessary
+    del obj
+
+    return d
+
+
 def tif_to_array(root, name, band=1):
     """
     Helper function for getting an array from a tiff
@@ -87,11 +125,20 @@ class ETRM:
     _nlcd_plt_hgt = None
     _ksat = None
     _tew = None
-    _dr1 = None
-    _de1 = None
+    _dr = None
+    _de = None
     _drew = None
 
     _verbose = False
+
+    _gtiff_driver = None
+    _output_tag = None
+    _dataset_params = None
+
+    _start = None
+    _end = None
+    _start_month = None
+    _end_month = None
 
     def config(self):
         """
@@ -110,6 +157,14 @@ class ETRM:
         self._prism_max_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Maximum_standard'
         self._pm_data_root = 'F:\\ETRM_Inputs\\PM_RAD'
 
+        self._gtiff_driver = gdal.GetDriverByName('GTiff')
+        self._output_tag = '23MAY'
+
+        self._start = start = datetime.datetime(2000, 1, 1)
+        self._end = datetime.datetime(2000, 12, 31)
+        self._start_month = datetime.datetime(start.year, 6, 1).timetuple().tm_yday
+        self._end_month = datetime.datetime(start.year, 10, 1).timetuple().tm_yday
+
     def run(self):
         """
         Run the model
@@ -125,10 +180,7 @@ class ETRM:
         taw = self._taw
 
         start_time = datetime.datetime.now()
-        start = datetime.datetime(2000, 1, 1)
-        end = datetime.datetime(2000, 12, 31)
-        sMon = datetime.datetime(start.year, 6, 1).timetuple().tm_yday
-        eMon = datetime.datetime(start.year, 10, 1).timetuple().tm_yday
+
         pkcb = zeros(shape)
         swe = zeros(shape)
         tot_snow = zeros(shape)
@@ -141,30 +193,47 @@ class ETRM:
         a = a_max
         pA = a_min
 
-        days = list(rrule.rrule(rrule.DAILY, dtstart=start, until=end))
+        days = list(rrule.rrule(rrule.DAILY, dtstart=self._start, until=self._end))
         nsteps = len(days)
-        pltDay = zeros(nsteps)
-        pltRain = zeros(nsteps)
-        pltEta = zeros(nsteps)
-        pltSnow_fall = zeros(nsteps)
-        pltRo = zeros(nsteps)
-        pltDr = zeros(nsteps)
-        pltDe = zeros(nsteps)
-        pltDrew = zeros(nsteps)
-        pltTemp = zeros(nsteps)
-        pltDp_r = zeros(nsteps)
-        pltKs = zeros(nsteps)
-        pltPdr = zeros(nsteps)
-        pltEtrs = zeros(nsteps)
-        pltKcb = zeros(nsteps)
-        pltPpt = zeros(nsteps)
-        pltKe = zeros(nsteps)
-        pltKr = zeros(nsteps)
-        pltMlt = zeros(nsteps)
-        pltSwe = zeros(nsteps)
-        pltTempM = zeros(nsteps)
-        pltFs1 = zeros(nsteps)
-        pltMass = zeros(nsteps)
+        plt_day = zeros(nsteps)
+        plt_rain = zeros(nsteps)
+        plt_eta = zeros(nsteps)
+        plt_snow_fall = zeros(nsteps)
+        plt_ro = zeros(nsteps)
+        plt_dr = zeros(nsteps)
+        plt_de = zeros(nsteps)
+        plt_drew = zeros(nsteps)
+        plt_temp = zeros(nsteps)
+        plt_dp_r = zeros(nsteps)
+        plt_ks = zeros(nsteps)
+        plt_pdr = zeros(nsteps)
+        plt_etrs = zeros(nsteps)
+        plt_kcb = zeros(nsteps)
+        plt_ppt = zeros(nsteps)
+        plt_ke = zeros(nsteps)
+        plt_kr = zeros(nsteps)
+        plt_mlt = zeros(nsteps)
+        plt_swe = zeros(nsteps)
+        plt_tempm = zeros(nsteps)
+        plt_fs1 = zeros(nsteps)
+        plt_mass = zeros(nsteps)
+
+        p_mo_et = zeros(shape)
+        p_mo_precip = zeros(shape)
+        p_mo_ro = zeros(shape)
+        p_mo_deps = self._dr + self._de + self._drew
+        p_mo_infil = zeros(shape)
+        p_mo_etrs = zeros(shape)
+
+        p_yr_et = zeros(shape)
+        p_yr_precip = zeros(shape)
+        p_yr_ro = zeros(shape)
+        p_yr_deps = self._dr + self._de + self._drew
+        p_yr_infil = zeros(shape)
+        p_yr_etrs = zeros(shape)
+
+        start_month = self._start_month
+        end_month = self._end_month
 
         for i, dday in enumerate(days):
             if i > 0:
@@ -216,14 +285,14 @@ class ETRM:
                 # del tew1, tew2
 
                 # you should have all these from previous model runs
-                pDr = self._dr1
-                pDe = self._de1
-                pDrew = self._drew1
-                dr = self._dr1
-                de = self._de1
-                drew = self._drew1
+                pDr = self._dr
+                pDe = self._de
+                pDrew = self._drew
+                dr = self._dr
+                de = self._de
+                drew = self._drew
 
-            nom = 2 if sMon <= doy <= eMon else 6
+            nom = 2 if start_month <= doy <= end_month else 6
             ksat = self._ksat * nom / 24.
 
             kc_max_1 = kcb + 0.0001
@@ -340,41 +409,153 @@ class ETRM:
 
             mo_date = calendar.monthrange(year, month)
             if day == mo_date[1]:
-                # this needs to be copied from original
-                pass
+                infil_mo = infil - p_mo_infil
+                infil_mo = maximum(infil_mo, zeros(shape))
+
+                ref_et_mo = etrs - p_mo_etrs
+                et_mo = et - p_mo_et
+                et_mo = where(isnan(et_mo) == True, p_mo_et, et_mo)
+                et_mo = where(et_mo > ref_et, ref_et / 2., et_mo)
+                et_mo = maximum(et_mo, ones(shape) * 0.001)
+
+                precip_mo = precip - p_mo_precip
+                precip_mo = maximum(precip_mo, zeros(shape))
+
+                runoff_mo = ro - p_mo_ro
+                runoff_mo = maximum(runoff_mo, zeros(shape))
+
+                snow_ras_mo = swe
+                snow_ras_mo = maximum(snow_ras_mo, zeros(shape))
+
+                deps_mo = drew + de + dr
+                delta_s_mo = p_mo_deps - deps_mo
+
+                outputs = (('infil', infil_mo), ('et', et_mo), ('precip', precip_mo), ('runoff', runoff_mo),
+                           ('snow_ras', snow_ras_mo), ('delta_s_mo', delta_s_mo), ('deps_mo', deps_mo))
+
+                self.save_month_step(outputs, month, year)
+
+                p_mo_et = et
+                p_mo_precip = precip
+                p_mo_ro = ro
+                p_mo_deps = deps_mo
+                p_mo_infil = infil
+                p_mo_etrs = etrs
 
             if day == 31 and month == 12:
-                # this needs to be copied from original
-                pass
+                infil_yr = infil - p_yr_infil
+                infil_yr = maximum(infil_yr, zeros(shape))
+
+                ref_et_yr = etrs - p_yr_etrs
+                et_yr = et - p_yr_et
+                et_yr = where(isnan(et_yr) == True, p_yr_et, et_yr)
+                et_yr = where(et_yr > ref_et, ref_et / 2., et_yr)
+                et_yr = maximum(et_yr, ones(shape) * 0.001)
+
+                precip_yr = precip - p_yr_precip
+                precip_yr = maximum(precip_yr, zeros(shape))
+
+                runoff_yr = ro - p_yr_ro
+                runoff_yr = maximum(runoff_yr, zeros(shape))
+
+                snow_ras_yr = swe
+                snow_ras_yr = maximum(snow_ras_yr, zeros(shape))
+
+                deps_yr = drew + de + dr
+                delta_s_yr = p_yr_deps - deps_yr
+
+                outputs = (('infil', infil_yr), ('et', et_yr), ('precip', precip_yr), ('runoff', runoff_yr),
+                           ('snow_ras', snow_ras_yr), ('delta_s_yr', delta_s_yr), ('deps_yr', deps_yr))
+
+                p_yr_et = et
+                p_yr_precip = precip
+                p_yr_ro = ro
+                p_yr_deps = deps_yr  # this was originally p_mo_deps = deps_yr im assuming this is a typo
+                p_yr_infil = infil
+                p_yr_etrs = etrs
+
+                self.save_year_step(outputs, month, year)
 
             # Check MASS BALANCE for the love of WATER!!!
             mass = rain + mlt - (ro + transp + evap + dp_r + ((pDr - dr) + (pDe - de) + (pDrew - drew)))
             tot_mass += abs(mass)
             cum_mass += mass
 
-            pltDay[i] = dday
+            plt_day[i] = dday
 
-            pltRain[i] = rain[S, E]
-            pltEta[i] = eta[S, E]
-            pltSnow_fall[i] = snow_fall[S, E]
-            pltRo[i] = ro[S, E]
-            pltDr[i] = dr[S, E]
-            pltDe[i] = de[S, E]
-            pltDrew[i] = drew[S, E]
-            pltTemp[i] = mid_temp[S, E]
-            pltDp_r[i] = dp_r[S, E]
-            pltKs[i] = ks[S, E]
-            pltPdr[i] = pDr[S, E]
-            pltEtrs[i] = etrs[S, E]
-            pltKcb[i] = kcb[S, E]
-            pltPpt[i] = ppt[S, E]
-            pltKe[i] = ke[S, E]
-            pltKr[i] = kr[S, E]
-            pltMlt[i] = mlt[S, E]
-            pltSwe[i] = swe[S, E]
-            pltTempM[i] = max_temp[S, E]
-            pltFs1[i] = fs1[S, E]
-            pltMass[i] = mass[S, E]
+            plt_rain[i] = rain[S, E]
+            plt_eta[i] = eta[S, E]
+            plt_snow_fall[i] = snow_fall[S, E]
+            plt_ro[i] = ro[S, E]
+            plt_dr[i] = dr[S, E]
+            plt_de[i] = de[S, E]
+            plt_drew[i] = drew[S, E]
+            plt_temp[i] = mid_temp[S, E]
+            plt_dp_r[i] = dp_r[S, E]
+            plt_ks[i] = ks[S, E]
+            plt_pdr[i] = pDr[S, E]
+            plt_etrs[i] = etrs[S, E]
+            plt_kcb[i] = kcb[S, E]
+            plt_ppt[i] = ppt[S, E]
+            plt_ke[i] = ke[S, E]
+            plt_kr[i] = kr[S, E]
+            plt_mlt[i] = mlt[S, E]
+            plt_swe[i] = swe[S, E]
+            plt_tempm[i] = max_temp[S, E]
+            plt_fs1[i] = fs1[S, E]
+            plt_mass[i] = mass[S, E]
+
+    def save_year_step(self, outputs, month, year):
+        """
+
+        :param year:
+        :param month:
+        :param outputs:
+        :return:
+        """
+        basename = 'F:\\ETRM_Results\\Annual_results\\{name}_{year}_{tag}.tif'
+        savemsg = 'Saving name={name} year={year}'
+        self.save_step(outputs, basename, savemsg, month, year)
+
+    def save_month_step(self, outputs, month, year):
+        """
+        :param year:
+        :param month:
+        :param outputs:
+        :return:
+        """
+        basename = 'F:\\ETRM_Results\\Monthly_results\\{name}_{month}_{year}_{tag}.tif'
+        savemsg = 'Saving name={name} month={month}, year={year}'
+        self.save_step(outputs, basename, savemsg, month, year)
+
+    def save_step(self, outputs, basename, savemsg, month, year):
+        """
+
+        :param outputs:
+        :param basename:
+        :param savemsg:
+        :param month:
+        :param year:
+        :return:
+        """
+        driver = self._driver
+
+        params = self._dataset_params
+        args = params['cols'], params['rows'], params['bands'], params['datatype']
+
+        geo_transform = params['geo_transform']
+        projection = params['projection']
+        band = params['band']
+
+        for name, data in outputs:
+            if self._verbose:
+                print savemsg.format(name=name, month=month, year=year)
+            path = basename.format(name=name, month=month, year=year, tag=self._output_tag)
+            out = driver.Create(path, *args)
+            out.SetGeoTransform(geo_transform)
+            out.setProjection(projection)
+            outband = out.GetRasterBand(band)
+            outband.WriteArray(data, 0, 0)
 
     def load_prism(self, d):
         """
@@ -426,6 +607,7 @@ class ETRM:
 
         aws = tif_to_array(root, 'aws_mod_4_21_10_0')
         aws = maximum(aws, min_val)
+        self._dataset_params = tif_params(root, 'aws_mod_4_21_10_0')
 
         nlcd_rt_z = tif_to_array(root, 'nlcd_root_dpth_15apr')
         nlcd_rt_z = maximum(nlcd_rt_z, min_val)
@@ -459,11 +641,11 @@ class ETRM:
         tag = '4_19_23_11'
         de1 = tif_to_array(root, 'de_{}'.format(tag))
         de1 = clean(de1)
-        self._de1 = de1
+        self._de = de1
 
         dr1 = tif_to_array(root, 'dr_{}'.format(tag))
         dr1 = clean(dr1)
-        self._dr1 = dr1
+        self._dr = dr1
 
         drew = tif_to_array(root, 'drew_{}'.format(tag))
         drew = clean(drew)
