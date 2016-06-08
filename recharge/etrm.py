@@ -14,20 +14,22 @@
 # limitations under the License.
 # ===============================================================================
 
-# ============= standard library imports ========================
-import calendar
-from math import isnan
-from numpy import array, ones, where, zeros
-from numpy.ma import maximum, minimum, exp
-from osgeo import gdal
-from dateutil import rrule
-from datetime import datetime, timedelta
-import os
-
-# ============= local library imports  ==========================
-
 # Modified from ETRM_distributed/ETRM_savAnMo_5MAY16.py
 # Developed by David Ketchum NMT 2016
+
+# ============= standard library imports ========================
+import calendar
+import os
+from datetime import datetime, timedelta, time
+from math import isnan
+
+from dateutil import rrule
+from numpy import ones, where, zeros
+from numpy.ma import maximum, minimum, exp
+from osgeo import gdal
+
+# ============= local library imports  ==========================
+from recharge.etrm_funcs import tif_params, tif_to_array, clean
 
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
@@ -36,79 +38,13 @@ S = 480
 E = 940
 
 
-def tif_path(root, name):
-    """
-
-    :param root:
-    :param name:
-    :return:
-    """
-    if not name.endswith('.tif'):
-        name = '{}.tif'.format(name)
-
-    path = os.path.join(root, name)
-    return path
-
-
-def tif_params(root, name, band=1):
-    """
-
-    :param root:
-    :param name:
-    :param band:
-    :return:
-    """
-    path = tif_path(root, name)
-    obj = gdal.Open(path)
-    band = obj.GetRasterBand(band)
-    d = {'cols': obj.RasterXSize, 'rows': obj.RasterYSize,
-         'bands': obj.RasterCount,
-         'band': band,
-         'projection': obj.GetProjection(),
-         'geo_transform': obj.GetGeoTransform(),
-         'datatype': band.DataType}
-
-    # probably not necessary
-    del obj
-
-    return d
-
-
-def tif_to_array(root, name, band=1):
-    """
-    Helper function for getting an array from a tiff
-
-    :param root: directory
-    :type root: str
-    :param name: name of file
-    :type name: str
-    :param band: band
-    :type band: int
-    :return: numpy.ndarray
-    """
-    if not name.endswith('.tif'):
-        name = '{}.tif'.format(name)
-
-    path = os.path.join(root, name)
-    rband = gdal.Open(path).GetRasterBand(band)
-    return array(rband.ReadAsArray())
-
-
-def clean(d):
-    """
-    Replace NaN with 0
-    :param d: input array
-    :type d: numpy.ndarray
-    :return: numpy.ndarray
-    """
-    return where(isnan(d), zeros(d.shape), d)
-
-
 class ETRM:
     """
     ETRM: EvapoTranspiration Recharge Model
 
     """
+    _runtime = None
+
     _current_use_root = None
     _array_results_root = None
     _ndvi_root = None
@@ -140,24 +76,52 @@ class ETRM:
     _start_month = None
     _end_month = None
 
-    def config(self):
+    _annual_results_root = None
+    _monthly_results_root = None
+
+    def run(self, verbose=False):
+        if not self.config(verbose):
+            print 'Failed to configure model'
+            return
+        else:
+            self.report_config()
+
+        if not self.initialize():
+            print 'Failed to initialize model'
+            return
+
+        st = time.time()
+        self.run_model()
+        self._runtime = time.time() - st
+
+        self.report_results()
+
+    def config(self, verbose):
         """
         Configure the model
 
         :return:
         """
 
-        self._verbose = True
+        self._verbose = verbose
 
-        self._current_use_root = 'C:\\Recharge_GIS\\OSG_Data\\current_use'
-        self._array_results_root = 'C:\\Recharge_GIS\\Array_Results\\initialize'
-        self._ndvi_root = 'F:\\ETRM_Inputs\\NDVI\\NDVI_std_all'
-        self._prism_root = 'F:\\ETRM_Inputs\\PRISM\Precip\\800m_std_all'
-        self._prism_min_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Minimum_standard'
-        self._prism_max_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Maximum_standard'
-        self._pm_data_root = 'F:\\ETRM_Inputs\\PM_RAD'
+        root = 'C:'
+        self._current_use_root = os.path.join(root, 'Recharge_GIS', 'OSG_Data', 'current_use')
+        self._array_results_root = os.path.join(root, 'Recharge_GIS', 'Array_Results', 'initialize')
 
-        self._gtiff_driver = gdal.GetDriverByName('GTiff')
+        root = 'F:'
+        input_root = os.path.join(root, 'ETRM_Inputs')
+
+        self._ndvi_root = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+        self._prism_root = os.path.join(input_root, 'PRISM', 'Precip', '800m_std_all')
+        self._prism_min_temp_root = os.path.join(input_root, 'PRISM', 'Temp', 'Minimum_standard')
+        self._prism_max_temp_root = os.path.join(input_root, 'PRISM', 'Temp', 'Maximum_standard')
+        self._pm_data_root = os.path.join(input_root, 'PM_RAD')
+
+        results_root = os.path.join(root, 'ETRM_Results')
+        self._annual_results_root = os.path.join(results_root, 'Annual_results')
+        self._monthly_results_root = os.path.join(results_root, 'Monthly_results')
+
         self._output_tag = '23MAY'
 
         self._start = start = datetime.datetime(2000, 1, 1)
@@ -165,15 +129,27 @@ class ETRM:
         self._start_month = datetime.datetime(start.year, 6, 1).timetuple().tm_yday
         self._end_month = datetime.datetime(start.year, 10, 1).timetuple().tm_yday
 
-    def run(self):
+        return True
+
+    def initialize(self):
+        """
+        Initialize the model
+
+        :return:
+        """
+        self._gtiff_driver = gdal.GetDriverByName('GTiff')
+
+        self.load_current_use()
+        self.load_array_results()
+
+        return True
+
+    def run_model(self):
         """
         Run the model
 
         :return:
         """
-
-        self.load_current_use()
-        self.load_array_results()
 
         shape = self._shape
         tew = self._tew
@@ -513,7 +489,7 @@ class ETRM:
         :param outputs:
         :return:
         """
-        basename = 'F:\\ETRM_Results\\Annual_results\\{name}_{year}_{tag}.tif'
+        basename = os.path.join(self._annual_results_root, '{name}_{year}_{tag}.tif')
         savemsg = 'Saving name={name} year={year}'
         self.save_step(outputs, basename, savemsg, month, year)
 
@@ -524,7 +500,7 @@ class ETRM:
         :param outputs:
         :return:
         """
-        basename = 'F:\\ETRM_Results\\Monthly_results\\{name}_{month}_{year}_{tag}.tif'
+        basename = os.path.join(self._monthly_results_root, '{name}_{month}_{year}_{tag}.tif')
         savemsg = 'Saving name={name} month={month}, year={year}'
         self.save_step(outputs, basename, savemsg, month, year)
 
@@ -592,6 +568,19 @@ class ETRM:
         mid_temp = (min_temp + max_temp) / 2
 
         return ppt, ppt_tom, max_temp, min_temp, mid_temp
+
+    def report_results(self):
+        print '=============== Model Results ==============='
+        print 'Run Time (m): {}'.format(self._runtime/60.)
+        print '============================================='
+
+    def report_config(self):
+        print '=============== Model Configuration ==============='
+        print 'Start: {}'.format(self._start)
+        print 'Start Month: {}'.format(self._start_month)
+        print 'End: {}'.format(self._end)
+        print 'End Month: {}'.format(self._end_month)
+        print '==================================================='
 
     # private
     def load_current_use(self):
@@ -729,6 +718,6 @@ class ETRM:
 
 if __name__ == '__main__':
     e = ETRM()
-    e.config()
-    e.run()
+    e.run(verbose=True)
+
 # ============= EOF =============================================
