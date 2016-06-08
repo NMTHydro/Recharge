@@ -1,0 +1,106 @@
+import datetime
+from osgeo import gdal
+import numpy as np
+
+path = 'C:\\Recharge_GIS\\OSG_Data\\current_use'
+raster = 'aws_mod_4_21_10_0'
+aws_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+taw = np.array(aws_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+dataset = taw
+# taw = aws[480:520, 940:980]
+# initialize ones and zeros arrays for use later
+min_val = np.ones(taw.shape) * 0.001
+taw = np.maximum(taw, min_val)
+aws_open = []
+
+outputs = [infil, et, precip, runoff, snow_ras, mass, dr, de, drew]
+output_names = ['infil', 'et', 'precip', 'runoff', 'snow_ras', 'mass', 'dr', 'de', 'drew']
+x = 0
+now = datetime.datetime.now()
+tag = '{}_{}_{}_{}'.format(now.month, now.day, now.hour, now.minute)
+for element in outputs:
+    name = output_names[x]
+    print "Saving {a}".format(a=name)
+    driver = gdal.GetDriverByName('GTiff')
+    filename = 'C:\\Recharge_GIS\\Array_Results\\recover\\{a}.tif'.format(a=name)
+    cols = dataset.RasterXSize
+    rows = dataset.RasterYSize
+    bands = dataset.RasterCount
+    band = dataset.GetRasterBand(1)
+    datatype = band.DataType
+    outDataset = driver.Create(filename, cols, rows, bands, datatype)
+    geoTransform = dataset.GetGeoTransform()
+    outDataset.SetGeoTransform(geoTransform)
+    proj = dataset.GetProjection()
+    outDataset.SetProjection(proj)
+    outBand = outDataset.GetRasterBand(1)
+    outBand.WriteArray(element, 0, 0)
+    x += 1
+
+# if recovering a model run from a failure, run ETRM_monthly_recover
+# and run this next code block
+recover_names = ['infil', 'et', 'precip', 'runoff', 'snow_ras', 'mass', 'dr', 'de', 'drew']
+recover_vars = [infil, et, precip, runoff, snow_ras, mass, dr, de, drew]
+path = 'C:\\Recharge_GIS\\Array_Results\\recover'
+x = 0
+for name in recover_names:
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
+    raster = recover_names[x]
+    ras_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+    recover_vars[x] = np.array(ras_open.GetRasterBand(1).ReadAsArray(), dtype=float)
+    recover_vars[x] = np.where(np.isnan(drew) == True, np.zeros(taw.shape), np.zeros(taw.shape))
+    ras_open = []
+    x += 1
