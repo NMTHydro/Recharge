@@ -20,10 +20,12 @@ import unittest
 
 
 def suite():
+    from recharge.etrm_tests import ETRMTestCase
+
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
-    tests = ()
+    tests = (ETRMTestCase, )
     for t in tests:
         suite.addTest(loader.loadTestsFromTestCase(t))
     return suite

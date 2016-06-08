@@ -141,7 +141,7 @@ class ETRM:
         a = a_max
         pA = a_min
 
-        days = rrule.rrule(rrule.DAILY, dtstart=start, until=end)
+        days = list(rrule.rrule(rrule.DAILY, dtstart=start, until=end))
         nsteps = len(days)
         pltDay = zeros(nsteps)
         pltRain = zeros(nsteps)
