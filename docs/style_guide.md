@@ -44,6 +44,18 @@ def foobar():
     """
 ```
 
+- import individual items from numpy
+
+```
+from numpy import array
+```
+
+DO NOT USE
+
+```
+import numpy as np
+```
+
 Pycharm Template
 ----------------
 

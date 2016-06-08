@@ -37,21 +37,47 @@ E = 940
 
 
 def tif_to_array(root, name, band=1):
-    path = os.path.join(root, '{}.tif'.format(name))
+    """
+    Helper function for getting an array from a tiff
+
+    :param root: directory
+    :type root: str
+    :param name: name of file
+    :type name: str
+    :param band: band
+    :type band: int
+    :return: numpy.ndarray
+    """
+    if not name.endswith('.tif'):
+        name = '{}.tif'.format(name)
+
+    path = os.path.join(root, name)
     rband = gdal.Open(path).GetRasterBand(band)
-    return array(rband.ReadAsArray(), dtype=float)
+    return array(rband.ReadAsArray())
 
 
-def clean(d, shape):
-    return where(isnan(d) == True, zeros(shape), d)
+def clean(d):
+    """
+    Replace NaN with 0
+    :param d: input array
+    :type d: numpy.ndarray
+    :return: numpy.ndarray
+    """
+    return where(isnan(d), zeros(d.shape), d)
 
 
 class ETRM:
-    _ndvi_root = 'F:\\ETRM_Inputs\\NDVI\\NDVI_std_all'
-    _prism_root = 'F:\\ETRM_Inputs\\PRISM\Precip\\800m_std_all'
-    _prism_min_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Minimum_standard'
-    _prism_max_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Maximum_standard'
-    _pm_data_root = 'F:\\ETRM_Inputs\\PM_RAD'
+    """
+    ETRM: EvapoTranspiration Recharge Model
+
+    """
+    _current_use_root = None
+    _array_results_root = None
+    _ndvi_root = None
+    _prism_root = None
+    _prism_min_temp_root = None
+    _prism_max_temp_root = None
+    _pm_data_root = None
 
     _min_val = None
     _shape = None
@@ -65,12 +91,34 @@ class ETRM:
     _de1 = None
     _drew = None
 
-    _verbose = True
+    _verbose = False
+
+    def config(self):
+        """
+        Configure the model
+
+        :return:
+        """
+
+        self._verbose = True
+
+        self._current_use_root = 'C:\\Recharge_GIS\\OSG_Data\\current_use'
+        self._array_results_root = 'C:\\Recharge_GIS\\Array_Results\\initialize'
+        self._ndvi_root = 'F:\\ETRM_Inputs\\NDVI\\NDVI_std_all'
+        self._prism_root = 'F:\\ETRM_Inputs\\PRISM\Precip\\800m_std_all'
+        self._prism_min_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Minimum_standard'
+        self._prism_max_temp_root = 'F:\\ETRM_Inputs\\PRISM\\Temp\\Maximum_standard'
+        self._pm_data_root = 'F:\\ETRM_Inputs\\PM_RAD'
 
     def run(self):
+        """
+        Run the model
 
-        self._load_current_use()
-        self._load_array_results()
+        :return:
+        """
+
+        self.load_current_use()
+        self.load_array_results()
 
         shape = self._shape
 
@@ -124,20 +172,20 @@ class ETRM:
             month = dday.month
             day = dday.day
 
-            msg = 'Time : {a} day {b}_{c}'.format(datetime.now() - start_time, doy, )
+            msg = 'Time : {a} day {}_{}'.format(datetime.now() - start_time, doy, year)
             print msg
 
             # --------------  kcb -------------------
             if year == 2000:
-                ndvi = self._calculate_ndvi_2000(doy)
+                ndvi = self.calculate_ndvi_2000(doy)
             elif year == 2001:
-                ndvi = self._calculate_ndvi_2001(year, doy)
+                ndvi = self.calculate_ndvi_2001(doy)
             else:
-                ndvi = self._calculate_ndvi(year)
+                ndvi = self.calculate_ndvi(year, doy)
 
             kcb = ndvi * 1.25
             kcb = maximum(kcb, self._min_val)
-            kcb = where(isnan(kcb) == True, pkcb, kcb)
+            kcb = where(isnan(kcb), pkcb, kcb)
 
             # -------------- PRISM -------------------
             prism_base = 'PRISMD2_NMHW2mi_{}{:02n}{:02n}'
@@ -213,16 +261,16 @@ class ETRM:
 
             pKr = kr
             kr = minimum(((tew - de) / (tew - rew)), ones(shape))
-            kr = where(isnan(kr) == True, pKr, kr)
+            kr = where(isnan(kr), pKr, kr)
 
             pKs = ks
             ks_ref = where(((taw - pDr) / (0.6 * taw)) < zeros(shape), ones(shape) * 0.001,
                            ((taw - pDr) / (0.6 * taw)))
-            ks_ref = where(isnan(ks) == True, pKs, ks_ref)
+            ks_ref = where(isnan(ks), pKs, ks_ref)
             ks = minimum(ks_ref, ones(shape))
 
             # Ke evaporation reduction coefficient; stage 1 evaporation
-            fsa = where(isnan((rew - drew) / (KE_MAX * etrs)) == True, zeros(shape),
+            fsa = where(isnan((rew - drew) / (KE_MAX * etrs)), zeros(shape),
                         (rew - drew) / (KE_MAX * etrs))
             fsb = minimum(fsa, ones(shape))
             fs1 = maximum(fsb, zeros(shape))
@@ -350,8 +398,12 @@ class ETRM:
             pltMass[i] = mass[S, E]
 
     # private
-    def _load_current_use(self):
-        root = 'C:\\Recharge_GIS\\OSG_Data\\current_use'
+    def load_current_use(self):
+        """
+
+        :return:
+        """
+        root = self._current_use_root
         qDeps = tif_to_array(root, 'Q_deps_std')
 
         min_val = ones(qDeps.shape) * 0.001
@@ -382,26 +434,32 @@ class ETRM:
         self._min_val = min_val
         self._shape = aws.shape
 
-    def _load_array_results(self):
-        shape = self._shape
+    def load_array_results(self):
+        """
 
-        root = 'C:\\Recharge_GIS\\Array_Results\\initialize'
+        :return:
+        """
+        root = self._array_results_root
 
         tag = '4_19_23_11'
         de1 = tif_to_array(root, 'de_{}'.format(tag))
-        de1 = clean(de1, shape)
+        de1 = clean(de1)
         self._de1 = de1
 
         dr1 = tif_to_array(root, 'dr_{}'.format(tag))
-        dr1 = clean(dr1, shape)
+        dr1 = clean(dr1)
         self._dr1 = dr1
 
         drew = tif_to_array(root, 'drew_{}'.format(tag))
-        drew = clean(drew, shape)
+        drew = clean(drew)
         self._drew = drew
 
-    def _calculate_ndvi_2000(self, doy):
+    def calculate_ndvi_2000(self, doy):
+        """
 
+        :param doy:
+        :return:
+        """
         base_name = 'T{:03n}_{:03n}_2000_etrf_subset_001_048_ndvi_daily'
         if doy < 49:
             a = 1
@@ -429,7 +487,12 @@ class ETRM:
 
         return ndvi
 
-    def _calculate_ndvi_2001(self, year, doy):
+    def calculate_ndvi_2001(self, doy):
+        """
+
+        :param doy:
+        :return:
+        """
         obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
                225, 241, 257, 273, 289, 305, 321, 337, 353]
         idx = next((num for num in obj[1:] if 0 <= doy - num <= 15))
@@ -440,14 +503,20 @@ class ETRM:
         strt = idx
         nd = idx + offset
 
-        name = '{}_{}_{}'.format(year, strt, nd)
+        name = '2001_{}_{}'.format(strt, nd)
         if self._verbose:
             print 'calculate 3 {}'.format(name)
 
         ndvi = tif_to_array(self._ndvi_root, name, band=diff + 1)
         return ndvi
 
-    def _calculate_ndvi(self, year, doy):
+    def calculate_ndvi(self, year, doy):
+        """
+
+        :param year:
+        :param doy:
+        :return:
+        """
         obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
                225, 241, 257, 273, 289, 305, 321, 337, 353]
         idx = next((num for num in obj[1:] if 0 <= doy - num <= 15))
@@ -463,5 +532,6 @@ class ETRM:
 
 if __name__ == '__main__':
     e = ETRM()
+    e.config()
     e.run()
 # ============= EOF =============================================

@@ -14,6 +14,7 @@ Contents:
    quick_start
    install
    style_guide
+   api
 
 
 Indices and tables
