@@ -23,6 +23,11 @@ x=10
 xMax = 102
 ```
 
+- global variables all UPPERCASE
+
+```
+DEBUG = True
+```
 
 Pycharm Template
 ----------------
