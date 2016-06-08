@@ -11,6 +11,7 @@ import numpy as np
 np.set_printoptions(linewidth=700, precision=2)
 
 
+
 startTime = datetime.datetime.now()
 print startTime
 def cells(array):
