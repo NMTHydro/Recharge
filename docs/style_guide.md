@@ -6,26 +6,26 @@ Style Guide
 - max line length 120
 - method/functions all lowercase
 
-```
+```python
 def foobar():
 ```
 
 - classes PascalCase
 
-```
+```python
 class FooBar:
 ```
 
 - variables must start with lowercase
 
-```
-x=10
+```python
+x = 10
 xMax = 102
 ```
 
 - global variables all UPPERCASE
 
-```
+```python
 DEBUG = True
 ```
 
