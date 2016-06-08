@@ -5,3 +5,5 @@ API
    :members:
 
 .. automodule:: recharge.etrm_funcs
+   :members:
+
