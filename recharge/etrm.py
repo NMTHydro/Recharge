@@ -121,6 +121,8 @@ class ETRM:
         self.load_array_results()
 
         shape = self._shape
+        tew = self._tew
+        taw = self._taw
 
         start_time = datetime.datetime.now()
         start = datetime.datetime(2000, 1, 1)
@@ -172,7 +174,7 @@ class ETRM:
             month = dday.month
             day = dday.day
 
-            msg = 'Time : {a} day {}_{}'.format(datetime.now() - start_time, doy, year)
+            msg = 'Time : {} day {}_{}'.format(datetime.now() - start_time, doy, year)
             print msg
 
             # --------------  kcb -------------------
@@ -188,30 +190,9 @@ class ETRM:
             kcb = where(isnan(kcb), pkcb, kcb)
 
             # -------------- PRISM -------------------
-            prism_base = 'PRISMD2_NMHW2mi_{}{:02n}{:02n}'
-            name = prism_base.format(year, month, day)
-            ppt = tif_to_array(self._prism_root, name)
+            ppt, ppt_tom, max_temp, min_temp, mid_temp = self.load_prism(dday)
 
-            tom = dday + timedelta(days=1)
-            name = prism_base.format(year, tom.month, tom.day)
-            ppt_tom = tif_to_array(self._prsim_root, name)
-
-            ppt = maximum(ppt, zeros(shape))
-            ppt_tom = maximum(ppt_tom, zeros(shape))
-
-            # PRISM to mintemp, maxtemp, temp
-            if dday.year in YEARS:
-                name = 'cai_tmin_us_us_30s_{}{:02n}{:02n}'.format(year, month, day)
-                min_temp = tif_to_array(self._prism_min_temp_root, name)
-            else:
-                name = 'TempMin_NMHW2Buff_{}{:02n}{:02n}'.format(year, month, day)
-                min_temp = tif_to_array(self._prism_min_temp_root, name)
-
-            name = 'TempMax_NMHW2Buff_{}{:02n}{:02n}'.format(year, month, day)
-            max_temp = tif_to_array(self._prism_max_temp_root, name)
-
-            temp = (min_temp + max_temp) / 2
-
+            # -------------- PM -------------------
             # PM data to etrs
             name = os.path.join('PM{}'.format(year),
                                 'PM_NM_{}_{:03n}'.format(year, doy))
@@ -228,8 +209,6 @@ class ETRM:
             rg = tif_to_array(self._pm_data_root, name)
             rg = maximum(rg, zeros(shape))
 
-            tew = self._tew
-            taw = self._taw
             if i == 0:
                 #  Total evaporable water is depth of water in the evaporable
                 #  soil layer, i.e., the water available to both stage 1 and 2 evaporation
@@ -288,8 +267,8 @@ class ETRM:
             # Use SNOTEL data for precip and temps:
             # df_snow : (stel_date, stel_snow, stel_precip, stel_tobs, stel_tmax, stel_tmin, stel_tavg, stel_snwd)
 
-            snow_fall = where(temp <= 0.0, ppt, zeros(shape))
-            rain = where(temp >= 0.0, ppt, zeros(shape))
+            snow_fall = where(mid_temp <= 0.0, ppt, zeros(shape))
+            rain = where(mid_temp >= 0.0, ppt, zeros(shape))
 
             pA = a
             a = where(snow_fall > 3.0, ones(shape) * a_max, a)
@@ -299,7 +278,7 @@ class ETRM:
 
             swe += snow_fall
 
-            mlt_init = maximum(((1 - a) * rg * 0.2) + (temp - 1.8) * 11.0,
+            mlt_init = maximum(((1 - a) * rg * 0.2) + (mid_temp - 1.8) * 11.0,
                                zeros(shape))  # use calibrate coefficients
             mlt = minimum(swe, mlt_init)
 
@@ -382,7 +361,7 @@ class ETRM:
             pltDr[i] = dr[S, E]
             pltDe[i] = de[S, E]
             pltDrew[i] = drew[S, E]
-            pltTemp[i] = temp[S, E]
+            pltTemp[i] = mid_temp[S, E]
             pltDp_r[i] = dp_r[S, E]
             pltKs[i] = ks[S, E]
             pltPdr[i] = pDr[S, E]
@@ -396,6 +375,42 @@ class ETRM:
             pltTempM[i] = max_temp[S, E]
             pltFs1[i] = fs1[S, E]
             pltMass[i] = mass[S, E]
+
+    def load_prism(self, d):
+        """
+        load prism data for this day
+
+        :param d:
+         :type d: datetime.datetime
+        :return:
+        """
+
+        year = d.year
+        month = d.month
+        day = d.day
+
+        shape = self._shape
+
+        prism_base = 'PRISMD2_NMHW2mi_{}{:02n}{:02n}'
+        name = prism_base.format(year, month, day)
+        ppt = tif_to_array(self._prism_root, name)
+        tom = d + timedelta(days=1)
+        name = prism_base.format(year, tom.month, tom.day)
+        ppt_tom = tif_to_array(self._prsim_root, name)
+        ppt = maximum(ppt, zeros(shape))
+        ppt_tom = maximum(ppt_tom, zeros(shape))
+        # PRISM to mintemp, maxtemp, temp
+        if year in YEARS:
+            name = 'cai_tmin_us_us_30s_{}{:02n}{:02n}'.format(year, month, day)
+            min_temp = tif_to_array(self._prism_min_temp_root, name)
+        else:
+            name = 'TempMin_NMHW2Buff_{}{:02n}{:02n}'.format(year, month, day)
+            min_temp = tif_to_array(self._prism_min_temp_root, name)
+        name = 'TempMax_NMHW2Buff_{}{:02n}{:02n}'.format(year, month, day)
+        max_temp = tif_to_array(self._prism_max_temp_root, name)
+        mid_temp = (min_temp + max_temp) / 2
+
+        return ppt, ppt_tom, max_temp, min_temp, mid_temp
 
     # private
     def load_current_use(self):
