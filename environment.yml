@@ -23,7 +23,7 @@ dependencies:
 - pip
 - proj4
 - pygments
-- pytho
+- python
 - pytz
 - readline
 - setuptools
@@ -34,7 +34,7 @@ dependencies:
 - sqlite
 - tk
 - wheel
-- xerces
+- xerces-c
 - zlib
 - pip:
   - commonmark==0.5.4
