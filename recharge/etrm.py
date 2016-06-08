@@ -24,7 +24,6 @@ from dateutil import rrule
 from datetime import datetime, timedelta
 import os
 
-
 # ============= local library imports  ==========================
 
 # Modified from ETRM_distributed/ETRM_savAnMo_5MAY16.py
@@ -33,6 +32,8 @@ import os
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 KE_MAX = 1.0
+S = 480
+E = 940
 
 
 def tif_to_array(root, name, band=1):
@@ -90,7 +91,32 @@ class ETRM:
         a = a_max
         pA = a_min
 
-        for i, dday in enumerate(rrule.rrule(rrule.DAILY, dtstart=start, until=end)):
+        days = rrule.rrule(rrule.DAILY, dtstart=start, until=end)
+        nsteps = len(days)
+        pltDay = zeros(nsteps)
+        pltRain = zeros(nsteps)
+        pltEta = zeros(nsteps)
+        pltSnow_fall = zeros(nsteps)
+        pltRo = zeros(nsteps)
+        pltDr = zeros(nsteps)
+        pltDe = zeros(nsteps)
+        pltDrew = zeros(nsteps)
+        pltTemp = zeros(nsteps)
+        pltDp_r = zeros(nsteps)
+        pltKs = zeros(nsteps)
+        pltPdr = zeros(nsteps)
+        pltEtrs = zeros(nsteps)
+        pltKcb = zeros(nsteps)
+        pltPpt = zeros(nsteps)
+        pltKe = zeros(nsteps)
+        pltKr = zeros(nsteps)
+        pltMlt = zeros(nsteps)
+        pltSwe = zeros(nsteps)
+        pltTempM = zeros(nsteps)
+        pltFs1 = zeros(nsteps)
+        pltMass = zeros(nsteps)
+
+        for i, dday in enumerate(days):
             if i > 0:
                 pkcb = kcb
             doy = dday.timetuple().tm_yday
@@ -136,7 +162,7 @@ class ETRM:
             name = 'TempMax_NMHW2Buff_{}{:02n}{:02n}'.format(year, month, day)
             max_temp = tif_to_array(self._prism_max_temp_root, name)
 
-            temp = (min_temp + max_temp)/2
+            temp = (min_temp + max_temp) / 2
 
             # PM data to etrs
             name = os.path.join('PM{}'.format(year),
@@ -171,7 +197,7 @@ class ETRM:
                 drew = self._drew1
 
             nom = 2 if sMon <= doy <= eMon else 6
-            ksat = self._ksat * nom/24.
+            ksat = self._ksat * nom / 24.
 
             kc_max_1 = kcb + 0.0001
             min_val = ones(shape) * 0.0001
@@ -191,17 +217,17 @@ class ETRM:
 
             pKs = ks
             ks_ref = where(((taw - pDr) / (0.6 * taw)) < zeros(shape), ones(shape) * 0.001,
-                              ((taw - pDr) / (0.6 * taw)))
+                           ((taw - pDr) / (0.6 * taw)))
             ks_ref = where(isnan(ks) == True, pKs, ks_ref)
             ks = minimum(ks_ref, ones(shape))
 
             # Ke evaporation reduction coefficient; stage 1 evaporation
             fsa = where(isnan((rew - drew) / (KE_MAX * etrs)) == True, zeros(shape),
-                           (rew - drew) / (KE_MAX * etrs))
+                        (rew - drew) / (KE_MAX * etrs))
             fsb = minimum(fsa, ones(shape))
             fs1 = maximum(fsb, zeros(shape))
             ke = where(drew < rew, minimum((fs1 + (1 - fs1) * kr) * (kc_max - ks * kcb), few * kc_max),
-                          zeros(shape))
+                       zeros(shape))
 
             transp = (ks * kcb) * etrs
             et_init = (ks * kcb + ke) * etrs
@@ -226,7 +252,7 @@ class ETRM:
             swe += snow_fall
 
             mlt_init = maximum(((1 - a) * rg * 0.2) + (temp - 1.8) * 11.0,
-                                  zeros(shape))  # use calibrate coefficients
+                               zeros(shape))  # use calibrate coefficients
             mlt = minimum(swe, mlt_init)
 
             swe -= mlt
@@ -287,14 +313,41 @@ class ETRM:
 
             mo_date = calendar.monthrange(year, month)
             if day == mo_date[1]:
+                # this needs to be copied from original
                 pass
+
             if day == 31 and month == 12:
+                # this needs to be copied from original
                 pass
 
             # Check MASS BALANCE for the love of WATER!!!
             mass = rain + mlt - (ro + transp + evap + dp_r + ((pDr - dr) + (pDe - de) + (pDrew - drew)))
             tot_mass += abs(mass)
             cum_mass += mass
+
+            pltDay[i] = dday
+
+            pltRain[i] = rain[S, E]
+            pltEta[i] = eta[S, E]
+            pltSnow_fall[i] = snow_fall[S, E]
+            pltRo[i] = ro[S, E]
+            pltDr[i] = dr[S, E]
+            pltDe[i] = de[S, E]
+            pltDrew[i] = drew[S, E]
+            pltTemp[i] = temp[S, E]
+            pltDp_r[i] = dp_r[S, E]
+            pltKs[i] = ks[S, E]
+            pltPdr[i] = pDr[S, E]
+            pltEtrs[i] = etrs[S, E]
+            pltKcb[i] = kcb[S, E]
+            pltPpt[i] = ppt[S, E]
+            pltKe[i] = ke[S, E]
+            pltKr[i] = kr[S, E]
+            pltMlt[i] = mlt[S, E]
+            pltSwe[i] = swe[S, E]
+            pltTempM[i] = max_temp[S, E]
+            pltFs1[i] = fs1[S, E]
+            pltMass[i] = mass[S, E]
 
     # private
     def _load_current_use(self):
@@ -409,7 +462,6 @@ class ETRM:
 
 
 if __name__ == '__main__':
-
     e = ETRM()
     e.run()
 # ============= EOF =============================================
