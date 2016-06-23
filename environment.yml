@@ -36,6 +36,7 @@ dependencies:
 - wheel
 - xerces-c
 - zlib
+- pyyaml
 - pip:
   - commonmark==0.5.4
   - future==0.15.2

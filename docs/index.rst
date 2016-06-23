@@ -13,6 +13,8 @@ Contents:
 
    quick_start
    install
+   config
+   model
    style_guide
    api
 

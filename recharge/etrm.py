@@ -19,23 +19,24 @@
 
 # ============= standard library imports ========================
 import calendar
+import logging
 import os
 from datetime import datetime, timedelta, time
 from math import isnan
-
 from dateutil import rrule
 from numpy import ones, where, zeros
 from numpy.ma import maximum, minimum, exp
 from osgeo import gdal
 
 # ============= local library imports  ==========================
-from recharge.etrm_funcs import tif_params, tif_to_array, clean
-
+from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, get_config
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 KE_MAX = 1.0
 S = 480
 E = 940
+
+logging.basicConfig(filename='etrm.log', level=logging.DEBUG)
 
 
 class ETRM:
@@ -79,57 +80,78 @@ class ETRM:
     _annual_results_root = None
     _monthly_results_root = None
 
-    def run(self, verbose=False):
-        if not self.config(verbose):
-            print 'Failed to configure model'
+    def run(self, config_path, verbose=False):
+        logging.info('=================== RUN ===================')
+        cfg = self.config(config_path, verbose)
+        if not cfg:
+            logging.warning('Failed to configure model')
             return
         else:
-            self.report_config()
+            self.report_config(cfg)
 
-        if not self.initialize():
-            print 'Failed to initialize model'
+        try:
+            if not self.initialize():
+                logging.warning('Failed to initialize model')
+                return
+        except InvalidDataSourceException:
+            logging.warning('**** MODEL FAILED. Not all data was located ****')
             return
 
         st = time.time()
         self.run_model()
         self._runtime = time.time() - st
 
+        logging.info('Model Completed Successfully')
         self.report_results()
 
-    def config(self, verbose):
+    def config(self, path, verbose):
         """
         Configure the model
 
         :return:
         """
-
         self._verbose = verbose
 
-        root = 'C:'
-        self._current_use_root = os.path.join(root, 'Recharge_GIS', 'OSG_Data', 'current_use')
-        self._array_results_root = os.path.join(root, 'Recharge_GIS', 'Array_Results', 'initialize')
+        cfg = get_config(path)
+        if cfg:
+            try:
+                self._current_use_root = cfg['current_use']
+                self._array_results_root = cfg['array_results']
+                self._ndvi_root = cfg['ndvi']
+                self._prism_root = cfg['prism']
+                self._prism_min_temp_root = cfg['prism_min_temp']
+                self._prism_max_temp_root = cfg['prism_max_temp']
+                self._pm_data_root = cfg['pm_data']
+                self._annual_results_root = cfg['annual_results']
+                self._monthly_results_root = cfg['monthly_results']
 
-        root = 'F:'
-        input_root = os.path.join(root, 'ETRM_Inputs')
+                self._output_tag = cfg['output_tag']
 
-        self._ndvi_root = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
-        self._prism_root = os.path.join(input_root, 'PRISM', 'Precip', '800m_std_all')
-        self._prism_min_temp_root = os.path.join(input_root, 'PRISM', 'Temp', 'Minimum_standard')
-        self._prism_max_temp_root = os.path.join(input_root, 'PRISM', 'Temp', 'Maximum_standard')
-        self._pm_data_root = os.path.join(input_root, 'PM_RAD')
+                try:
+                    y, m, d = map(int, cfg['start'].split('-'))
+                except ValueError, e:
+                    logging.warning('Invalid start date "{}". error={}'.format(cfg['start'], e))
+                    return
 
-        results_root = os.path.join(root, 'ETRM_Results')
-        self._annual_results_root = os.path.join(results_root, 'Annual_results')
-        self._monthly_results_root = os.path.join(results_root, 'Monthly_results')
+                self._start = start = datetime(y, m, d)
+                try:
+                    y, m, d = map(int, cfg['start'].split('-'))
+                except ValueError, e:
+                    logging.warning('Invalid start date "{}". error={}'.format(cfg['start'], e))
+                    return
 
-        self._output_tag = '23MAY'
+                self._end = datetime(y, m, d)
 
-        self._start = start = datetime.datetime(2000, 1, 1)
-        self._end = datetime.datetime(2000, 12, 31)
-        self._start_month = datetime.datetime(start.year, 6, 1).timetuple().tm_yday
-        self._end_month = datetime.datetime(start.year, 10, 1).timetuple().tm_yday
+                sm = int(cfg['start_month'])
+                self._start_month = datetime(start.year, sm, 1).timetuple().tm_yday
+                em = int(cfg['end_month'])
+                self._end_month = datetime(start.year, em, 1).timetuple().tm_yday
 
-        return True
+            except KeyError, e:
+                logging.warning('Invalid configuration: {}'.format(e))
+                return
+
+            return cfg
 
     def initialize(self):
         """
@@ -155,7 +177,7 @@ class ETRM:
         tew = self._tew
         taw = self._taw
 
-        start_time = datetime.datetime.now()
+        start_time = datetime.now()
 
         pkcb = zeros(shape)
         swe = zeros(shape)
@@ -220,7 +242,7 @@ class ETRM:
             day = dday.day
 
             msg = 'Time : {} day {}_{}'.format(datetime.now() - start_time, doy, year)
-            print msg
+            logging.debug(msg)
 
             # --------------  kcb -------------------
             if year == 2000:
@@ -525,7 +547,7 @@ class ETRM:
 
         for name, data in outputs:
             if self._verbose:
-                print savemsg.format(name=name, month=month, year=year)
+                logging.debug(savemsg.format(name=name, month=month, year=year))
             path = basename.format(name=name, month=month, year=year, tag=self._output_tag)
             out = driver.Create(path, *args)
             out.SetGeoTransform(geo_transform)
@@ -538,7 +560,7 @@ class ETRM:
         load prism data for this day
 
         :param d:
-         :type d: datetime.datetime
+         :type d: datetime
         :return:
         """
 
@@ -570,17 +592,15 @@ class ETRM:
         return ppt, ppt_tom, max_temp, min_temp, mid_temp
 
     def report_results(self):
-        print '=============== Model Results ==============='
-        print 'Run Time (m): {}'.format(self._runtime/60.)
-        print '============================================='
+        logging.info('=============== Model Results ===============')
+        logging.info('Run Time (m): {}'.format(self._runtime / 60.))
+        logging.info('=============================================')
 
-    def report_config(self):
-        print '=============== Model Configuration ==============='
-        print 'Start: {}'.format(self._start)
-        print 'Start Month: {}'.format(self._start_month)
-        print 'End: {}'.format(self._end)
-        print 'End Month: {}'.format(self._end_month)
-        print '==================================================='
+    def report_config(self, cfg):
+        logging.info('=============== Model Configuration ===============')
+        for k, v in cfg.iteritems():
+            logging.info('{:<20s}= {}'.format(k, v))
+        logging.info('===================================================')
 
     # private
     def load_current_use(self):
@@ -652,7 +672,7 @@ class ETRM:
             b = 48
             name = base_name.format(a, b)
             if self._verbose:
-                print 'calculate 1 {}'.format(name)
+                logging.debug('calculate 1 {}'.format(name))
             ndvi = tif_to_array(self._ndvi_root, name, band=doy)
         else:
             obj = [1, 49, 81, 113, 145, 177, 209, 241, 273, 305, 337]
@@ -667,7 +687,7 @@ class ETRM:
 
             name = base_name.format(strt, nd)
             if self._verbose:
-                print 'calculate 2 {}'.format(name)
+                logging.debug('calculate 2 {}'.format(name))
 
             ndvi = tif_to_array(self._ndvi_root, name, band=diff + 1)
 
@@ -691,7 +711,7 @@ class ETRM:
 
         name = '2001_{}_{}'.format(strt, nd)
         if self._verbose:
-            print 'calculate 3 {}'.format(name)
+            logging.debug('calculate 3 {}'.format(name))
 
         ndvi = tif_to_array(self._ndvi_root, name, band=diff + 1)
         return ndvi
@@ -710,7 +730,7 @@ class ETRM:
         diff = doy - idx
         name = '{}_{}'.format(year, obj.index(idx) + 1)
         if self._verbose:
-            print 'calculate 4 {}'.format(name)
+            logging.debug('calculate 4 {}'.format(name))
 
         ndvi = tif_to_array(self._ndvi_root, name, band=diff + 1)
         return ndvi
@@ -718,6 +738,7 @@ class ETRM:
 
 if __name__ == '__main__':
     e = ETRM()
-    e.run(verbose=True)
+    config = '../example_configuration.yml'
+    e.run(config, verbose=True)
 
 # ============= EOF =============================================
