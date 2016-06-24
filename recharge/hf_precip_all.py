@@ -25,17 +25,17 @@ from numpy import array, multiply, column_stack, savetxt
 # ============= local library imports  ==========================
 
 
-def precip(search, path, output):
+def precip(watershed, path, output, daily, field='USGS_Code'):
     # make sure that this is getting the right string from the file name
     files = os.listdir(path)
     files_names = [str(name[1:8]) for name in files]
 
-    field = 'USGS_Code'
-    nm_wtrs = os.path.join('C:', 'Recharge_GIS', 'Watersheds', 'nm_wtrs_11DEC15.shp')
-    for row in arcpy.SearchCursor(search):
+    env.overwriteOutput = True  # Ensure overwrite capability
+
+    for row in arcpy.SearchCursor(watershed):
         gPoly = row.getValue(field)
 
-        gstr = arcpy.AddFieldDelimiters(nm_wtrs, field)
+        gstr = arcpy.AddFieldDelimiters(watershed, field)
 
         sql = '{} = {}'.format(gstr, gPoly)
 
@@ -46,8 +46,6 @@ def precip(search, path, output):
         #  Get csv data from gauges and identify time interval of needed precip data
 
         if str(gPoly) in files_names:
-            # folder = 'C:\\Users\David\\Documents\\Recharge\\Gauges\\Gauge_Data_HF_csv'
-            # os.chdir(folder)
             pos = files_names.index(gPoly)
             p = files[pos]
             recs = []
@@ -84,17 +82,15 @@ def precip(search, path, output):
             date = []
             q = []
 
-            daily_root = os.path.join('C:', 'Recharge_GIS', 'Precip', '800m', 'Daily')
             for day in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
                 # folder = 'C:\\Recharge_GIS\\Precip\\800m\\Daily\\'
                 yr = day.year
                 d = day.strftime('%y%m%d')
 
                 if yr <= 1991:
-                    env.overwriteOutput = True  # Ensure overwrite capability
 
-                    ws = os.path.join(daily_root, str(yr), 'a')
-                    env.workspace = ws
+                    ws = os.path.join(daily, str(yr), 'a')
+                    # env.workspace = ws
 
                     ras = os.path.join(ws, 'PRISM_NM_{}.tif'.format(d))
                     if arcpy.Exists(ras):
@@ -119,8 +115,8 @@ def precip(search, path, output):
                             logging.info('Exception pre1991 {}'.format(e))
 
                 if yr > 1991:
-                    ws = os.path.join(daily_root, str(yr))
-                    env.workspace = ws
+                    ws = os.path.join(daily, str(yr))
+                    # env.workspace = ws
 
                     ras = os.path.join(ws, 'PRISM_NMHW2Buff_{}.tif'.format(d))
 
@@ -159,7 +155,8 @@ def precip(search, path, output):
 if __name__ == '__main__':
     p = os.path.join('C:', 'Users', 'David', 'Documents', 'Recharge', 'Gauges', 'Gauge_Data_HF_csv')
     op = os.path.join('C:', 'Users', 'David', 'Documents', 'Recharge', 'Gauges', 'Gauge_ppt_csv')
-    search = os.path.join('C:', 'Recharge', 'Watersheds', 'nm_wtrs_11DEC15.shp')
-    precip(search, p, op)
+    sp = os.path.join('C:', 'Recharge_GIS', 'Watersheds', 'nm_wtrs_11DEC15.shp')
+    dr = os.path.join('C:', 'Recharge_GIS', 'Precip', '800m', 'Daily')
+    precip(sp, p, op, dr)
 
 # ============= EOF =============================================

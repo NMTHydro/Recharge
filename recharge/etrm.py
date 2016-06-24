@@ -29,7 +29,8 @@ from numpy.ma import maximum, minimum, exp
 from osgeo import gdal
 
 # ============= local library imports  ==========================
-from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, get_config, write_tiff
+from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, write_tiff
+from recharge.model import BaseModel
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 KE_MAX = 1.0
@@ -39,7 +40,7 @@ E = 940
 logging.basicConfig(filename='etrm.log', level=logging.DEBUG)
 
 
-class ETRM:
+class ETRM(BaseModel):
     """
     ETRM: EvapoTranspiration Recharge Model
 
@@ -66,91 +67,11 @@ class ETRM:
     _de = None
     _drew = None
 
-    _verbose = False
-
     _output_tag = None
     _dataset_params = None
 
-    _start = None
-    _end = None
-    _start_month = None
-    _end_month = None
-
     _annual_results_root = None
     _monthly_results_root = None
-
-    def run(self, config_path, verbose=False):
-        logging.info('=================== RUN ===================')
-        cfg = self.config(config_path, verbose)
-        if not cfg:
-            logging.warning('Failed to configure model')
-            return
-        else:
-            self.report_config(cfg)
-
-        try:
-            if not self.initialize():
-                logging.warning('Failed to initialize model')
-                return
-        except InvalidDataSourceException:
-            logging.warning('**** MODEL FAILED. Not all data was located ****')
-            return
-
-        st = time.time()
-        self.run_model()
-        self._runtime = time.time() - st
-
-        logging.info('Model Completed Successfully')
-        self.report_results()
-
-    def config(self, path, verbose):
-        """
-        Configure the model
-
-        :return:
-        """
-        self._verbose = verbose
-
-        cfg = get_config(path)
-        if cfg:
-            try:
-                self._current_use_root = cfg['current_use']
-                self._array_results_root = cfg['array_results']
-                self._ndvi_root = cfg['ndvi']
-                self._prism_root = cfg['prism']
-                self._prism_min_temp_root = cfg['prism_min_temp']
-                self._prism_max_temp_root = cfg['prism_max_temp']
-                self._pm_data_root = cfg['pm_data']
-                self._annual_results_root = cfg['annual_results']
-                self._monthly_results_root = cfg['monthly_results']
-
-                self._output_tag = cfg['output_tag']
-
-                try:
-                    y, m, d = map(int, cfg['start'].split('-'))
-                except ValueError, e:
-                    logging.warning('Invalid start date "{}". error={}'.format(cfg['start'], e))
-                    return
-
-                self._start = start = datetime(y, m, d)
-                try:
-                    y, m, d = map(int, cfg['start'].split('-'))
-                except ValueError, e:
-                    logging.warning('Invalid start date "{}". error={}'.format(cfg['start'], e))
-                    return
-
-                self._end = datetime(y, m, d)
-
-                sm = int(cfg['start_month'])
-                self._start_month = datetime(start.year, sm, 1).timetuple().tm_yday
-                em = int(cfg['end_month'])
-                self._end_month = datetime(start.year, em, 1).timetuple().tm_yday
-
-            except KeyError, e:
-                logging.warning('Invalid configuration: {}'.format(e))
-                return
-
-            return cfg
 
     def initialize(self):
         """
@@ -580,18 +501,42 @@ class ETRM:
 
         return ppt, ppt_tom, max_temp, min_temp, mid_temp
 
-    def report_results(self):
-        logging.info('=============== Model Results ===============')
-        logging.info('Run Time (m): {}'.format(self._runtime / 60.))
-        logging.info('=============================================')
-
-    def report_config(self, cfg):
-        logging.info('=============== Model Configuration ===============')
-        for k, v in cfg.iteritems():
-            logging.info('{:<20s}= {}'.format(k, v))
-        logging.info('===================================================')
-
     # private
+    def _default_config(self):
+        input_root = os.path.join('F:', 'ETRM_Inputs')
+        results_root = os.path.join('F:', 'ETRM_Results')
+        cfg = {'current_use': os.path.join('C:', 'Recharge_GIS', 'OSG_Data', 'current_use'),
+               'array_results': os.path.join('C:', 'Recharge_GIS', 'Array_Results', 'initialize'),
+               'ndvi': os.path.join(input_root, 'NDVI', 'NDVI_std_all'),
+               'prism': os.path.join(input_root, 'PRISM', 'Precip', '800m_std_all'),
+               'prism_min_temp': os.path.join(input_root, 'PRISM', 'Temp', 'Minimum_standard'),
+               'prism_max_temp': os.path.join(input_root, 'PRISM', 'Temp', 'Maximum_standard'),
+               'pm_data': os.path.join(input_root, 'PM_RAD'),
+               'annual_results': os.path.join(results_root, 'Annual_results'),
+               'monthly_results': os.path.join(results_root, 'Monthly_results'),
+               'output_tag': '23MAY',
+               'start': '2000-1-1',
+               'end': '2000-12-31',
+               'start_month': 6,
+               'end_month': 10,
+               }
+        return cfg
+
+    def _load_config(self, cfg):
+        self._current_use_root = cfg['current_use']
+        self._array_results_root = cfg['array_results']
+        self._ndvi_root = cfg['ndvi']
+        self._prism_root = cfg['prism']
+        self._prism_min_temp_root = cfg['prism_min_temp']
+        self._prism_max_temp_root = cfg['prism_max_temp']
+        self._pm_data_root = cfg['pm_data']
+        self._annual_results_root = cfg['annual_results']
+        self._monthly_results_root = cfg['monthly_results']
+
+        self._output_tag = cfg['output_tag']
+
+        self._load_start_end(cfg)
+
     def load_current_use(self):
         """
 
