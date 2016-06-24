@@ -65,6 +65,22 @@ def get_config(path):
     return cfg
 
 
+def write_tiff(path, params, data, driver=None):
+    if driver is None:
+        driver = gdal.GetDriverByName('GTiff')
+    args = params['cols'], params['rows'], params['bands'], params['datatype']
+
+    geo_transform = params['geo_transform']
+    projection = params['projection']
+    band = params['band']
+
+    out = driver.Create(path, *args)
+    out.SetGeoTransform(geo_transform)
+    out.setProjection(projection)
+    outband = out.GetRasterBand(band)
+    outband.WriteArray(data, 0, 0)
+
+
 def tif_path(root, name):
     """
 

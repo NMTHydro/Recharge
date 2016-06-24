@@ -29,7 +29,7 @@ from numpy.ma import maximum, minimum, exp
 from osgeo import gdal
 
 # ============= local library imports  ==========================
-from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, get_config
+from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, get_config, write_tiff
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 KE_MAX = 1.0
@@ -68,7 +68,6 @@ class ETRM:
 
     _verbose = False
 
-    _gtiff_driver = None
     _output_tag = None
     _dataset_params = None
 
@@ -159,8 +158,6 @@ class ETRM:
 
         :return:
         """
-        self._gtiff_driver = gdal.GetDriverByName('GTiff')
-
         self.load_current_use()
         self.load_array_results()
 
@@ -536,24 +533,16 @@ class ETRM:
         :param year:
         :return:
         """
-        driver = self._driver
+        driver = gdal.GetDriverByName('GTiff')
 
         params = self._dataset_params
-        args = params['cols'], params['rows'], params['bands'], params['datatype']
-
-        geo_transform = params['geo_transform']
-        projection = params['projection']
-        band = params['band']
 
         for name, data in outputs:
             if self._verbose:
                 logging.debug(savemsg.format(name=name, month=month, year=year))
             path = basename.format(name=name, month=month, year=year, tag=self._output_tag)
-            out = driver.Create(path, *args)
-            out.SetGeoTransform(geo_transform)
-            out.setProjection(projection)
-            outband = out.GetRasterBand(band)
-            outband.WriteArray(data, 0, 0)
+
+            write_tiff(path, params, data, driver=driver)
 
     def load_prism(self, d):
         """
