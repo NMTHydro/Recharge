@@ -1,0 +1,164 @@
+# ===============================================================================
+# Copyright 2016 dgketchum
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ===============================================================================
+"""
+The purpose of this module is to find a raster file for a specified day.
+
+this module provides (2) function -- find_ndvi, find_prism.
+run_distributed_ETRM does all the work
+
+dgketchum 24 JUL 2016
+"""
+from osgeo import gdal
+from numpy import maximum, array, where, isnan, ones, zeros
+from datetime import timedelta
+from recharge.raster_manager import ManageRasters
+import os
+
+rta = ManageRasters()
+
+
+def get_ndvi(in_path, previous_kcb, date_object):
+
+    doy = date_object.timetuple().tm_yday
+    #  NDVI to kcb
+    if date_object.year == 2000:
+        obj = [1, 49, 81, 113, 145, 177, 209, 241, 273, 305, 337]
+        if doy < 49:
+            strt = 1
+            band = doy
+            nd = 48
+            raster = 'T{}_{}_2000_etrf_subset_001_048_ndvi_daily.tif'.format(str(strt).rjust(3, '0'),
+                                                                             str(nd).rjust(3, '0'))
+            ndvi = rta.convert_raster_to_array(minimum_value=0.001, band=band, in_path=in_path, raster=raster)
+            kcb = ndvi * 1.25
+        else:
+            for num in obj[1:]:
+                diff = doy - num
+                if 0 <= diff <= 31:
+                    pos = obj.index(num)
+                    strt = obj[pos]
+                    band = diff + 1
+                    if num == 337:
+                        nd = num + 29
+                    else:
+                        nd = num + 31
+                    raster = 'T{}_{}_2000_etrf_subset_001_048_ndvi_daily.tif'.format(str(strt).rjust(3, '0'),
+                                                                                     str(nd).rjust(3, '0'))
+                    ndvi = rta.convert_raster_to_array(minimum_value=0.001, band=band, in_path=in_path, raster=raster)
+                    kcb = ndvi * 1.25
+
+    elif date_object.year == 2001:
+        obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
+               225, 241, 257, 273, 289, 305, 321, 337, 353]
+        for num in obj:
+            diff = doy - num
+            if 0 <= diff <= 15:
+                pos = obj.index(num)
+                strt = obj[pos]
+                band = diff + 1
+                if num == 353:
+                    nd = num + 12
+                else:
+                    nd = num + 15
+                raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=strt, d=nd)
+                ndvi = rta.convert_raster_to_array(minimum_value=0.001, band=band, in_path=in_path, raster=raster)
+                kcb = ndvi * 1.25
+
+    else:
+        obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
+               225, 241, 257, 273, 289, 305, 321, 337, 353]
+        for num in obj:
+            diff = doy - num
+            if 0 <= diff <= 15:
+                pos = obj.index(num)
+                band = diff + 1
+                if num == 353:
+                    nd = num + 12
+                else:
+                    nd = num + 15
+                raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
+                ndvi = rta.convert_raster_to_array(minimum_value=0.001, band=band, in_path=in_path, raster=raster)
+                kcb = ndvi * 1.25
+
+    kcb = where(isnan(kcb) == True, previous_kcb, kcb)
+    return kcb
+
+
+def get_prism(in_path, date_object, variable='precip'):
+
+    if variable == 'precip':
+        path = os.path.join(in_path, 'precip')  # this will need to be fixed
+        raster = 'PRISMD2_NMHW2mi_{}{}{}.tif'.format(date_object.year,
+                                                     str(date_object.month).rjust(2, '0'),
+                                                     str(date_object.day).rjust(2, '0'))
+        ppt = rta.convert_raster_to_array(path, raster)
+
+        dday_tom = date_object + timedelta(days=1)
+        raster_tom = '{a}\\PRISMD2_NMHW2mi_{b}{c}{d}.tif'.format(a=in_path, b=date_object.year,
+                                                                 c=str(dday_tom.month).rjust(2, '0'),
+                                                                 d=str(dday_tom.day).rjust(2, '0'))
+        ppt_tom = rta.convert_raster_to_array(minimum_value=0.0,
+                                              input_raster_path=in_path, filename=raster_tom)
+
+
+        return ppt, ppt_tom
+
+    elif variable == 'min_temp':
+        if date_object.year in [2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]:
+            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
+            raster = 'cai_tmin_us_us_30s_{}{}{}.tif'.format(date_object.year,
+                                                            str(date_object.month).rjust(2, '0'),
+                                                            str(date_object.day).rjust(2, '0'))
+
+            min_temp = rta.convert_raster_to_array(input_raster_path=path, filename=raster)
+
+        else:
+            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
+            raster = 'TempMin_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
+                                                           str(date_object.month).rjust(2, '0'),
+                                                           str(date_object.day).rjust(2, '0'))
+            min_temp = rta.convert_raster_to_array(input_raster_path=path, filename=raster)
+        return min_temp
+
+    if variable == 'max_temp':
+        path = os.path.join(in_path, 'Temp', 'Maximum_standard')
+        raster = 'TempMax_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
+                                                       str(date_object.month).rjust(2, '0'),
+                                                       str(date_object.day).rjust(2, '0'))
+        max_temp = rta.convert_raster_to_array(input_raster_path=path, filename=raster)
+        return max_temp
+
+
+def get_penman(in_path, date_object, variable='etrs'):
+    doy = date_object.timetuple().tm_yday
+
+    if variable == 'etrs':
+        raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        etrs = rta.convert_raster_to_array(input_raster_path=in_path, filename=raster,
+                                           minimum_value=0.0)
+        return etrs
+    elif variable == 'rlin':
+        raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        rlin = rta.convert_raster_to_array(input_raster_path=in_path, filename=raster,
+                                           minimum_value=0.0)
+        return rlin
+    elif variable == 'rg':
+        raster = 'PM{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        rg = rta.convert_raster_to_array(input_raster_path=in_path, filename=raster,
+                                           minimum_value=0.0)
+        return rg
+
+# ============= EOF =============================================
