@@ -155,7 +155,7 @@ def run_distributed_etrm(start_date, end_date, extent):
         # print_check(rlin, 'daily kcb')
         # Net Shortwave Radiation Data
 
-
+        #
         #  ETRM Daily Run  #######################################################################
 
         # day_of_year = dday.timetuple().tm_yday
