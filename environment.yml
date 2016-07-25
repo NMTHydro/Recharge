@@ -1,0 +1,46 @@
+name: recharge
+dependencies:
+- alabaster
+- babel
+- curl
+- dateutil
+- docutils
+- gdal
+- geos
+- hdf4
+- hdf5
+- imagesize
+- jinja2
+- jpeg
+- kealib
+- libgdal
+- libnetcdf
+- markupsafe
+- mkl
+- nose
+- numpy
+- openssl
+- pip
+- proj4
+- pygments
+- python
+- pytz
+- readline
+- setuptools
+- six
+- snowballstemmer
+- sphinx
+- sphinx_rtd_theme
+- sqlite
+- tk
+- wheel
+- xerces-c
+- zlib
+- pyyaml
+- pip:
+  - commonmark==0.5.4
+  - future==0.15.2
+  - python-dateutil==2.4.1
+  - recommonmark==0.4.0
+  - sphinx-rtd-theme==0.1.9
+
