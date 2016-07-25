@@ -111,18 +111,8 @@ def run_distributed_etrm(start_date, end_date, extent):
     tot_snow = zeros_shaped
     delta_s_yr = []
 
-    # Define user-controlled constants, these are constants to start with day one, replace
-    # with spin-up data when multiple years are covered
-    constants = set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal_crop_coef=0.15,
-                              max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90)
-
-    empty_array_list = ['albedo', 'de', 'dp_r', 'dr', 'drew', 'eta', 'etrs', 'evap', 'fs1', 'infil', 'kcb',
-                        'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr', 'pdrew', 'pkr', 'pks', 'ppt',
-                        'precip', 'rg', 'runoff', 'swe', 'temp', 'transp']
-
-    master = initialize_master_dict(empty_array_list, shape)
-
-    process = Processes(master, static, constants, shape)
+    process = Processes(static, shape)
+    master = process.get_master()
 
     for dday in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
         print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - start_time),
