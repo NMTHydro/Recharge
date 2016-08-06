@@ -45,22 +45,23 @@ class ManageRasters(object):
         return ras
 
     def update_save_raster(self, master, annual_dict,  monthly_dict, last_month_master, last_year_master,
-                           outputs, date_object, raster_output_data):
+                           outputs, date_object, raster_output_data, save_dates=None, save_outputs=None):
 
         mo_date = monthrange(date_object.year, date_object.month)
+        if save_dates:
+            for element in save_outputs:
+                self._update(master, monthly_dict, last_month_master, element)
+                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
+
         if date_object.day == mo_date[1]:
-            count_output = 0
             for element in outputs:
                 self._update(master, monthly_dict, last_month_master, element)
                 self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
-                count_output += 1
 
         if date_object.day == 31 and date_object.month == 12:
-            count_output = 0
             for element in outputs:
                 self._update(master, annual_dict, last_year_master, element)
                 self._write_raster(annual_dict, element, date_object, raster_output_data, period='annual')
-                count_output += 1
         return None
 
     def _update(self, master_dict, previous_master, cumulative_dict, var):

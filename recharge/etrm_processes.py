@@ -33,7 +33,7 @@ from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 class Processes(object):
 
-    def __init__(self, static_inputs, initial_inputs, constants):
+    def __init__(self, static_inputs, initial_inputs, constants, point=False):
 
         self._raster = ManageRasters()
 
@@ -57,13 +57,19 @@ class Processes(object):
                             'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe', 'temp', 'transp']
 
         self._static = initialize_static_dict(static_inputs)
-        self._shape = self._static['taw'].shape
-        self._master = initialize_master_dict(empty_array_list, self._shape)
-        self._initial = initialize_initial_conditions_dict(initial_inputs)
-        self._tracker = initialize_tracker()
+        if point:
+            pass
+            # somehow have option to find point values or run an extraction script
+        else:
+            self._shape = self._static['taw'].shape
+            self._master = initialize_master_dict(empty_array_list, self._shape)
+            self._initial = initialize_initial_conditions_dict(initial_inputs)
+            self._tracker = initialize_tracker()
 
-        self._ones = ones(self._shape)
-        self._zeros = zeros(self._shape)
+        if point:
+            self._zeros, self._ones = 0.0, 1.0
+        else:
+            self._ones, self._zeros = ones(self._shape), zeros(self._shape)
 
     def run(self, date_range, ndvi_path, prism_path, penman_path, monsoon,
             out_pack):
@@ -118,7 +124,8 @@ class Processes(object):
             self._do_soil_moisture_depletion()
 
             self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
-                                            self._last_mo, self._outputs, day, out_pack)
+                                            self._last_mo, self._outputs, day, out_pack, save_dates=None,
+                                            save_outputs=None)
 
     def get_master(self):
         """

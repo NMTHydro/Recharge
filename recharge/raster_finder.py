@@ -21,6 +21,7 @@ run_distributed_ETRM does all the work
 
 dgketchum 24 JUL 2016
 """
+
 from numpy import where, isnan
 from datetime import timedelta
 from recharge.raster_manager import ManageRasters

@@ -39,10 +39,14 @@ constants = set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal
                           max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90, snow_alpha=0.2,
                           snow_beta=11.0)
 
-extent = ''  # we should eventually have a program to run etrm on a given extent
+extent = []  # we should eventually have a program to run etrm on a given extent
+
+save_dates = []
+save_outputs = []
 
 
-def get_distributed_recharge(date_range, monsoon, raster_out_data, user_constants):
+def get_distributed_recharge(date_range, monsoon, raster_out_data, user_constants, select_dates=None,
+                             select_outputs=None):
 
     etrm = Processes(static_inputs_path, initial_conditions_path, user_constants)
 
