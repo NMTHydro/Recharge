@@ -22,94 +22,76 @@ dgketchum 24 JUL 2016
 """
 
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp
-import os
 from datetime import datetime
 from dateutil import rrule
 
-from recharge.master_dict import initialize_master_dict
-from recharge.user_constants import set_constants
+from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
+    initialize_tracker
 from recharge.raster_manager import ManageRasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 
 class Processes(object):
 
-    def __init__(self, static_inputs, initial_inputs):
+    def __init__(self, static_inputs, initial_inputs, constants):
 
         self._raster = ManageRasters()
 
-        outputs = ['cum_ref_et', 'cum_et', 'cum_precip', 'cum_ro', 'cur_swe', 'tot_snow']
+        self._outputs = ['cum_ref_et', 'cum_et', 'cum_precip', 'cum_ro', 'cur_swe', 'tot_snow']
         self._output_an = {}
         self._output_mo = {}
-        for key in outputs:
+        self._last_mo = {}
+        self._last_yr = {}
+        for key in self._outputs:
             self._output_an.update({key: []})
             self._output_mo.update({key: []})
-
-        # build list of static rasters from current use file
-        statics = [filename for filename in os.listdir(static_inputs) if filename.endswith('.tif')]
-        statics = sorted(statics, key=lambda s: s.lower())
-        # convert rasters to arrays
-        static_arrays = [self._raster.convert_raster_to_array(static_inputs, filename) for filename in statics]
-        # give variable names to each raster
-        static_keys = ['bedksat', 'plant_height', 'quat_deposits', 'root_z', 'soilksat', 'taw', 'tew']
-        static = {}
-        for key, data in zip(static_keys, static_arrays):
-            self._print_check(key, 'static')
-            static.update({key: data})
-
-        self._shape = static['taw'].shape
-
-        # read in initial soil moisture conditions from spin up, put in dict
-        initial_cond = [filename for filename in os.listdir(initial_inputs) if filename.endswith('.tif')]
-        initial_cond.sort()
-        initial_cond_arrays = [self._raster.convert_raster_to_array(initial_inputs, filename) for filename in statics]
-        initial_cond_keys = ['de', 'dr', 'drew']
-        initial_cond_dict = {}
-        for key, data in zip(initial_cond_keys, initial_cond_arrays):
-            self._print_check(key, 'initial conditions')
-            initial_cond_dict.update({key: data})
-
-        # Create indices to plot point time series, these are empty lists that will
-        # be filled as the simulation progresses
-        tracker = {}
-        tracker_keys = ['rain', 'eta', 'snowfall', 'runoff', 'dr', 'pdr', 'de', 'pde', 'drew',
-                        'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb', 'ke', 'pke', 'melt',
-                        'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
-        for key in tracker_keys:
-            tracker.update({key: []})
+            self._last_mo.update({key: []})
+            self._last_yr.update({key: []})
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        constants = set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal_crop_coef=0.15,
-                                  max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90)
+        self._constants = constants
 
         empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs', 'evap',
                             'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr', 'pdrew', 'pkr',
                             'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe', 'temp', 'transp']
 
-        master = initialize_master_dict(empty_array_list, self._shape)
+        self._static = initialize_static_dict(static_inputs)
+        self._shape = self._static['taw'].shape
+        self._master = initialize_master_dict(empty_array_list, self._shape)
+        self._initial = initialize_initial_conditions_dict(initial_inputs)
+        self._tracker = initialize_tracker()
 
         self._ones = ones(self._shape)
         self._zeros = zeros(self._shape)
 
-        self._master = master
-        self._static = static
-        self._initial_conditions = initial_cond_dict
-        self._constants = constants
-
-    def run(self, start_date, end_date, ndvi_path, prism_path, penman_path, start_monsoon, end_monsoon):
+    def run(self, date_range, ndvi_path, prism_path, penman_path, monsoon,
+            out_pack):
         m = self._master
         s = self._static
-
+        start_date, end_date = date_range
+        start_monsoon, end_monsoon = monsoon
         start_time = datetime.now()
         print start_time
         for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
-            print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - start_time),
+            print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
                                                   b=day.timetuple().tm_yday, c=day.year)
+
+            if day == start_date:
+                pkcb = 0.0
+                rew = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
+                s.update({'rew': rew})
+                #  should have all these from previous model runs
+                m['pdr'] = self._initial['dr']
+                m['pde'] = self._initial['de']
+                m['pdrew'] = self._initial['drew']
+                m['dr'] = m['pdr']
+                m['de'] = m['pde']
+                m['drew'] = m['pdrew']
 
             if day != start_date:
                 pkcb = m['kcb']
-            m['kcb'] = get_ndvi(ndvi_path, pkcb, self._shape)
+            m['kcb'] = get_ndvi(ndvi_path, pkcb, day)
             self._print_check(m['kcb'], 'daily kcb')
             m['min_temp'] = get_prism(prism_path, day, variable='min_temp')
             self._print_check(m['min_temp'], 'daily min_temp')
@@ -117,29 +99,17 @@ class Processes(object):
             self._print_check(m['max_temp'], 'daily max_temp')
             m['temp'] = (m['min_temp'] + m['max_temp']) / 2
             self._print_check(m['temp'], 'daily temp')
-            m['ppt'] = get_prism(prism_path, day, variable='precip')
+            m['ppt'], m['ppt_tom'] = get_prism(prism_path, day, variable='precip')
             self._print_check(m['ppt'], 'daily ppt')
             m['etrs'] = get_penman(penman_path, day, variable='etrs')
             self._print_check(m['etrs'], 'daily etrs')
             m['rg'] = get_penman(penman_path, day, variable='rg')
             self._print_check(m['rg'], 'daily rg')
 
-            if day == start_date:
-
-                rew = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
-                m.update({'rew': rew})
-                #  should have all these from previous model runs
-                m['pdr'] = self._initial_conditions['dr']
-                m['pde'] = self._initial_conditions['de']
-                m['pdrew'] = self._initial_conditions['drew']
-                dr = m['pdr']
-                de = m['pde']
-                drew = m['pdrew']
-
             if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
-                s['ksat'] = s['ksat'] * 2 / 24.
+                s['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
-                s['ksat'] = s['ksat'] * 6 / 24.
+                s['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
             self._do_dual_crop_coefficient()
 
@@ -147,9 +117,8 @@ class Processes(object):
 
             self._do_soil_moisture_depletion()
 
-            self._raster.update(m)
-
-            self._raster.save_raster(m, day)
+            self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
+                                            self._last_mo, self._outputs, day, out_pack)
 
     def get_master(self):
         """
@@ -213,7 +182,7 @@ class Processes(object):
 
         temp = m['temp']
 
-        m['snow_fall'] = where(temp <= 0.0, m['ppt'], _zeros)
+        m['snow_fall'] = where(temp < 0.0, m['ppt'], _zeros)
         m['rain'] = where(temp >= 0.0, m['ppt'], _zeros)
 
         palb = m['albedo']
@@ -225,7 +194,7 @@ class Processes(object):
 
         m['swe'] += m['snow_fall']
 
-        mlt_init = maximum(((1 - alb) * m['rg'] * 0.2) + (temp - 1.8) * 11.0, _zeros)
+        mlt_init = maximum(((1 - alb) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'], _zeros)
         m['mlt'] = minimum(m['swe'], mlt_init)
 
         m['swe'] -= m['mlt']
@@ -244,14 +213,14 @@ class Processes(object):
         deps = m['dr'] + m['de'] + m['drew']
 
         ro = _zeros
-        ro = where(watr > m['ksat'] + deps, watr - m['ksat'] - deps, ro)
+        ro = where(watr > s['soil_ksat'] + deps, watr - s['soil_ksat'] - deps, ro)
         m['ro'] = maximum(ro, _zeros)
 
         dp_r = _zeros
         id1 = where(watr > deps, _ones, _zeros)
-        id2 = where(m['ksat'] > watr - deps, _ones, _zeros)
+        id2 = where(s['soil_ksat'] > watr - deps, _ones, _zeros)
         dp_r = where(id1 + id2 > 1.99, maximum(watr - deps, _zeros), dp_r)
-        dp_r = where(watr > m['ksat'] + deps, m['ksat'], dp_r)
+        dp_r = where(watr > s['soil_ksat'] + deps, s['soil_ksat'], dp_r)
         m['dp_r'] = maximum(dp_r, _zeros)
 
         drew_1 = minimum((m['pdrew'] + m['ro'] + (m['evap'] - (m['rain'] + m['mlt']))),
@@ -310,8 +279,7 @@ class Processes(object):
         m['cum_mass'] += m['mass']
 
     def _cells(self, raster):
-        window = raster[480:485, 940:945]
-        return window
+        return raster[480:485, 940:945]
 
     def _print_check(self, variable, category):
         print 'raster is {}'.format(category)

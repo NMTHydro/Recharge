@@ -27,23 +27,26 @@ import os
 from numpy import set_printoptions
 
 from recharge.etrm_processes import Processes
+from recharge.user_constants import set_constants
 
 
 set_printoptions(linewidth=700, precision=2)
 
-# Set start datetime object
-start, end = datetime(2000, 1, 1), datetime(2000, 12, 31)
-# Define winter and summer for SNOW algorithm
-sWin, eWin = datetime(start.year, 11, 1), datetime(end.year, 3, 30)
-# Define monsoon for Ksat, presumed storm intensity
-sMon, eMon = datetime(start.year, 6, 1), datetime(start.year, 10, 1)
+simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
+monsoon_dates = datetime(simulation_period[0].year, 6, 1), datetime(simulation_period[1].year, 10, 1)
+
+constants = set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal_crop_coef=0.15,
+                          max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90, snow_alpha=0.2,
+                          snow_beta=11.0)
+
+extent = ''  # we should eventually have a program to run etrm on a given extent
 
 
-def get_distributed_recharge(start_date, end_date, extent):
+def get_distributed_recharge(date_range, monsoon, raster_out_data, user_constants):
 
-    etrm = Processes(static_inputs_path, initial_conditions_path)
+    etrm = Processes(static_inputs_path, initial_conditions_path, user_constants)
 
-    etrm.run(start, end, ndvi_path, prism_path, penman_path, sMon, eMon,)
+    etrm.run(date_range, ndvi_path, prism_path, penman_path, monsoon, raster_out_data)
 
     return None
 
@@ -58,10 +61,10 @@ if __name__ == '__main__':
     ndvi_path = os.path.join(dynamic_inputs_path, 'NDVI', 'NDVI_std_all')
     prism_path = os.path.join(dynamic_inputs_path, 'PRISM')
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
-    # output_path = os.path.join('F', 'output')
-    # fig_save = os.path.join(home, 'Documents', 'ArcGIS', 'results', 'July_results')
-    # csv_save = os.path.join(home, 'Documents', 'ArcGIS', 'results', 'July_results')
-    get_distributed_recharge(start, end, extent='NM')
+    output_path = os.path.join('F:\\', 'ETRM_Results')
+    out_date = datetime.now()
+    out_pack = (output_path, out_date)
+    get_distributed_recharge(simulation_period, monsoon_dates, out_pack, constants)
 
 # ============= EOF =============================================
 

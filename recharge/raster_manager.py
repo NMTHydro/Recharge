@@ -25,64 +25,80 @@ dgketchum 24 JUL 2016
 from osgeo import gdal
 from numpy import array, ones, maximum
 from calendar import monthrange
+from datetime import datetime
 import os
 
 
 class ManageRasters(object):
 
-    def __init__(self, out_path):
-        self._out_path = out_path
+    def __init__(self):
         pass
 
-    def convert_raster_to_array(self, raster=None, input_raster_path=None,
-                                filename=None, minimum_value=None, band=1):
-        if not raster:
-            raster = self._open_raster(input_path=input_raster_path, filename=filename)
-        ras = array(raster.GetRasterBand(band).ReadAsArray(), dtype=float)
+    def convert_raster_to_array(self, input_raster_path, raster,
+                                minimum_value=None, band=1):
+        # if not raster:
+        ras = self._open_raster(input_path=input_raster_path, filename=raster)
+        ras = array(ras.GetRasterBand(band).ReadAsArray(), dtype=float)
         if minimum_value:
             min_val = ones(ras.shape) * minimum_value
             ras = maximum(ras, min_val)
         return ras
 
-    def save_raster(self, master_dictionary, outputs, date_object):
+    def update_save_raster(self, master, annual_dict,  monthly_dict, last_month_master, last_year_master,
+                           outputs, date_object, raster_output_data):
+
         mo_date = monthrange(date_object.year, date_object.month)
         if date_object.day == mo_date[1]:
             count_output = 0
             for element in outputs:
-                self._write_raster(master_dictionary, element, date_object, 'monthly')
-                self._update(master_dictionary, zero_out=True)
+                self._update(master, monthly_dict, last_month_master, element)
+                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
                 count_output += 1
+
         if date_object.day == 31 and date_object.month == 12:
             count_output = 0
             for element in outputs:
-                self._write_raster(master_dictionary, element, date_object, 'annual')
-                self._update(master_dictionary, zero_out=True)
+                self._update(master, annual_dict, last_year_master, element)
+                self._write_raster(annual_dict, element, date_object, raster_output_data, period='annual')
                 count_output += 1
+        return None
 
-    def _update(self, dictionary, zero_out=False):
-        pass
-        if zero_out:
+    def _update(self, master_dict, previous_master, cumulative_dict, var):
+        cumulative_dict[var] = master_dict[var] - previous_master[var]
+        previous_master[var] = master_dict[var]
+        return None
 
-    def _open_raster(self, input_path, filename):
-        ras_open = gdal.Open('{a}\\{b}'.format(a=input_path, b=filename))
-        return ras_open
+    def _write_raster(self, dictionary, key, date, raster_output_data, period=None):
 
-    def _write_raster(self, dictionary, key, date, period):
-        dataset = dictionary['taw']
+        out_path, out_date_tag = raster_output_data
+        out_date_tag = datetime.strftime(out_date_tag.now(), '%d_%m_%Y')
         print "Saving {}_{}_{}".format(key, date.month, date.year)
+
+        if period == 'annual':
+            file_ = '{}.tif'.format(key)
+            filename = os.path.join(out_path, 'Annual_results', out_date_tag, file_)
+        elif period == 'monthly':
+            file_ = '{}.tif'.format(key)
+            filename = os.path.join(out_path, 'Monthly_results', out_date_tag, file_)
+
+        dataset = dictionary[key]
         driver = gdal.GetDriverByName('GTiff')
-        filename = os.path.join(self._out_path, period)
         cols = dataset.RasterXSize
         rows = dataset.RasterYSize
         bands = dataset.RasterCount
         band = dataset.GetRasterBand(1)
-        datatype = band.DataType
-        outdataset = driver.Create(filename, cols, rows, bands, datatype)
+        data_type = band.DataType
+        out_data_set = driver.Create(filename, cols, rows, bands, data_type)
         geotransform = dataset.GetGeoTransform()
-        outdataset.SetGeoTransform(geotransform)
-        proj = dataset.GetProjection()
-        outdataset.SetProjection(proj)
-        outband = outdataset.GetRasterBand(1)
-        outband.WriteArray(dictionary[key], 0, 0)
+        out_data_set.SetGeoTransform(geotransform)
+        projection = dataset.GetProjection()
+        out_data_set.SetProjection(projection)
+        output_band = out_data_set.GetRasterBand(1)
+        output_band.WriteArray(dictionary[key], 0, 0)
 
+    def _open_raster(self, input_path, filename):
+        print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
+        raster_open = gdal.Open('{a}\\{b}'.format(a=input_path, b=filename))
+        return raster_open
+            
 # ============= EOF =============================================

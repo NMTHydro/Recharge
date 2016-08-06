@@ -23,11 +23,11 @@ dgketchum 24 JUL 2016
 
 
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal_crop_coef=0.15,
-                  max_basal_crop_coef=1.2,
+                  max_basal_crop_coef=1.2, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90):
 
     dictionary = dict(ze=soil_evap_depth, p=et_depletion_factor, kc_min=min_basal_crop_coef,
-                      kc_max=max_basal_crop_coef,
+                      kc_max=max_basal_crop_coef, snow_alpha=snow_alpha, snow_beta=snow_beta,
                       ke_max=max_ke, a_min=min_snow_albedo, a_max=max_snow_albedo)
 
     return dictionary
