@@ -29,8 +29,8 @@ from recharge.raster_manager import ManageRasters
 
 
 def initialize_master_dict(list_of_variables, raster_shape):
-    """create an empty dict that will carry ETRM-drived values day to day"""
-    
+    """create an empty dict that will carry ETRM-derived values day to day"""
+
     dictionary = {}
     for key in list_of_variables:
         dictionary.update({key: ones(raster_shape)})
