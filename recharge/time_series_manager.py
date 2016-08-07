@@ -20,6 +20,31 @@ from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
 
+def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
+    """# csv should be in the following format:
+# ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
+# 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']"""
+
+    folder = os.path.join(inputs_path)
+    os.chdir(folder)
+    csv_list = os.listdir(folder)
+    csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
+    print 'csv list: \n{}'.format(csv_list)
+    for file_ in csv_list:
+        csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
+        name = file_.strip('AMF').strip('_extract.csv')
+        try:
+            new_ind = [datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S') for row in csv]
+        except ValueError:
+            new_ind = [datetime.strptime(row[0], '%Y/%m%d') for row in csv]
+        arr = array(csv[:, 1:], dtype=float)
+        cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
+                'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
+        df = DataFrame(arr, index=new_ind, columns=cols)
+        dict_[name].update({'etrm': df})
+        return None
+
+
 def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False):
 
     """read in data from an extract file

@@ -26,18 +26,19 @@ import os
 
 
 from recharge.raster_manager import ManageRasters
+from recharge.point_extract_utility import get_static_inputs_at_point
 
 
-def initialize_master_dict(list_of_variables, raster_shape):
+def initialize_master_dict(list_of_variables):
     """create an empty dict that will carry ETRM-derived values day to day"""
 
     dictionary = {}
     for key in list_of_variables:
-        dictionary.update({key: ones(raster_shape)})
+        dictionary.update({key: None})
     return dictionary
 
 
-def initialize_static_dict(inputs_path):
+def initialize_static_dict(inputs_path, point_dict=None):
 
     """# build list of static rasters from current use file
     # convert rasters to arrays
@@ -45,33 +46,44 @@ def initialize_static_dict(inputs_path):
 
     static_keys = ['bed_ksat', 'plant_height', 'quat_deposits', 'root_z', 'soil_ksat', 'taw', 'tew']
 
-    raster = ManageRasters()
-    print 'only argument is inputs path = {}'.format(inputs_path)
+    ras = ManageRasters()
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
-    statics = sorted(statics, key=lambda s: s.lower())
-    for x in statics:
-        print 'joined raster path = {}'.format(os.path.join(inputs_path, x))
-    static_arrays = [raster.convert_raster_to_array(inputs_path, filename, minimum_value=0.0) for filename in statics]
     static_dict = {}
-    print static_keys
-    print statics
-    for key, data in zip(static_keys, static_arrays):
-        static_dict.update({key: data})
-    return static_dict
+    statics = sorted(statics, key=lambda s: s.lower())
+    if point_dict:
+        for key, val in point_dict.iteritems():
+            coords = val['Coords']
+            for filename, value in zip(statics, static_keys):
+                full_path = os.path.join(inputs_path, filename)
+                point_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
+    else:
+        static_arrays = [ras.convert_raster_to_array(inputs_path, filename, minimum_value=0.0) for filename in statics]
+        for key, data in zip(static_keys, static_arrays):
+            static_dict.update({key: data})
+        return static_dict
 
 
-def initialize_initial_conditions_dict(initial_inputs_path):
+def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     # read in initial soil moisture conditions from spin up, put in dict
 
     initial_cond_keys = ['de', 'dr', 'drew']
 
-    raster = ManageRasters()
+    ras = ManageRasters()
     initial_cond = [filename for filename in os.listdir(initial_inputs_path) if filename.endswith('.tif')]
     initial_cond.sort()
-    initial_cond_arrays = [raster.convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
     initial_cond_dict = {}
-    for key, data in zip(initial_cond_keys, initial_cond_arrays):
-        initial_cond_dict.update({key: data})
+
+    if point_dict:
+        for key, val in point_dict.iteritems():
+            coords = val['Coords']
+            for filename, value in zip(initial_cond, initial_cond_keys):
+                full_path = os.path.join(initial_inputs_path, filename)
+                point_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
+
+    else:
+        initial_cond_arrays = [ras.convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
+        for key, data in zip(initial_cond_keys, initial_cond_arrays):
+            initial_cond_dict.update({key: data})
     return initial_cond_dict
 
 

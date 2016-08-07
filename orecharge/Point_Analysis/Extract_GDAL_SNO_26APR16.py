@@ -4,7 +4,6 @@ from osgeo import gdal, ogr
 import numpy as np
 
 start, end = datetime(2000, 1, 1), datetime(2013, 12, 31)
-sWin, eWin = datetime(start.year, 11, 1), datetime(end.year, 3, 30)
 sMon, eMon = datetime(start.year, 6, 1), datetime(start.year, 10, 1)
 
 shp_filename = 'C:\\Recharge_GIS\\qgis_layers\\sensitivity_points\\SA_pnts29APR16_UTM13.shp'

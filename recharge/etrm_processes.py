@@ -33,7 +33,8 @@ from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 class Processes(object):
 
-    def __init__(self, static_inputs, constants, initial_inputs=None, point=False):
+    def __init__(self, constants, static_inputs=None, initial_inputs=None, point=False,
+                 point_dict=None):
 
         self._raster = ManageRasters()
 
@@ -53,19 +54,22 @@ class Processes(object):
         # with spin-up data when multiple years are covered
         self._constants = constants
 
-        self._static = initialize_static_dict(static_inputs)
         if point:
-            pass
-            # somehow have option to find point values or run an extraction script
+            self._static = initialize_static_dict(static_inputs, point_dict)
+            print 'intitialized static dict:\n{}'.format(self._static)
+            self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
+
         else:
-            self._shape = self._static['taw'].shape
-            empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs',
-                                'evap', 'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr',
-                                'pdrew', 'pkr', 'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe',
-                                'temp', 'transp']
-            self._master = initialize_master_dict(empty_array_list, self._shape)
+            self._static = initialize_static_dict(static_inputs)
             self._initial = initialize_initial_conditions_dict(initial_inputs)
-            self._tracker = initialize_tracker()
+
+        self._shape = self._static['taw'].shape
+        empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs',
+                            'evap', 'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr',
+                            'pdrew', 'pkr', 'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe',
+                            'temp', 'transp']
+        self._master = initialize_master_dict(empty_array_list)
+        self._tracker = initialize_tracker()
 
         if point:
             self._zeros, self._ones = 0.0, 1.0
