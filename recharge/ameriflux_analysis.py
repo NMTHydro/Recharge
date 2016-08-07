@@ -19,22 +19,26 @@ from datetime import datetime
 from recharge.time_series_manager import amf_obs_time_series
 from recharge.etrm_processes import Processes
 from recharge.user_constants import set_constants
+from recharge.dict_setup import initialize_tracker
 
 simulation_dates = datetime(2007, 1, 1), datetime(2013, 12, 31)
 user_const = set_constants()
 base_amf_dict = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_conifer'},
-'2': {'Coords': '355774 3969864', 'Name': 'Valles_ponderosa'},
-'3': {'Coords': '339552 3800667', 'Name': 'Sev_shrub'},
-'4': {'Coords': '343495 3803640', 'Name': 'Sev_grass'},
-'5': {'Coords': '386288 3811461', 'Name': 'Heritage_pinyon_juniper'},
-    '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_juniper_savanna'}}
+                 '2': {'Coords': '355774 3969864', 'Name': 'Valles_ponderosa'},
+                 '3': {'Coords': '339552 3800667', 'Name': 'Sev_shrub'},
+                 '4': {'Coords': '343495 3803640', 'Name': 'Sev_grass'},
+                 '5': {'Coords': '386288 3811461', 'Name': 'Heritage_pinyon_juniper'},
+                 '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_juniper_savanna'}}
 
 
 def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period):
 
     amf_dict = amf_obs_time_series(ameriflux_dict, amf_file_path, save_cleaned_data_path=False)
 
-    etrm = Processes(constants=user_const)
+    extract = extract_to_dict(something)
+    etrm = Processes(static_inputs=extract, constants=user_const)
+    tracker = initialize_tracker()
+
     for key, val in amf_dict.iteritems():
         val.update({'etrm': etrm.run(simulation_period)})
 

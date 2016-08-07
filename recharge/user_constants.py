@@ -14,7 +14,7 @@
 # limitations under the License.
 # ===============================================================================
 """
-The purpose of this module is to set ETRM constant.
+The purpose of this module is to set ETRM constants.
 
 returns dict with all rasters under keys of etrm variable names
 

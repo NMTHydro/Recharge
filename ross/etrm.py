@@ -30,7 +30,7 @@ from numpy.ma import maximum, minimum, exp
 from osgeo import gdal
 
 # ============= local library imports  ==========================
-from recharge.etrm_funcs import tif_params, tif_to_array, clean, write_tiff
+from ross.etrm_funcs import tif_params, tif_to_array, clean, write_tiff
 from ross.model import BaseModel
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)

@@ -23,7 +23,7 @@ from datetime import datetime
 # ============= local library imports  ==========================
 import yaml
 
-from recharge.etrm_funcs import InvalidDataSourceException
+from ross.etrm_funcs import InvalidDataSourceException
 
 
 class BaseModel:

@@ -74,6 +74,7 @@ def initialize_initial_conditions_dict(initial_inputs_path):
         initial_cond_dict.update({key: data})
     return initial_cond_dict
 
+
 def initialize_tracker():
 
     """ Create indices to plot point time series, these are empty lists that will
@@ -81,8 +82,8 @@ def initialize_tracker():
 
     tracker = {}
     tracker_keys = ['rain', 'eta', 'snowfall', 'runoff', 'dr', 'pdr', 'de', 'pde', 'drew',
-                    'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb', 'ke', 'pke', 'melt',
-                    'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
+                    'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb',
+                    'ke', 'pke', 'melt', 'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
     for key in tracker_keys:
         tracker.update({key: []})
     return tracker
