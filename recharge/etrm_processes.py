@@ -33,10 +33,11 @@ from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 class Processes(object):
 
-    def __init__(self, static_inputs, initial_inputs, constants, point=False):
+    def __init__(self, static_inputs, constants, initial_inputs=None, point=False):
 
         self._raster = ManageRasters()
 
+        self._point = point
         self._outputs = ['cum_ref_et', 'cum_et', 'cum_precip', 'cum_ro', 'cur_swe', 'tot_snow']
         self._output_an = {}
         self._output_mo = {}
@@ -52,16 +53,16 @@ class Processes(object):
         # with spin-up data when multiple years are covered
         self._constants = constants
 
-        empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs', 'evap',
-                            'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr', 'pdrew', 'pkr',
-                            'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe', 'temp', 'transp']
-
         self._static = initialize_static_dict(static_inputs)
         if point:
             pass
             # somehow have option to find point values or run an extraction script
         else:
             self._shape = self._static['taw'].shape
+            empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs',
+                                'evap', 'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr',
+                                'pdrew', 'pkr', 'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe',
+                                'temp', 'transp']
             self._master = initialize_master_dict(empty_array_list, self._shape)
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._tracker = initialize_tracker()
@@ -71,8 +72,7 @@ class Processes(object):
         else:
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
 
-    def run(self, date_range, ndvi_path, prism_path, penman_path, monsoon,
-            out_pack):
+    def run(self, date_range, monsoon, out_pack, ndvi_path=None, prism_path=None, penman_path=None):
         m = self._master
         s = self._static
         start_date, end_date = date_range
@@ -84,7 +84,7 @@ class Processes(object):
                                                   b=day.timetuple().tm_yday, c=day.year)
 
             if day == start_date:
-                pkcb = 0.0
+                m['pkcb'] = 0.0
                 rew = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
                 s.update({'rew': rew})
                 #  should have all these from previous model runs
@@ -96,21 +96,8 @@ class Processes(object):
                 m['drew'] = m['pdrew']
 
             if day != start_date:
-                pkcb = m['kcb']
-            m['kcb'] = get_ndvi(ndvi_path, pkcb, day)
-            self._print_check(m['kcb'], 'daily kcb')
-            m['min_temp'] = get_prism(prism_path, day, variable='min_temp')
-            self._print_check(m['min_temp'], 'daily min_temp')
-            m['max_temp'] = get_prism(prism_path, day, variable='max_temp')
-            self._print_check(m['max_temp'], 'daily max_temp')
-            m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-            self._print_check(m['temp'], 'daily temp')
-            m['ppt'], m['ppt_tom'] = get_prism(prism_path, day, variable='precip')
-            self._print_check(m['ppt'], 'daily ppt')
-            m['etrs'] = get_penman(penman_path, day, variable='etrs')
-            self._print_check(m['etrs'], 'daily etrs')
-            m['rg'] = get_penman(penman_path, day, variable='rg')
-            self._print_check(m['rg'], 'daily rg')
+                if not self._point:
+                    self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
             if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
                 s['soil_ksat'] = s['soil_ksat'] * 2 / 24.
@@ -276,7 +263,7 @@ class Processes(object):
 
         m['tot_snow'] += m['snow_fall']
 
-    def do_mass_balance(self):
+    def _do_mass_balance(self):
 
         m = self._master
         m['mass'] = m['rain'] +m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
@@ -284,6 +271,27 @@ class Processes(object):
                                             (m['pdrew'] - m['drew'])))
         m['tot_mass'] += abs(m['mass'])
         m['cum_mass'] += m['mass']
+
+    def _do_daily_raster_load(self, ndvi_path, prism_path, penman_path, date):
+
+        m = self._master
+
+        pkcb = m['kcb']
+        m['kcb'] = get_ndvi(ndvi_path, pkcb, date)
+        self._print_check(m['kcb'], 'daily kcb')
+        m['min_temp'] = get_prism(prism_path, date, variable='min_temp')
+        self._print_check(m['min_temp'], 'daily min_temp')
+        m['max_temp'] = get_prism(prism_path, date, variable='max_temp')
+        self._print_check(m['max_temp'], 'daily max_temp')
+        m['temp'] = (m['min_temp'] + m['max_temp']) / 2
+        self._print_check(m['temp'], 'daily temp')
+        m['ppt'], m['ppt_tom'] = get_prism(prism_path, date, variable='precip')
+        self._print_check(m['ppt'], 'daily ppt')
+        m['etrs'] = get_penman(penman_path, date, variable='etrs')
+        self._print_check(m['etrs'], 'daily etrs')
+        m['rg'] = get_penman(penman_path, date, variable='rg')
+        self._print_check(m['rg'], 'daily rg')
+        return None
 
     def _cells(self, raster):
         return raster[480:485, 940:945]

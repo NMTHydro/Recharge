@@ -21,16 +21,17 @@
 import calendar
 import logging
 import os
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from math import isnan
+
 from dateutil import rrule
 from numpy import ones, where, zeros
 from numpy.ma import maximum, minimum, exp
 from osgeo import gdal
 
 # ============= local library imports  ==========================
-from recharge.etrm_funcs import tif_params, tif_to_array, clean, InvalidDataSourceException, write_tiff
-from recharge.model import BaseModel
+from recharge.etrm_funcs import tif_params, tif_to_array, clean, write_tiff
+from ross.model import BaseModel
 
 YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 KE_MAX = 1.0

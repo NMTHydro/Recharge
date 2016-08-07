@@ -20,7 +20,7 @@ import unittest
 
 
 def suite():
-    from recharge.etrm_tests import ETRMTestCase
+    from ross.etrm_tests import ETRMTestCase
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()

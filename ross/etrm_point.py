@@ -28,7 +28,7 @@ from pandas import DataFrame
 from numpy import array, column_stack, savetxt, exp
 
 # ============= local library imports  ==========================
-from recharge.model import BaseModel
+from ross.model import BaseModel
 
 
 # AMF = (('361716 3972654', 'Valles_conifer'),
