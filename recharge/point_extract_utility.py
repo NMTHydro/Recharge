@@ -3,7 +3,6 @@ from osgeo import gdal, ogr
 
 
 def get_static_inputs_at_point(coords, full_path):
-    print 'coordinate type :{} coords: {}'.format(type(coords), coords)
 
     mx, my = coords.split(' ')
     mx, my = int(mx), int(my)
@@ -13,7 +12,7 @@ def get_static_inputs_at_point(coords, full_path):
     px = abs(int((mx - gt[0]) / gt[1]))
     py = int((my - gt[3]) / gt[5])
     obj = rb.ReadAsArray(px, py, 1, 1)
-    return obj
+    return obj[0][0]
 
 
 def save_point_static_inputs_to_csv(coords, static_inputs_path, save_path):

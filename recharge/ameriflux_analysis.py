@@ -18,10 +18,9 @@ from datetime import datetime
 
 from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series
 from recharge.etrm_processes import Processes
-from recharge.user_constants import set_constants
 
 simulation_dates = datetime(2007, 1, 1), datetime(2013, 12, 31)
-user_const = set_constants()
+
 base_amf_dict = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_conifer'},
                  '2': {'Coords': '355774 3969864', 'Name': 'Valles_ponderosa'},
                  '3': {'Coords': '339552 3800667', 'Name': 'Sev_shrub'},
@@ -36,12 +35,12 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
     amf_dict = amf_obs_time_series(ameriflux_dict, amf_file_path, save_cleaned_data_path=False)
 
     get_etrm_time_series(amf_dict, inputs_path=etrm_extract)
-    etrm = Processes(static_inputs=static_inputs, constants=user_const, point=True, point_dict=amf_dict)
+    etrm = Processes(static_inputs=static_inputs, point=True, point_dict=ameriflux_dict,
+                     initial_inputs=initial_path)
+    for key, val in amf_dict.iteritems():
+        etrm.run(simulation_period, point_dict=amf_dict[key])
 
     print amf_dict
-
-    # for key, val in amf_dict.iteritems():
-    #     val.update({'etrm': etrm.run(simulation_period)})
 
     return None
 

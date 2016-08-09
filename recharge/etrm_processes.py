@@ -14,7 +14,8 @@
 # limitations under the License.
 # ===============================================================================
 """
-The purpose of this module is update the etrm master dict daily.
+The purpose of this module is update the etrm master dict daily.  It should work for both point and
+distributed model runs
 
 returns dict with all rasters under keys of etrm variable names
 
@@ -22,18 +23,18 @@ dgketchum 24 JUL 2016
 """
 
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
-    initialize_tracker
+    initialize_tracker, set_constants
 from recharge.raster_manager import ManageRasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 
 class Processes(object):
 
-    def __init__(self, constants, static_inputs=None, initial_inputs=None, point=False,
+    def __init__(self, static_inputs=None, initial_inputs=None, point=False,
                  point_dict=None):
 
         self._raster = ManageRasters()
@@ -52,12 +53,13 @@ class Processes(object):
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        self._constants = constants
+        self._constants = set_constants()
 
         if point:
             self._static = initialize_static_dict(static_inputs, point_dict)
             print 'intitialized static dict:\n{}'.format(self._static)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
+            print 'intitialized initial conditions dict:\n{}'.format(self._initial)
 
         else:
             self._static = initialize_static_dict(static_inputs)
@@ -69,6 +71,7 @@ class Processes(object):
                             'pdrew', 'pkr', 'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe',
                             'temp', 'transp']
         self._master = initialize_master_dict(empty_array_list)
+        print 'master dict empty: {}'.format(self._master)
         self._tracker = initialize_tracker()
 
         if point:
@@ -76,13 +79,16 @@ class Processes(object):
         else:
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
 
-    def run(self, date_range, monsoon, out_pack, ndvi_path=None, prism_path=None, penman_path=None):
+    def run(self, date_range, out_pack=None, ndvi_path=None, prism_path=None, penman_path=None,
+            point_dict=None):
+
         m = self._master
         s = self._static
+        c = self._constants
         start_date, end_date = date_range
-        start_monsoon, end_monsoon = monsoon
+        start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
-        print start_time
+        print 'start tiime :{}'.format(start_time)
         for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
             print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
                                                   b=day.timetuple().tm_yday, c=day.year)
@@ -91,7 +97,6 @@ class Processes(object):
                 m['pkcb'] = 0.0
                 rew = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
                 s.update({'rew': rew})
-                #  should have all these from previous model runs
                 m['pdr'] = self._initial['dr']
                 m['pde'] = self._initial['de']
                 m['pdrew'] = self._initial['drew']
@@ -99,9 +104,10 @@ class Processes(object):
                 m['de'] = m['pde']
                 m['drew'] = m['pdrew']
 
-            if day != start_date:
-                if not self._point:
-                    self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
+            if self._point:
+                self._do_daily_point_load(point_dict, day)
+            else:
+                self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
             if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
                 s['soil_ksat'] = s['soil_ksat'] * 2 / 24.
@@ -114,17 +120,10 @@ class Processes(object):
 
             self._do_soil_moisture_depletion()
 
-            self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
-                                            self._last_mo, self._outputs, day, out_pack, save_dates=None,
-                                            save_outputs=None)
-
-    def get_master(self):
-        """
-        get the master dictionary
-        :return: master dictionary
-        :rtype: dict
-        """
-        return self._master
+            if not point_dict:
+                self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
+                                                self._last_mo, self._outputs, day, out_pack, save_dates=None,
+                                                save_outputs=None)
 
     def _do_dual_crop_coefficient(self):
         """
@@ -154,17 +153,24 @@ class Processes(object):
         pks = m['ks']
         ks_ref = where(((s['taw'] - m['pdr']) / (0.6 * s['taw'])) < _ones, _ones * 0.001,
                        ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw'])))
-        ks_ref = where(isnan(m['ks']) == True, pks, ks_ref)
+        if not self._point:
+            ks_ref = where(isnan(m['ks']) == True, pks, ks_ref)
         m['ks'] = minimum(ks_ref, _ones)
 
         # Ke evaporation reduction coefficient; stage 1 evaporation
-        fsa = where(isnan((s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])) == True, _zeros,
-                    (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs']))
+        if not self._point:
+            fsa = where(isnan((s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])) == True, _zeros,
+                        (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs']))
+        else:
+            fsa = (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])
         fsb = minimum(fsa, _ones)
         fs1 = maximum(fsb, _zeros)
-        ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
-                                                 few * c['kc_max']), _zeros)
-
+        if not self._point:
+            ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
+                                                     few * c['kc_max']), _zeros)
+        else:
+            ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
+                                                     few * c['kc_max']), _zeros)
         m['transp'] = (m['ks'] * m['kcb']) * m['etrs']
         et_init = (m['ks'] * m['kcb'] + ke) * m['etrs']
         m['eta'] = maximum(et_init, _zeros)
@@ -270,8 +276,8 @@ class Processes(object):
     def _do_mass_balance(self):
 
         m = self._master
-        m['mass'] = m['rain'] +m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
-                                           ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
+        m['mass'] = m['rain'] + m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
+                                            ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                             (m['pdrew'] - m['drew'])))
         m['tot_mass'] += abs(m['mass'])
         m['cum_mass'] += m['mass']
@@ -296,6 +302,17 @@ class Processes(object):
         m['rg'] = get_penman(penman_path, date, variable='rg')
         self._print_check(m['rg'], 'daily rg')
         return None
+
+    def _do_daily_point_load(self, point_dict, date):
+        m = self._master
+        ts = point_dict['etrm']
+        m['kcb'] = ts['kcb'][date]
+        m['min_temp'] = ts['min temp'][date]
+        m['max_temp'] = ts['max temp'][date]
+        m['temp'] = (m['min_temp'] + m['max_temp']) / 2
+        m['ppt'], m['ppt_tom'] = ts['precip'][date], ts['precip'][date + timedelta(days=1)]
+        m['etrs'] = ts['etrs_pm'][date]
+        m['rg'] = ts['rg'][date]
 
     def _cells(self, raster):
         return raster[480:485, 940:945]

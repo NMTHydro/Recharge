@@ -27,17 +27,11 @@ import os
 from numpy import set_printoptions
 
 from recharge.etrm_processes import Processes
-from recharge.user_constants import set_constants
 
 
 set_printoptions(linewidth=700, precision=2)
 
 simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
-monsoon_dates = datetime(simulation_period[0].year, 6, 1), datetime(simulation_period[1].year, 10, 1)
-
-constants = set_constants(soil_evap_depth=40, et_depletion_factor=0.4, min_basal_crop_coef=0.15,
-                          max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90, snow_alpha=0.2,
-                          snow_beta=11.0)
 
 extent = []  # we should eventually have a program to run etrm on a given extent
 
@@ -45,12 +39,12 @@ save_dates = []
 save_outputs = []
 
 
-def get_distributed_recharge(date_range, monsoon, raster_out_data, user_constants, select_dates=None,
+def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, select_dates=None,
                              select_outputs=None):
 
-    etrm = Processes(static_inputs_path, initial_conditions_path, user_constants)
+    etrm = Processes(static_inputs_path, initial_conditions_path)
 
-    etrm.run(date_range, ndvi_path, prism_path, penman_path, monsoon, raster_out_data)
+    etrm.run(date_range, ndvi, prism, penman, raster_out_data)
 
     return None
 
@@ -68,7 +62,7 @@ if __name__ == '__main__':
     output_path = os.path.join('F:\\', 'ETRM_Results')
     out_date = datetime.now()
     out_pack = (output_path, out_date)
-    get_distributed_recharge(simulation_period, monsoon_dates, out_pack, constants)
+    get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, out_pack)
 
 # ============= EOF =============================================
 

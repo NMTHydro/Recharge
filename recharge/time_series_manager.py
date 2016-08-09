@@ -38,7 +38,7 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
         except ValueError:
             new_ind = [datetime.strptime(row[0], '%Y/%m%d') for row in csv]
         arr = array(csv[:, 1:], dtype=float)
-        cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
+        cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_pm', 'plant height', 'min temp',
                 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
         df = DataFrame(arr, index=new_ind, columns=cols)
         dict_[name].update({'etrm': df})
@@ -147,4 +147,5 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
 
 if __name__ == '__main__':
     pass
+
 # ============= EOF =============================================
