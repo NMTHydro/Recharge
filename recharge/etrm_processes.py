@@ -40,7 +40,7 @@ class Processes(object):
         self._raster = ManageRasters()
 
         self._point = point
-        self._outputs = ['cum_ref_et', 'cum_et', 'cum_precip', 'cum_ro', 'cur_swe', 'tot_snow']
+        self._outputs = ['cum_ref_et', 'cum_eta', 'cum_precip', 'cum_ro', 'tot_snow']
         self._output_an = {}
         self._output_mo = {}
         self._last_mo = {}
@@ -66,7 +66,7 @@ class Processes(object):
             self._initial = initialize_initial_conditions_dict(initial_inputs)
 
         self._shape = self._static['taw'].shape
-        empty_array_list = ['albedo', 'cum_eta', 'cur_swe', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs',
+        empty_array_list = ['albedo', 'cum_eta', 'de', 'dp_r', 'dr', 'drew', 'et_ind', 'eta', 'etrs',
                             'evap', 'fs1', 'infil', 'kcb', 'kr', 'ks', 'max_temp', 'min_temp', 'pde', 'pdr',
                             'pdrew', 'pkr', 'pks', 'ppt', 'precip', 'rain', 'rg', 'runoff', 'snow_fall', 'swe',
                             'temp', 'transp']
@@ -95,6 +95,8 @@ class Processes(object):
 
             if day == start_date:
                 m['pkcb'] = 0.0
+                m['albedo'] = 0.45
+                m['swe'] = 0.0  # this should be initialized correctly using simulation results
                 rew = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
                 s.update({'rew': rew})
                 m['pdr'] = self._initial['dr']
@@ -185,16 +187,37 @@ class Processes(object):
         _zeros = self._zeros
 
         temp = m['temp']
-
-        m['snow_fall'] = where(temp < 0.0, m['ppt'], _zeros)
-        m['rain'] = where(temp >= 0.0, m['ppt'], _zeros)
+        if self._point:
+            if temp < 0.0 < m['ppt']:
+                print 'producing snow fall'
+                m['snow_fall'] = m['ppt']
+                m['rain'] = 0.0
+            else:
+                m['rain'] = m['ppt']
+                m['snow'] = 0.0
+        else:
+            m['snow_fall'] = where(temp < 0.0, m['ppt'], _zeros)
+            m['rain'] = where(temp >= 0.0, m['ppt'], _zeros)
 
         palb = m['albedo']
-
-        alb = where(m['snow_fall'] > 3.0, _ones * c['a_max'], palb)
-        alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
-        alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
-        m['albedo'] = alb = where(alb < c['a_min'], c['a_min'], alb)
+        if self._point:
+            if m['snow_fall'] > 3.0:
+                print 'snow: {}'.format(m['snow_fall'])
+                alb = c['a_max']
+            elif 0.0 < m['snow_fall'] < 3.0:
+                print 'snow: {}'.format(m['snow_fall'])
+                alb = c['a_min'] + (palb - c['a_min']) * exp(-0.12)
+            elif m['snow_fall'] == 0.0:
+                print 'no snow fall'
+                alb = c['a_min'] + (palb - c['a_min']) * exp(-0.05)
+            if alb < c['a_min']:
+                alb = c['a_min']
+        else:
+            alb = where(m['snow_fall'] > 3.0, _ones * c['a_max'], palb)
+            alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
+            alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
+            alb = where(alb < c['a_min'], c['a_min'], alb)
+            m['albedo'] = alb
 
         m['swe'] += m['snow_fall']
 
@@ -220,12 +243,21 @@ class Processes(object):
         ro = where(watr > s['soil_ksat'] + deps, watr - s['soil_ksat'] - deps, ro)
         m['ro'] = maximum(ro, _zeros)
 
-        dp_r = _zeros
-        id1 = where(watr > deps, _ones, _zeros)
-        id2 = where(s['soil_ksat'] > watr - deps, _ones, _zeros)
-        dp_r = where(id1 + id2 > 1.99, maximum(watr - deps, _zeros), dp_r)
-        dp_r = where(watr > s['soil_ksat'] + deps, s['soil_ksat'], dp_r)
-        m['dp_r'] = maximum(dp_r, _zeros)
+        if self._point:
+            dp_r = _zeros
+            if watr > deps and s['soil_ksat'] > watr - deps:
+                dp_r = max(watr - deps, zeros)
+            elif watr > s['soil_ksat'] + deps:
+                dp_r = s['soil_ksat']
+            m['dp_r'] = max(dp_r, _zeros)
+
+        else:
+            dp_r = _zeros
+            id1 = where(watr > deps, _ones, _zeros)
+            id2 = where(s['soil_ksat'] > watr - deps, _ones, _zeros)
+            dp_r = where(id1 + id2 > 1.99, maximum(watr - deps, _zeros), dp_r)
+            dp_r = where(watr > s['soil_ksat'] + deps, s['soil_ksat'], dp_r)
+            m['dp_r'] = maximum(dp_r, _zeros)
 
         drew_1 = minimum((m['pdrew'] + m['ro'] + (m['evap'] - (m['rain'] + m['mlt']))),
                          s['rew'])
@@ -254,13 +286,13 @@ class Processes(object):
         m['cum_infil'] += m['dp_r']
         m['cum_infil'] = maximum(m['infil'], _zeros)
 
-        prev_et = m['cum_et']
+        prev_et = m['cum_eta']
         m['cum_ref_et'] += m['etrs']
-        m['cum_et'] = m['cum_et'] + m['evap'] + m['transp']
-        m['et_ind'] = m['cum_et'] / m['cum_ref_et']
-        m['cum_et'] = where(isnan(m['cum_et']) == True, prev_et, m['cum_et'])
-        m['cum_et'] = where(m['cum_et'] > m['cum_ref_et'], m['cum_ref_et'] / 2., m['cum_et'])
-        m['cum_et'] = maximum( m['cum_et'], _ones * 0.001)
+        m['cum_eta'] = m['cum_eta'] + m['evap'] + m['transp']
+        m['et_ind'] = m['cum_eta'] / m['cum_ref_et']
+        m['cum_eta'] = where(isnan(m['cum_eta']) == True, prev_et, m['cum_eta'])
+        m['cum_eta'] = where(m['cum_eta'] > m['cum_ref_et'], m['cum_ref_et'] / 2., m['cum_eta'])
+        m['cum_eta'] = maximum( m['cum_eta'], _ones * 0.001)
 
         m['cum_precip'] = m['precip'] + m['rain'] + m['snow_fall']
         m['cum_precip'] = maximum(m['precip'], _zeros)
@@ -268,8 +300,7 @@ class Processes(object):
         m['cum_ro'] += m['ro']
         m['cum_ro'] = maximum(m['cum_ro'], _zeros)
 
-        m['cur_swe'] = m['swe'] + m['snow_fall'] - m['mlt']
-        m['cur_swe'] = maximum(m['cur_swe'], _zeros)
+        m['cum_swe'] += m['swe']
 
         m['tot_snow'] += m['snow_fall']
 

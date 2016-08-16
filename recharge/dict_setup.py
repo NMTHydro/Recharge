@@ -53,7 +53,7 @@ def initialize_master_dict(list_of_variables):
 
     dictionary = {}
     for key in list_of_variables:
-        dictionary.update({key: None})
+        dictionary.update({key: 0.0})
     return dictionary
 
 
