@@ -156,6 +156,8 @@ class Processes(object):
         fcov_min = minimum(fcov_ref, _ones)
         fcov = maximum(fcov_min, _ones * 0.001)
         few = maximum(1 - fcov, 0.01)  # exposed ground
+        m['pke'] = m['ke']
+        m['pks'] = m['ks']
 
         if self._point_dict:
             pkr = m['kr']
@@ -168,11 +170,11 @@ class Processes(object):
             ks_ref = where(isnan(m['ks']) == True, pks, ks_ref)
             fsa = (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])
             fsb = minimum(fsa, _ones)
-            fs1 = maximum(fsb, _zeros)
+            m['fs1'] = maximum(fsb, _zeros)
             if m['drew'] < s['rew']:
-                ke = min((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']), few * c['kc_max'])
+                m['ke'] = min((m['fs1'] + (1 - m['fs1']) * kr) * (c['kc_max'] - m['ks'] * m['kcb']), few * c['kc_max'])
             else:
-                ke = 0.0
+                m['ke'] = 0.0
 
         else:
             pkr = m['kr']
@@ -186,15 +188,15 @@ class Processes(object):
             fsa = where(isnan((s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])) == True, _zeros,
                         (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs']))
             fsb = minimum(fsa, _ones)
-            fs1 = maximum(fsb, _zeros)
-            ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
+            m['fs1'] = maximum(fsb, _zeros)
+            m['ke'] = where(m['drew'] < s['rew'], minimum((m['fs1'] + (1 - m['fs1']) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
                                                      few * c['kc_max']), _zeros)
 
         m['ks'] = minimum(ks_ref, _ones)
         m['transp'] = (m['ks'] * m['kcb']) * m['etrs']
-        et_init = (m['ks'] * m['kcb'] + ke) * m['etrs']
+        et_init = (m['ks'] * m['kcb'] + m['ke']) * m['etrs']
         m['eta'] = maximum(et_init, _zeros)
-        evap_init = ke * m['etrs']
+        evap_init = m['ke'] * m['etrs']
         evap_min = maximum(evap_init, _zeros)
         m['evap'] = minimum(evap_min, c['kc_max'])
 
