@@ -34,12 +34,13 @@ from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 class Processes(object):
 
-    def __init__(self, static_inputs=None, initial_inputs=None, point=False,
-                 point_dict=None):
+    def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
         self._raster = ManageRasters()
 
-        self._point = point
+        self._raster_point = raster_point
+
+        self._point_dict = point_dict
         self._outputs = ['cum_ref_et', 'cum_eta', 'cum_precip', 'cum_ro', 'tot_snow']
         self._output_an = {}
         self._output_mo = {}
@@ -55,7 +56,7 @@ class Processes(object):
         # with spin-up data when multiple years are covered
         self._constants = set_constants()
 
-        if point:
+        if point_dict:
             self._static = initialize_static_dict(static_inputs, point_dict)
             print 'intitialized static dict:\n{}'.format(self._static)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
@@ -74,7 +75,7 @@ class Processes(object):
         print 'master dict empty: {}'.format(self._master)
         self._tracker = initialize_tracker()
 
-        if point:
+        if point_dict:
             self._zeros, self._ones = 0.0, 1.0
         else:
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
@@ -88,7 +89,7 @@ class Processes(object):
         start_date, end_date = date_range
         start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
-        print 'start tiime :{}'.format(start_time)
+        print 'start time :{}'.format(start_time)
         for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
             print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
                                                   b=day.timetuple().tm_yday, c=day.year)
@@ -106,7 +107,7 @@ class Processes(object):
                 m['de'] = m['pde']
                 m['drew'] = m['pdrew']
 
-            if self._point:
+            if self._point_dict:
                 self._do_daily_point_load(point_dict, day)
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
@@ -126,6 +127,14 @@ class Processes(object):
                 self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
                                                 self._last_mo, self._outputs, day, out_pack, save_dates=None,
                                                 save_outputs=None)
+                if self._raster_point:
+                    self._update_point_tracker(day, self._raster_point)
+
+            else:
+                self._update_point_tracker(day)
+
+            if point_dict and day == end_date:
+                return self._tracker
 
     def _do_dual_crop_coefficient(self):
         """
@@ -148,31 +157,40 @@ class Processes(object):
         fcov = maximum(fcov_min, _ones * 0.001)
         few = maximum(1 - fcov, 0.01)  # exposed ground
 
-        pkr = m['kr']
-        kr = minimum(((s['tew'] - m['de']) / (s['tew'] - s['rew'])), _ones)
-        kr = where(isnan(kr) == True, pkr, kr)
+        if self._point_dict:
+            pkr = m['kr']
+            kr = minimum(((s['tew'] - m['de']) / (s['tew'] - s['rew'])), _ones)
+            kr = where(isnan(kr) == True, pkr, kr)
 
-        pks = m['ks']
-        ks_ref = where(((s['taw'] - m['pdr']) / (0.6 * s['taw'])) < _ones, _ones * 0.001,
-                       ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw'])))
-        if not self._point:
+            pks = m['ks']
+            ks_ref = where(((s['taw'] - m['pdr']) / (0.6 * s['taw'])) < _ones, _ones * 0.001,
+                           ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw'])))
             ks_ref = where(isnan(m['ks']) == True, pks, ks_ref)
-        m['ks'] = minimum(ks_ref, _ones)
+            fsa = (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])
+            fsb = minimum(fsa, _ones)
+            fs1 = maximum(fsb, _zeros)
+            if m['drew'] < s['rew']:
+                ke = min((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']), few * c['kc_max'])
+            else:
+                ke = 0.0
 
-        # Ke evaporation reduction coefficient; stage 1 evaporation
-        if not self._point:
+        else:
+            pkr = m['kr']
+            kr = minimum(((s['tew'] - m['de']) / (s['tew'] - s['rew'])), _ones)
+            kr = where(isnan(kr) == True, pkr, kr)
+
+            pks = m['ks']
+            ks_ref = where(((s['taw'] - m['pdr']) / (0.6 * s['taw'])) < _ones, _ones * 0.001,
+                           ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw'])))
+            ks_ref = where(isnan(m['ks']) == True, pks, ks_ref)
             fsa = where(isnan((s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])) == True, _zeros,
                         (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs']))
-        else:
-            fsa = (s['rew'] - m['drew']) / (c['ke_max'] * m['etrs'])
-        fsb = minimum(fsa, _ones)
-        fs1 = maximum(fsb, _zeros)
-        if not self._point:
+            fsb = minimum(fsa, _ones)
+            fs1 = maximum(fsb, _zeros)
             ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
                                                      few * c['kc_max']), _zeros)
-        else:
-            ke = where(m['drew'] < s['rew'], minimum((fs1 + (1 - fs1) * kr) * (c['kc_max'] - m['ks'] * m['kcb']),
-                                                     few * c['kc_max']), _zeros)
+
+        m['ks'] = minimum(ks_ref, _ones)
         m['transp'] = (m['ks'] * m['kcb']) * m['etrs']
         et_init = (m['ks'] * m['kcb'] + ke) * m['etrs']
         m['eta'] = maximum(et_init, _zeros)
@@ -187,7 +205,7 @@ class Processes(object):
         _zeros = self._zeros
 
         temp = m['temp']
-        if self._point:
+        if self._point_dict:
             if temp < 0.0 < m['ppt']:
                 print 'producing snow fall'
                 m['snow_fall'] = m['ppt']
@@ -200,7 +218,7 @@ class Processes(object):
             m['rain'] = where(temp >= 0.0, m['ppt'], _zeros)
 
         palb = m['albedo']
-        if self._point:
+        if self._point_dict:
             if m['snow_fall'] > 3.0:
                 print 'snow: {}'.format(m['snow_fall'])
                 alb = c['a_max']
@@ -243,7 +261,7 @@ class Processes(object):
         ro = where(watr > s['soil_ksat'] + deps, watr - s['soil_ksat'] - deps, ro)
         m['ro'] = maximum(ro, _zeros)
 
-        if self._point:
+        if self._point_dict:
             dp_r = _zeros
             if watr > deps and s['soil_ksat'] > watr - deps:
                 dp_r = max(watr - deps, zeros)
@@ -312,6 +330,27 @@ class Processes(object):
                                             (m['pdrew'] - m['drew'])))
         m['tot_mass'] += abs(m['mass'])
         m['cum_mass'] += m['mass']
+
+    def _update_point_tracker(self, date, raster_point=None):
+
+        # tracker format ####
+        # ['rain', 'eta', 'snowfall', 'runoff', 'dr', 'pdr', 'de', 'pde', 'drew',
+        #  'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb',
+        #  'ke', 'pke', 'melt', 'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
+
+        m = self._master
+        tracker_from_master = [m['rain'], m['eta'], m['snow_fall'], m['ro'], m['dr'], m['pdr'], m['de'], m['pde'],
+                                    m['drew'], m['pdrew'], m['temp'], m['max_temp'], m['dp_r'], m['ks'], m['pks'],
+                                    m['etrs'], m['kcb'], m['ke'], m['pke'], m['mlt'], m['swe'], m['fs1'], m['ppt'],
+                                    m['kr'], m['pkr'], m['mass']]
+        if raster_point:
+            list_ = []
+            for item in tracker_from_master:
+                list_.append(item[raster_point])
+                self._tracker.iloc[date] = list_
+
+        else:
+            self._tracker.iloc[date] = tracker_from_master
 
     def _do_daily_raster_load(self, ndvi_path, prism_path, penman_path, date):
 

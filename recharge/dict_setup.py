@@ -24,6 +24,7 @@ dgketchum 24 JUL 2016
 from numpy import ones
 import os
 from datetime import datetime
+from pandas import DataFrame
 
 
 from recharge.raster_manager import ManageRasters
@@ -110,15 +111,15 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
 
 def initialize_tracker():
 
-    """ Create indices to plot point time series, these are empty lists that will
+    """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
 
-    tracker = {}
     tracker_keys = ['rain', 'eta', 'snowfall', 'runoff', 'dr', 'pdr', 'de', 'pde', 'drew',
                     'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb',
                     'ke', 'pke', 'melt', 'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
-    for key in tracker_keys:
-        tracker.update({key: []})
+
+    tracker = DataFrame(columns=tracker_keys)
+
     return tracker
 
 # ============= EOF =============================================

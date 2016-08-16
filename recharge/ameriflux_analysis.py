@@ -35,12 +35,11 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
     amf_dict = amf_obs_time_series(ameriflux_dict, amf_file_path, save_cleaned_data_path=False)
 
     get_etrm_time_series(amf_dict, inputs_path=etrm_extract)
-    etrm = Processes(static_inputs=static_inputs, point=True, point_dict=ameriflux_dict,
+    etrm = Processes(static_inputs=static_inputs, point_dict=ameriflux_dict,
                      initial_inputs=initial_path)
     for key, val in amf_dict.iteritems():
-        etrm.run(simulation_period, point_dict=amf_dict[key])
-
-    print amf_dict
+        tracker = etrm.run(simulation_period, point_dict=amf_dict[key])
+        print tracker
 
     return None
 
