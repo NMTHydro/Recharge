@@ -2,7 +2,8 @@
 # Copyright 2016 dgketchum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# you may not use this file except in compliance
+# with the License.
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
@@ -34,7 +35,7 @@ from recharge.point_extract_utility import get_static_inputs_at_point
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.15,
                   max_basal_crop_coef=1.2, snow_alpha=0.2, snow_beta=11.0,
-                  max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90):
+                  max_ke=0.8, min_snow_albedo=0.45, max_snow_albedo=0.90):
 
     monsoon_dates = datetime(1900, 6, 1), datetime(1900, 10, 1)
     start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
@@ -67,19 +68,20 @@ def initialize_static_dict(inputs_path, point_dict=None):
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
     static_dict = {}
     statics = sorted(statics, key=lambda s: s.lower())
-    print statics
-    print static_keys
+
     if point_dict:
         for key, val in point_dict.iteritems():
             coords = val['Coords']
+            static_dict.update({key: {}})
             for filename, value in zip(statics, static_keys):
                 full_path = os.path.join(inputs_path, filename)
-                static_dict.update({value: get_static_inputs_at_point(coords, full_path)})
+                static_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
 
     else:
         static_arrays = [ras.convert_raster_to_array(inputs_path, filename, minimum_value=0.0) for filename in statics]
         for key, data in zip(static_keys, static_arrays):
             static_dict.update({key: data})
+
     return static_dict
 
 
