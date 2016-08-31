@@ -41,8 +41,8 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
         cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_pm', 'plant height', 'min temp',
                 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
         df = DataFrame(arr, index=new_ind, columns=cols)
-        dict_[name].update({'etrm': df})
-        return None
+        dict_.update({'etrm': df})
+    return None
 
 
 def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False):
@@ -140,7 +140,7 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
             df.to_csv('{}\\{}_cleaned_all.csv'.format(save_cleaned_data_path, amf_name))
             df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))
 
-        val.update({'Dataframe': df})
+        val.update({'AMF_Data': df})
 
     return dict_
 

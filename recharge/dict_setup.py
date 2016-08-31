@@ -49,13 +49,10 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
     return dictionary
 
 
-def initialize_master_dict(list_of_variables):
+def initialize_master_dict():
     """create an empty dict that will carry ETRM-derived values day to day"""
 
-    dictionary = {}
-    for key in list_of_variables:
-        dictionary.update({key: 0.0})
-    return dictionary
+    return {}
 
 
 def initialize_static_dict(inputs_path, point_dict=None):
@@ -109,14 +106,13 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     return initial_cond_dict
 
 
-def initialize_tracker():
+def initialize_tracker(master):
 
     """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
 
-    tracker_keys = ['rain', 'eta', 'snowfall', 'runoff', 'dr', 'pdr', 'de', 'pde', 'drew',
-                    'pdrew', 'temp', 'max_temp', 'recharge', 'ks', 'pks', 'etrs', 'kcb',
-                    'ke', 'pke', 'melt', 'swe', 'fs1', 'precip', 'kr', 'pkr', 'mass']
+    tracker_keys = [key for key, val in master.iteritems()]
+    tracker_keys.sort()
 
     tracker = DataFrame(columns=tracker_keys)
 

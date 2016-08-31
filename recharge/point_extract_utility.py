@@ -28,7 +28,7 @@ def get_static_inputs_by_shapefile(shp_path, static_inputs_path):
     layer = shapefile.GetLayer()
     for feature in layer:
         name = feature.GetField('Name')
-        print name
+        # print name
         geometry = feature.GetGeometryRef()
         xx, yy = geometry.GetX(), geometry.GetY()
         obj = get_static_inputs_at_point('{} {}'.format(xx, yy), static_inputs_path)
