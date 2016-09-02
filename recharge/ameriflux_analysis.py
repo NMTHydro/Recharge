@@ -35,8 +35,7 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
     amf_dict = amf_obs_time_series(ameriflux_dict, amf_file_path, save_cleaned_data_path=False)
     # print 'amf dict w/ AMF time series: \n{}'.format(amf_dict)
 
-    for key, val in amf_dict.iteritems():
-        get_etrm_time_series(amf_dict[key], inputs_path=etrm_extract)
+    get_etrm_time_series(amf_dict, inputs_path=etrm_extract)
     # print 'amf dict w/ etrm input time series: \n{}'.format(amf_dict)  # fix this so it appends to all sites
 
     etrm = Processes(static_inputs=static_inputs, point_dict=amf_dict,
@@ -46,7 +45,7 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
     for key, val in amf_dict.iteritems():
         print 'key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=amf_dict[key])
+        tracker = etrm.run(simulation_period, point_dict=amf_dict[key], point_dict_key=key)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = '{}\\{}.csv'.format(save_csv, key)
         print 'this should be your csv: {}'.format(csv_path_filename)

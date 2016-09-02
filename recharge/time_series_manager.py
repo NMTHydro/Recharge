@@ -29,7 +29,7 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
     os.chdir(folder)
     csv_list = os.listdir(folder)
     csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
-    print 'csv list: \n{}'.format(csv_list)
+    print 'etrm extract csv list: \n{}'.format(csv_list)
     for file_ in csv_list:
         csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
         name = file_.strip('AMF').strip('_extract.csv')
@@ -41,7 +41,7 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
         cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_pm', 'plant height', 'min temp',
                 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
         df = DataFrame(arr, index=new_ind, columns=cols)
-        dict_.update({'etrm': df})
+        dict_[name].update({'etrm': df})
     return None
 
 
@@ -68,12 +68,12 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
         hour_split = str(hour_dec).split('.')
         hour, hour_part = int(hour_split[0]), float('.{}'.format(hour_split[1]))
         min_part = str(hour_part * 60).split('.')
-        min = int(min_part[0])
-        if min == 29:
-            min = 30
-        if min == 59:
-            min = 0
-        tup = datetime(year, 1, 1) + timedelta(days=day, hours=hour, minutes=min)
+        min_ = int(min_part[0])
+        if min_ == 29:
+            min_ = 30
+        if min_ == 59:
+            min_ = 0
+        tup = datetime(year, 1, 1) + timedelta(days=day, hours=hour, minutes=min_)
         return tup
 
     for key, val in dict_.iteritems():
@@ -141,7 +141,6 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
             df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))
 
         val.update({'AMF_Data': df})
-
     return dict_
 
 

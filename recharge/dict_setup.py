@@ -34,8 +34,8 @@ from recharge.point_extract_utility import get_static_inputs_at_point
 
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.15,
-                  max_basal_crop_coef=1.2, snow_alpha=0.2, snow_beta=11.0,
-                  max_ke=0.8, min_snow_albedo=0.45, max_snow_albedo=0.90):
+                  max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
+                  max_ke=1.1, min_snow_albedo=0.45, max_snow_albedo=0.90):
 
     monsoon_dates = datetime(1900, 6, 1), datetime(1900, 10, 1)
     start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
@@ -97,9 +97,10 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     if point_dict:
         for key, val in point_dict.iteritems():
             coords = val['Coords']
+            initial_cond_dict.update({key: {}})
             for filename, value in zip(initial_cond, initial_cond_keys):
                 full_path = os.path.join(initial_inputs_path, filename)
-                initial_cond_dict.update({value: get_static_inputs_at_point(coords, full_path)})
+                initial_cond_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
 
     else:
         initial_cond_arrays = [ras.convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
