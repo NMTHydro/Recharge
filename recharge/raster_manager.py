@@ -22,7 +22,11 @@ run_distributed_ETRM does all the work
 dgketchum 24 JUL 2016
 """
 
-from osgeo import gdal
+try:
+    from osgeo import gdal
+except ImportError:
+    pass
+
 from numpy import array, ones, maximum
 from calendar import monthrange
 from datetime import datetime
