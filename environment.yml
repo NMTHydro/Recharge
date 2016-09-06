@@ -14,9 +14,6 @@ dependencies:
 - jbig=2.1=0
 - jinja2=2.8=py27_1
 - jpeg=8d=1
-- kealib=1.4.5=2
-- libgdal=2.0.0=4
-- libnetcdf=4.4.0=1
 - libpng=1.6.22=0
 - libtiff=4.0.6=2
 - markupsafe=0.23=py27_2
