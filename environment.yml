@@ -7,7 +7,6 @@ dependencies:
 - dateutil=2.4.1=py27_0
 - docutils=0.12=py27_2
 - freetype=2.5.5=1
-- gdal=2.0.0=np111py27_3
 - geos=3.4.2=0
 - hdf4=4.2.11=0
 - hdf5=1.8.16=0
