@@ -13,15 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-"""
-The purpose of this module is update the etrm master dict daily.  It should work for both point and
-distributed model runs
-See functions for explanations.
 
-Returns dict with all rasters under keys of etrm variable names.
-
-dgketchum 24 JUL 2016
-"""
 
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp
 from datetime import datetime, timedelta
@@ -34,7 +26,15 @@ from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 
 class Processes(object):
+    """
+    The purpose of this class is update the etrm master dict daily.  It should work for both point and
+    distributed model runs
+    See functions for explanations.
 
+    Returns dict with all rasters under keys of etrm variable names.
+
+    dgketchum 24 JUL 2016
+    """
     _tracker = None
     _point_dict_key = None
 
@@ -80,7 +80,18 @@ class Processes(object):
 
     def run(self, date_range, out_pack=None, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None):
+        """
+        I need a docstring
 
+        :param date_range:
+        :param out_pack:
+        :param ndvi_path:
+        :param prism_path:
+        :param penman_path:
+        :param point_dict:
+        :param point_dict_key:
+        :return:
+        """
         self._point_dict_key = point_dict_key
         m = self._master
         s = self._static
