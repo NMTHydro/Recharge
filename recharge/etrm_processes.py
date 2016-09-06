@@ -152,7 +152,8 @@ class Processes(object):
                 self._update_point_tracker(day)
 
             if point_dict and day == end_date:
-                print 'sample of the tracker:\n {}'.format(self._tracker.head(25))
+                self._get_tracker_summary(self._tracker, point_dict_key)
+
                 return self._tracker
 
     def _do_dual_crop_coefficient(self):
@@ -288,17 +289,17 @@ class Processes(object):
 
         melt = (1 - a) * R_sw * alpha + (T_air -  1.5) * beta
 
-        where melt is snow melt (SWE, [mm]), ai is albedo [-], Rsw is incoming shortwave radiation [W m-2], α is the
-        radiation-term calibration coefficient [-], T is temperature [deg C], and ß is the temperature correlation
+        where melt is snow melt (SWE, [mm]), ai is albedo [-], Rsw is incoming shortwave radiation [W m-2], alpha is the
+        radiation-term calibration coefficient [-], T is temperature [deg C], and beta is the temperature correlation
         coefficient [-]
         Albedo is computed each time step, is reset following any new snowfall exceeding 3 mm SWE to 0.90, and decays
          according to an equation after Rohrer (1991):
 
          a(i) = a_min + (a(i-1) - a_min) * f(T_air)
 
-        where ai and ai – 1 are albedo on the current and previous day, respectively, amin is the minimum albedo of
-        0.45 (Wiscombe and Warren; 1980), aprev is the previous day’s albedo, and k is the decay constant.  The decay
-        constant varies depending on temperature, after Rohrer (1991).
+        where a(i) and a(i - 1) are albedo on the current and previous day, respectively, a(min) is the minimum albedo of
+        of 0.45 (Wiscombe and Warren: 1980), a(i - 1) is the previous day's albedo, and k is the decay constant. The
+        decay  constant varies depending on temperature, after Rohrer (1991).
 
 
         :return: None
@@ -412,7 +413,7 @@ class Processes(object):
                 if water > m['soil_ksat']:
                     m['ro'] = water - m['soil_ksat']
                     water = m['soil_ksat']
-                    print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
+                    # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
             else:
                 print 'warning: water in rew not calculated'
 
@@ -592,6 +593,35 @@ class Processes(object):
 
     def _cells(self, raster):
         return raster[480:485, 940:945]
+
+    def _get_tracker_summary(self, tracker, name):
+        s = self._static[name]
+        print 'summary stats for {}:\n{}'.format(name, tracker.describe())
+        print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
+                                                                                      tracker['evap_2'].sum(),
+                                                                                      tracker['evap_1'].sum() +
+                                                                                      tracker['evap_2'].sum(),
+                                                                                      tracker['evap'].sum())
+        print 'total transpiration = {}'.format(tracker['transp'].sum())
+        depletions = ['drew', 'de', 'dr']
+        capacities = [s['rew'], s['tew'], s['taw']]
+        starting_water = sum([x - tracker[y][0] for x, y in zip(capacities, depletions)])
+        ending_water = sum([x - tracker[y][-1] for x, y in zip(capacities, depletions)])
+        delta_soil_water = ending_water - starting_water
+        print 'soil water change = {}'.format(delta_soil_water)
+        print 'input precip = {}, rain = {}, melt = {}'.format(tracker['ppt'].sum(), tracker['rain'].sum(),
+                                                               tracker['mlt'].sum())
+        print 'remaining snow on ground (swe) = {}'.format(tracker['swe'][-1])
+        input_sum = sum([tracker['swe'][-1], tracker['mlt'].sum(), tracker['rain'].sum()])
+        print 'swe + melt + rain ({}) should equal ppt ({})'.format(input_sum, tracker['ppt'].sum())
+        print 'total inputs (swe, rain, melt): {}'.format(input_sum)
+        print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['dp_r'].sum())
+        output_sum = sum([tracker['transp'].sum(), tracker['evap'].sum(), tracker['ro'].sum(), tracker['dp_r'].sum(),
+                          delta_soil_water])
+        print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
+        mass_balance = input_sum - output_sum
+        mass_percent = (mass_balance / input_sum) * 100
+        print 'overall water balance for {}: {}, or {} percent'.format(name, mass_balance, mass_percent)
 
     def _print_check(self, variable, category):
         print 'raster is {}'.format(category)
