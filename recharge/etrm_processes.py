@@ -71,12 +71,12 @@ class Processes(object):
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
 
-        self._master = initialize_master_dict()
-
         if point_dict:
             self._zeros, self._ones = 0.0, 1.0
         else:
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
+
+        self._master = initialize_master_dict(self._zeros)
 
     def run(self, date_range, out_pack=None, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None):
@@ -109,23 +109,17 @@ class Processes(object):
                                                       b=day.timetuple().tm_yday, c=day.year)
 
             if day == start_date:
-                m['pkcb'] = _zeros
-                m['tot_mass'] = _zeros
-                m['cum_mass'] = _zeros
                 m['albedo'] = 0.45
                 m['swe'] = _zeros  # this should be initialized correctly using simulation results
                 s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
                 if self._point_dict:
-                    m['pdr'] = self._initial[point_dict_key]['dr']
-                    m['pde'] = self._initial[point_dict_key]['de']
-                    m['pdrew'] = self._initial[point_dict_key]['drew']
+                    m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
+                    m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
+                    m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
                 else:
-                    m['pdr'] = self._initial['dr']
-                    m['pde'] = self._initial['de']
-                    m['pdrew'] = self._initial['drew']
-                m['dr'] = m['pdr']
-                m['de'] = m['pde']
-                m['drew'] = m['pdrew']
+                    m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
+                    m['pde'], m['de'] = self._initial['de'], self._initial['de']
+                    m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
             if self._point_dict:
                 self._do_daily_point_load(point_dict, day)
@@ -219,7 +213,9 @@ class Processes(object):
                 m['adjust_ke'] = 'False'
                 ke_adjustment = 1.0
         else:
-            pass  # distributed
+            m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
+            ke_adjustment = where(m['ke_init'] > m['few'] * c['kc_max'], m['ke'] / m['ke_init'], _ones)
+
         m['ke'] = minimum(m['ke'], _ones)
 
         # m['evap'] = m['ke'] * m['etrs']
@@ -483,15 +479,9 @@ class Processes(object):
         m['cum_eta'] = where(isnan(m['cum_eta']) == True, prev_et, m['cum_eta'])
         m['cum_eta'] = maximum(m['cum_eta'], _ones * 0.001)
 
-        m['cum_precip'] = m['precip'] + m['rain'] + m['snow_fall']
-        m['cum_precip'] = maximum(m['precip'], _zeros)
-
+        m['cum_precip'] += m['rain'] + m['snow_fall']
         m['cum_ro'] += m['ro']
-        m['cum_ro'] = maximum(m['cum_ro'], _zeros)
-
         m['cum_swe'] += m['swe']
-
-        m['tot_snow'] += m['snow_fall']
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -538,26 +528,26 @@ class Processes(object):
             # print 'master: {}'.format(m)
             self._tracker.loc[date] = tracker_from_master
 
-    def _do_daily_raster_load(self, ndvi_path, prism_path, penman_path, date):
+    def _do_daily_raster_load(self, ndvi, prism, penman, date):
 
         m = self._master
 
         m['pkcb'] = m['kcb']
-        m['kcb'] = get_ndvi(ndvi_path, m['pkcb'], date)
-        self._print_check(m['kcb'], 'daily kcb')
-        m['min_temp'] = get_prism(prism_path, date, variable='min_temp')
-        self._print_check(m['min_temp'], 'daily min_temp')
-        m['max_temp'] = get_prism(prism_path, date, variable='max_temp')
-        self._print_check(m['max_temp'], 'daily max_temp')
+        m['kcb'] = get_ndvi(ndvi, m['pkcb'], date)
+        # self._print_check(m['kcb'], 'daily kcb')
+        m['min_temp'] = get_prism(prism, date, variable='min_temp')
+        # self._print_check(m['min_temp'], 'daily min_temp')
+        m['max_temp'] = get_prism(prism, date, variable='max_temp')
+        # self._print_check(m['max_temp'], 'daily max_temp')
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-        self._print_check(m['temp'], 'daily temp')
-        m['ppt'], m['ppt_tom'] = get_prism(prism_path, date, variable='precip')
+        # self._print_check(m['temp'], 'daily temp')
+        m['ppt'], m['ppt_tom'] = get_prism(prism, date, variable='precip')
         # need to ensure nonnegative ppt
-        self._print_check(m['ppt'], 'daily ppt')
-        m['etrs'] = get_penman(penman_path, date, variable='etrs')
-        self._print_check(m['etrs'], 'daily etrs')
-        m['rg'] = get_penman(penman_path, date, variable='rg')
-        self._print_check(m['rg'], 'daily rg')
+        # self._print_check(m['ppt'], 'daily ppt')
+        m['etrs'] = get_penman(penman, date, variable='etrs')
+        # self._print_check(m['etrs'], 'daily etrs')
+        m['rg'] = get_penman(penman, date, variable='rg')
+        # self._print_check(m['rg'], 'daily rg')
         return None
 
     def _do_daily_point_load(self, point_dict, date):

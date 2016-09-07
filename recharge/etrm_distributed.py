@@ -16,7 +16,7 @@
 """
 The purpose of this module is to calculate recharge over a defined geographic area.
 
-this module provides (1) function -- run_distributed_ETRM.
+this module provides (1) function -- get_distributed_recharge.
 run_distributed_ETRM does all the work
 
 dgketchum 24 JUL 2016
@@ -44,7 +44,7 @@ def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, s
 
     etrm = Processes(static_inputs_path, initial_conditions_path)
 
-    etrm.run(date_range, ndvi, prism, penman, raster_out_data)
+    etrm.run(date_range, raster_out_data, ndvi, prism, penman)
 
     return None
 

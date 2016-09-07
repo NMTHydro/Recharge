@@ -50,10 +50,24 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
     return dictionary
 
 
-def initialize_master_dict():
+def initialize_master_dict(zeros):
     """create an empty dict that will carry ETRM-derived values day to day"""
 
-    return {}
+    master = dict()
+    master['pkcb'] = zeros
+    master['kcb'] = zeros
+    master['dp_r'] = zeros
+    master['tot_mass'] = zeros
+    master['cum_mass'] = zeros
+    master['cum_infil'] = zeros
+    master['cum_ref_et'] = zeros
+    master['infil'] = zeros
+    master['cum_eta'] = zeros
+    master['cum_precip'] = zeros
+    master['cum_ro'] = zeros
+    master['cum_swe'] = zeros
+
+    return master
 
 
 def initialize_static_dict(inputs_path, point_dict=None):

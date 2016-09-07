@@ -102,7 +102,7 @@ class ManageRasters(object):
         output_band.WriteArray(dictionary[key], 0, 0)
 
     def _open_raster(self, input_path, filename):
-        print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
+        # print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
         raster_open = gdal.Open('{a}\\{b}'.format(a=input_path, b=filename))
         return raster_open
             
