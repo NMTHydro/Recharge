@@ -123,6 +123,7 @@ class Processes(object):
 
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
+            # [mm/day] #
             if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
                 m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
@@ -136,8 +137,6 @@ class Processes(object):
 
             self._do_mass_balance()
 
-            self._do_accumulations()
-
             if day == start_date:
                 self._tracker = initialize_tracker(self._master)
 
@@ -145,6 +144,9 @@ class Processes(object):
                 self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
                                                 self._last_mo, self._outputs, day, out_pack, save_dates=None,
                                                 save_outputs=None)
+
+                self._do_accumulations()
+
                 if self._raster_point:
                     self._update_point_tracker(day, self._raster_point)
 
@@ -236,7 +238,7 @@ class Processes(object):
 
         ####
         # stage 2 coefficient
-        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] - s['rew']), _ones)
+        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), _ones)
 
         ####
         # check for stage 1 evaporation, i.e. drew < rew
@@ -260,9 +262,10 @@ class Processes(object):
             pass  # distributed
         m['ke'] = minimum(m['ke'], _ones)
 
-        m['evap'] = m['ke'] * m['etrs']
+        # m['evap'] = m['ke'] * m['etrs']
         m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
         m['evap_2'] = m['st_2_dur'] * m['kr'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
+        m['evap'] = m['evap_1'] + m['evap_2']
 
         m['eta'] = m['transp'] + m['evap']
 
@@ -378,6 +381,10 @@ class Processes(object):
 
             s = s[self._point_dict_key]
 
+            # give days with melt a daily ksat value
+            if m['rain'] < m['mlt']:
+                m['soil_ksat'] = s['soil_ksat']
+
             # update variables
             m['pdr'] = m['dr']
             m['pde'] = m['de']
@@ -391,11 +398,22 @@ class Processes(object):
             if m['evap_1'] > s['rew'] - m['drew']:
                 m['evap'] -= m['evap_1'] - (s['rew'] - m['drew'])
                 m['evap_1'] = s['rew'] - m['drew']
+                m['adjust_ev_1'] = 'True'
+            else:
+                m['adjust_ev_1'] = 'False'
+
             if m['evap_2'] > s['tew'] - m['de']:
                 m['evap'] -= m['evap_2'] - (s['tew'] - m['de'])
                 m['evap_2'] = s['tew'] - m['de']
+                m['adjust_ev_2'] = 'True'
+            else:
+                m['adjust_ev_2'] = 'False'
+
             if m['transp'] > s['taw'] - m['dr']:
                 m['transp'] = s['taw'] - m['dr']
+                m['adjust_transp'] = 'True'
+            else:
+                m['adjust_transp'] = 'False'
 
             # this is where a new day starts in terms of depletions (i.e. pdr vs dr) #
             # water balance through skin layer #
@@ -414,6 +432,8 @@ class Processes(object):
                     m['ro'] = water - m['soil_ksat']
                     water = m['soil_ksat']
                     # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
+                else:
+                    m['ro'] = 0.0
             else:
                 print 'warning: water in rew not calculated'
 
@@ -457,6 +477,8 @@ class Processes(object):
             m['pde'] = m['de']
             m['pdrew'] = m['drew']
 
+            m['soil_ksat'] = where(m['rain'] < m['mlt'], s['soil_ksat'], m['soil_ksat'])
+
             # impose limits on vaporization according to present depletions #
             # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
             m['evap_1'] = where(m['evap_1'] > s['rew'] - m['drew'], s['rew'] - m['drew'], m['evap_1'])
@@ -487,30 +509,29 @@ class Processes(object):
 
         :return: None
         """
-        pass
-        # m = self._master
-        # _ones = self._ones
-        # _zeros = self._zeros
-        #
-        # m['cum_infil'] += m['dp_r']
-        # m['cum_infil'] = maximum(m['infil'], _zeros)
-        #
-        # prev_et = m['cum_eta']
-        # m['cum_ref_et'] += m['etrs']
-        # m['cum_eta'] = m['cum_eta'] + m['evap'] + m['transp']
-        # m['et_ind'] = m['cum_eta'] / m['cum_ref_et']
-        # m['cum_eta'] = where(isnan(m['cum_eta']) == True, prev_et, m['cum_eta'])
-        # m['cum_eta'] = maximum(m['cum_eta'], _ones * 0.001)
-        #
-        # m['cum_precip'] = m['precip'] + m['rain'] + m['snow_fall']
-        # m['cum_precip'] = maximum(m['precip'], _zeros)
-        #
-        # m['cum_ro'] += m['ro']
-        # m['cum_ro'] = maximum(m['cum_ro'], _zeros)
-        #
-        # m['cum_swe'] += m['swe']
-        #
-        # m['tot_snow'] += m['snow_fall']
+        m = self._master
+        _ones = self._ones
+        _zeros = self._zeros
+
+        m['cum_infil'] += m['dp_r']
+        m['cum_infil'] = maximum(m['infil'], _zeros)
+
+        prev_et = m['cum_eta']
+        m['cum_ref_et'] += m['etrs']
+        m['cum_eta'] = m['cum_eta'] + m['evap'] + m['transp']
+        m['et_ind'] = m['cum_eta'] / m['cum_ref_et']
+        m['cum_eta'] = where(isnan(m['cum_eta']) == True, prev_et, m['cum_eta'])
+        m['cum_eta'] = maximum(m['cum_eta'], _ones * 0.001)
+
+        m['cum_precip'] = m['precip'] + m['rain'] + m['snow_fall']
+        m['cum_precip'] = maximum(m['precip'], _zeros)
+
+        m['cum_ro'] += m['ro']
+        m['cum_ro'] = maximum(m['cum_ro'], _zeros)
+
+        m['cum_swe'] += m['swe']
+
+        m['tot_snow'] += m['snow_fall']
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -597,6 +618,7 @@ class Processes(object):
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
         print 'summary stats for {}:\n{}'.format(name, tracker.describe())
+        print 'a look at vaporization:'
         print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
                                                                                       tracker['evap_2'].sum(),
                                                                                       tracker['evap_1'].sum() +
@@ -621,7 +643,8 @@ class Processes(object):
         print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
         mass_balance = input_sum - output_sum
         mass_percent = (mass_balance / input_sum) * 100
-        print 'overall water balance for {}: {}, or {} percent'.format(name, mass_balance, mass_percent)
+        print 'overall water balance for {} mm: {}, or {} percent'.format(name, mass_balance, mass_percent)
+        print ''
 
     def _print_check(self, variable, category):
         print 'raster is {}'.format(category)
