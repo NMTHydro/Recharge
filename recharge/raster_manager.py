@@ -22,11 +22,7 @@ run_distributed_ETRM does all the work
 dgketchum 24 JUL 2016
 """
 
-try:
-    from osgeo import gdal
-except ImportError:
-    pass
-
+from osgeo import gdal, ogr
 from numpy import array, ones, maximum
 from calendar import monthrange
 from datetime import datetime
@@ -35,15 +31,16 @@ import os
 
 class ManageRasters(object):
 
-    def __init__(self, raster, raster_path=None, polygon_path=None, temp_folder=None):
+    def __init__(self, raster, raster_path, polygon_paths=None, temp_folder=None, results_path=None):
 
-        self._raster = self._convert_raster_to_array(raster, raster_path)
+        self._array = self._convert_raster_to_array(raster, raster_path)
+        self._raster = self._get_raster(raster, raster_path)
 
         if temp_folder:
             self._temp_folder = temp_folder
 
-        if polygon_path:
-            self._polygon = self._get_shapefile_attributes(polygon_path)
+        if polygon_paths:
+            self._polygon = self._get_shapefile_attributes(polygon_paths, self._raster, temp_folder)
 
     def update_save_raster(self, master, annual_dict, monthly_dict, last_month_master, last_year_master,
                            outputs, date_object, raster_output_data, save_specific_dates=None, save_outputs=None):
@@ -70,7 +67,7 @@ class ManageRasters(object):
         os.chdir(self._temp_folder)
 
     def _convert_raster_to_array(self, input_raster_path, raster,
-                                minimum_value=None, band=1):
+                                 minimum_value=None, band=1):
         # if not raster:
         ras = self._open_raster(input_path=input_raster_path, filename=raster)
         ras = array(ras.GetRasterBand(band).ReadAsArray(), dtype=float)
@@ -79,7 +76,8 @@ class ManageRasters(object):
             ras = maximum(ras, min_val)
         return ras
 
-    def _get_shapefile_attributes(self, polygon):
+    def _get_shapefile_attributes(self, polygons, raster, temp):
+
         return None
 
     def _update(self, master_dict, previous_master, cumulative_dict, var):
