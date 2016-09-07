@@ -24,10 +24,10 @@ dgketchum 24 JUL 2016
 
 from numpy import where, isnan
 from datetime import timedelta
-from recharge.raster_manager import ManageRasters
+from recharge.raster_manager import Rasters
 import os
 
-rta = ManageRasters()
+rta = Rasters()
 
 
 def get_ndvi(in_path, previous_kcb, date_object):

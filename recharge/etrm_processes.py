@@ -20,8 +20,8 @@ from datetime import datetime, timedelta
 from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
-    initialize_tracker, set_constants
-from recharge.raster_manager import ManageRasters
+     initialize_tracker, set_constants
+from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
 
@@ -40,16 +40,18 @@ class Processes(object):
 
     def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
-        self._raster = ManageRasters()
+        self._raster = Rasters()
 
         self._raster_point = raster_point
 
         self._point_dict = point_dict
-        self._outputs = ['cum_ref_et', 'cum_eta', 'cum_precip', 'cum_ro', 'tot_snow']
+        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe']
+
         self._output_an = {}
         self._output_mo = {}
         self._last_mo = {}
         self._last_yr = {}
+
         for key in self._outputs:
             self._output_an.update({key: []})
             self._output_mo.update({key: []})
@@ -109,6 +111,7 @@ class Processes(object):
                                                       b=day.timetuple().tm_yday, c=day.year)
 
             if day == start_date:
+                m['first_day'] = True
                 m['albedo'] = 0.45
                 m['swe'] = _zeros  # this should be initialized correctly using simulation results
                 s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
@@ -120,6 +123,8 @@ class Processes(object):
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+            else:
+                m['first_day'] = False
 
             if self._point_dict:
                 self._do_daily_point_load(point_dict, day)
@@ -469,19 +474,19 @@ class Processes(object):
         _ones = self._ones
         _zeros = self._zeros
 
-        m['cum_infil'] += m['dp_r']
-        m['cum_infil'] = maximum(m['infil'], _zeros)
+        m['tot_infil'] += m['dp_r']
+        m['tot_infil'] = maximum(m['infil'], _zeros)
 
-        prev_et = m['cum_eta']
-        m['cum_ref_et'] += m['etrs']
-        m['cum_eta'] = m['cum_eta'] + m['evap'] + m['transp']
-        m['et_ind'] = m['cum_eta'] / m['cum_ref_et']
-        m['cum_eta'] = where(isnan(m['cum_eta']) == True, prev_et, m['cum_eta'])
-        m['cum_eta'] = maximum(m['cum_eta'], _ones * 0.001)
+        prev_et = m['tot_eta']
+        m['tot_ref_et'] += m['etrs']
+        m['tot_eta'] = m['tot_eta'] + m['evap'] + m['transp']
+        m['et_ind'] = m['tot_eta'] / m['tot_ref_et']
+        m['tot_eta'] = where(isnan(m['tot_eta']) == True, prev_et, m['tot_eta'])
+        m['tot_eta'] = maximum(m['tot_eta'], _ones * 0.001)
 
-        m['cum_precip'] += m['rain'] + m['snow_fall']
-        m['cum_ro'] += m['ro']
-        m['cum_swe'] += m['swe']
+        m['tot_precip'] += m['rain'] + m['snow_fall']
+        m['tot_ro'] += m['ro']
+        m['tot_swe'] += m['swe']
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -505,7 +510,7 @@ class Processes(object):
                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                             (m['pdrew'] - m['drew'])))
         m['tot_mass'] += abs(m['mass'])
-        m['cum_mass'] += m['mass']
+        m['tot_mass'] += m['mass']
 
     def _update_point_tracker(self, date, raster_point=None):
 

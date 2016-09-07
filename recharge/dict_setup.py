@@ -28,7 +28,7 @@ from datetime import datetime
 from pandas import DataFrame
 
 
-from recharge.raster_manager import ManageRasters
+from recharge.raster_manager import Rasters
 from recharge.point_extract_utility import get_static_inputs_at_point
 
 
@@ -58,14 +58,14 @@ def initialize_master_dict(zeros):
     master['kcb'] = zeros
     master['dp_r'] = zeros
     master['tot_mass'] = zeros
-    master['cum_mass'] = zeros
-    master['cum_infil'] = zeros
-    master['cum_ref_et'] = zeros
+    master['tot_mass'] = zeros
+    master['tot_infil'] = zeros
+    master['tot_ref_et'] = zeros
     master['infil'] = zeros
-    master['cum_eta'] = zeros
-    master['cum_precip'] = zeros
-    master['cum_ro'] = zeros
-    master['cum_swe'] = zeros
+    master['tot_eta'] = zeros
+    master['tot_precip'] = zeros
+    master['tot_ro'] = zeros
+    master['tot_swe'] = zeros
 
     return master
 
@@ -78,7 +78,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
     static_keys = ['bed_ksat', 'plant_height', 'quat_deposits', 'root_z', 'soil_ksat', 'taw', 'tew']
 
-    ras = ManageRasters()
+    ras = Rasters()
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
     static_dict = {}
     statics = sorted(statics, key=lambda s: s.lower())
@@ -104,7 +104,7 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
 
     initial_cond_keys = ['de', 'dr', 'drew']
 
-    ras = ManageRasters()
+    ras = Rasters()
     initial_cond = [filename for filename in os.listdir(initial_inputs_path) if filename.endswith('.tif')]
     initial_cond.sort()
     initial_cond_dict = {}

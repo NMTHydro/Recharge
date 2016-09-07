@@ -23,51 +23,20 @@ dgketchum 24 JUL 2016
 """
 
 from osgeo import gdal, ogr
-from numpy import array, ones, maximum
+from numpy import array, ones, maximum, where, zeros
 from calendar import monthrange
 from datetime import datetime
+from pandas import DataFrame
 import os
 
 
-class ManageRasters(object):
+class Rasters(object):
 
-    def __init__(self, raster, raster_path, polygon_paths=None, temp_folder=None, results_path=None):
+    def __init__(self):
+        pass
 
-        self._array = self._convert_raster_to_array(raster, raster_path)
-        self._raster = self._get_raster(raster, raster_path)
-
-        if temp_folder:
-            self._temp_folder = temp_folder
-
-        if polygon_paths:
-            self._polygon = self._get_shapefile_attributes(polygon_paths, self._raster, temp_folder)
-
-    def update_save_raster(self, master, annual_dict, monthly_dict, last_month_master, last_year_master,
-                           outputs, date_object, raster_output_data, save_specific_dates=None, save_outputs=None):
-
-        mo_date = monthrange(date_object.year, date_object.month)
-        if save_specific_dates:
-            # save data for a certain day
-            for element in save_outputs:
-                self._update(master, monthly_dict, last_month_master, element)
-                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
-        # save monthly data
-        if date_object.day == mo_date[1]:
-            for element in outputs:
-                self._update(master, monthly_dict, last_month_master, element)
-                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
-        # save annual data
-        if date_object.day == 31 and date_object.month == 12:
-            for element in outputs:
-                self._update(master, annual_dict, last_year_master, element)
-                self._write_raster(annual_dict, element, date_object, raster_output_data, period='annual')
-        return None
-
-    def tabulate_results_per_polygon(self):
-        os.chdir(self._temp_folder)
-
-    def _convert_raster_to_array(self, input_raster_path, raster,
-                                 minimum_value=None, band=1):
+    def convert_raster_to_array(self, input_raster_path, raster,
+                                minimum_value=None, band=1):
         # if not raster:
         ras = self._open_raster(input_path=input_raster_path, filename=raster)
         ras = array(ras.GetRasterBand(band).ReadAsArray(), dtype=float)
@@ -76,13 +45,50 @@ class ManageRasters(object):
             ras = maximum(ras, min_val)
         return ras
 
-    def _get_shapefile_attributes(self, polygons, raster, temp):
+    def update_save_raster(self, master, annual_dict, monthly_dict, last_month_master, last_year_master,
+                           outputs, date_object, raster_output_data, shapefiles=None,
+                           save_specific_dates=None, save_outputs=None):
+
+        mo_date = monthrange(date_object.year, date_object.month)
+
+        if save_specific_dates:
+            # save data for a certain day
+            for element in save_outputs:
+                self._update(master, monthly_dict, last_month_master, element, master['first_day'])
+                written_raster = self._write_raster(monthly_dict, element, date_object, raster_output_data,
+                                                    period='monthly')
+                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
+                                          outputs, master['first_day'])
+
+        # save monthly data
+        if date_object.day == mo_date[1]:
+            for element in outputs:
+                self._update(master, monthly_dict, last_month_master, element, master['first_day'])
+                written_raster = self._write_raster(monthly_dict, element, date_object, raster_output_data,
+                                                    period='monthly')
+                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
+                                          outputs, master['first_day'])
+
+        # save annual data
+        if date_object.day == 31 and date_object.month == 12:
+            for element in outputs:
+                self._update(master, annual_dict, last_year_master, element, master['first_day'])
+                written_raster = self._write_raster(annual_dict, element, date_object, raster_output_data,
+                                                    period='annual')
+                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
+                                          outputs, master['first_day'])
 
         return None
 
-    def _update(self, master_dict, previous_master, cumulative_dict, var):
-        cumulative_dict[var] = master_dict[var] - previous_master[var]
-        previous_master[var] = master_dict[var]
+    def _update(self, master_dict, previous_master, cumulative_dict, var, first):
+
+        if first:
+            cumulative_dict[var] = master_dict[var]
+            previous_master[var] = master_dict[var]
+        else:
+            cumulative_dict[var] = master_dict[var] - previous_master[var]
+            previous_master[var] = master_dict[var]
+
         return None
 
     def _write_raster(self, dictionary, key, date, raster_output_data, period=None):
@@ -112,11 +118,68 @@ class ManageRasters(object):
         out_data_set.SetProjection(projection)
         output_band = out_data_set.GetRasterBand(1)
         output_band.WriteArray(dictionary[key], 0, 0)
-        return None
+        return filename
+
+    def _sum_raster_by_shape(self, shapes, temp_folder, raster_name, parameter, date, outputs,
+                             first):
+        folders = os.listdir(shapes)
+        if first:
+            af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
+            tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
+            tabular_output = DataFrame(columns=tabular_cols)
+            tabular_dict = {}
+            for in_fold in folders:
+                region_type = os.path.basename(in_fold).strip('_Polygons')
+                tabular_dict.update({region_type: {}})
+                os.chdir(os.path.join(shapes,in_fold))
+                for root, dirs, files in os.walk(".", topdown=False):
+                    for element in files:
+                        if element.endswith('.shp'):
+                            sub_region = element.strip('.shp')
+                            tabular_dict[region_type].update({sub_region: tabular_output})
+
+        print 'your tabular results dict:\n'.format(tabular_dict)
+
+        for in_fold in folders:
+            print in_fold
+            region_type = os.path.basename(in_fold).strip('_Polygons')
+            os.chdir(os.path.join(shapes, in_fold))
+            for root, dirs, files in os.walk(".", topdown=False):
+                for element in files:
+                    if element.endswith('.shp'):
+                        sub_region = element.strip('.shp')
+                        shp_name = os.path.join(shapes, in_fold, element)
+                        polygon = ogr.Open(shp_name)
+                        layer = polygon.GetLayer()
+                        raster = gdal.Open(raster_name)
+                        geotransform = raster.GetGeoTransform()
+                        col, row = raster.RasterXSize, raster.RasterYSize
+                        mask_raster = gdal.GetDriverByName('GTiff').Create(temp_folder, col, row, 1, gdal.GDT_Byte)
+                        mask_raster.SetProjection(layer.GetSpatialRef().ExportToWkt())
+                        mask_raster.SetGeoTransform(geotransform)
+                        raster_band = mask_raster.GetRasterBand(1)
+                        raster_band.SetNoDataValue(0.0)
+                        raster_band.Fill(0.0)
+                        gdal.RasterizeLayer(mask_raster, [1], layer, options=["ALL_TOUCHED=TRUE",
+                                                                              "OGRLayerShadow=FALSE"])
+                        mask_raster.FlushCache()
+                        mask_array = mask_raster.GetRasterBand(1).ReadAsArray()
+                        mask_array = array(mask_array)
+
+                        param_obj = array(raster.GetRasterBand(1).ReadAsArray(), dtype=float)
+                        param_obj = where(mask_array > 0, param_obj, zeros(param_obj.shape))
+                        param_sum = sum(param_obj)
+                        param_cubic_meters = (param_sum / 1000) * (250 ** 2)
+                        param_acre_feet = param_cubic_meters / 1233.48
+                        df = tabular_dict[region_type][sub_region]
+                        df['{}_[cbm]'.format(parameter)].loc[date] = param_cubic_meters
+                        df['{}_[AF]'.format(parameter)].loc[date] = param_acre_feet
+
+        os.remove(os.path.join(temp_folder, 'temp.tif'))
 
     def _open_raster(self, input_path, filename):
         # print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
         raster_open = gdal.Open('{a}\\{b}'.format(a=input_path, b=filename))
         return raster_open
-            
+
 # ============= EOF =============================================
