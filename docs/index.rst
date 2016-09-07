@@ -14,7 +14,7 @@ Contents:
    quick_start
    install
    config
-   model
+   etrm_model
    style_guide
    api
 

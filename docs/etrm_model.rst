@@ -3,6 +3,7 @@ ETRM Model
 
 How Dual Crop Coefficients are calculated
 -----------------------------------------
+See :meth:`recharge.etrm_processes.Processes._do_dual_crop_coefficient`
 
 The well-established FAO Penman-Monteith dual crop coefficient(DCC) method finds a reference evapotranspiration
 value from which actual transpiration can be derived.  See GADGET documentation for a description of tall crop
