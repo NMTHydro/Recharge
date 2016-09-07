@@ -147,7 +147,7 @@ class Processes(object):
 
             if not point_dict:
                 self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
-                                                self._last_mo, self._outputs, day, out_pack, save_dates=None,
+                                                self._last_mo, self._outputs, day, out_pack, save_specific_dates=None,
                                                 save_outputs=None)
 
                 self._do_accumulations()

@@ -35,10 +35,41 @@ import os
 
 class ManageRasters(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, raster, raster_path=None, polygon_path=None, temp_folder=None):
 
-    def convert_raster_to_array(self, input_raster_path, raster,
+        self._raster = self._convert_raster_to_array(raster, raster_path)
+
+        if temp_folder:
+            self._temp_folder = temp_folder
+
+        if polygon_path:
+            self._polygon = self._get_shapefile_attributes(polygon_path)
+
+    def update_save_raster(self, master, annual_dict, monthly_dict, last_month_master, last_year_master,
+                           outputs, date_object, raster_output_data, save_specific_dates=None, save_outputs=None):
+
+        mo_date = monthrange(date_object.year, date_object.month)
+        if save_specific_dates:
+            # save data for a certain day
+            for element in save_outputs:
+                self._update(master, monthly_dict, last_month_master, element)
+                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
+        # save monthly data
+        if date_object.day == mo_date[1]:
+            for element in outputs:
+                self._update(master, monthly_dict, last_month_master, element)
+                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
+        # save annual data
+        if date_object.day == 31 and date_object.month == 12:
+            for element in outputs:
+                self._update(master, annual_dict, last_year_master, element)
+                self._write_raster(annual_dict, element, date_object, raster_output_data, period='annual')
+        return None
+
+    def tabulate_results_per_polygon(self):
+        os.chdir(self._temp_folder)
+
+    def _convert_raster_to_array(self, input_raster_path, raster,
                                 minimum_value=None, band=1):
         # if not raster:
         ras = self._open_raster(input_path=input_raster_path, filename=raster)
@@ -48,24 +79,7 @@ class ManageRasters(object):
             ras = maximum(ras, min_val)
         return ras
 
-    def update_save_raster(self, master, annual_dict,  monthly_dict, last_month_master, last_year_master,
-                           outputs, date_object, raster_output_data, save_dates=None, save_outputs=None):
-
-        mo_date = monthrange(date_object.year, date_object.month)
-        if save_dates:
-            for element in save_outputs:
-                self._update(master, monthly_dict, last_month_master, element)
-                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
-
-        if date_object.day == mo_date[1]:
-            for element in outputs:
-                self._update(master, monthly_dict, last_month_master, element)
-                self._write_raster(monthly_dict, element, date_object, raster_output_data, period='monthly')
-
-        if date_object.day == 31 and date_object.month == 12:
-            for element in outputs:
-                self._update(master, annual_dict, last_year_master, element)
-                self._write_raster(annual_dict, element, date_object, raster_output_data, period='annual')
+    def _get_shapefile_attributes(self, polygon):
         return None
 
     def _update(self, master_dict, previous_master, cumulative_dict, var):
@@ -100,6 +114,7 @@ class ManageRasters(object):
         out_data_set.SetProjection(projection)
         output_band = out_data_set.GetRasterBand(1)
         output_band.WriteArray(dictionary[key], 0, 0)
+        return None
 
     def _open_raster(self, input_path, filename):
         # print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
