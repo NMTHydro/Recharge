@@ -381,7 +381,7 @@ class Processes(object):
 
             s = s[self._point_dict_key]
 
-            # give days with melt a daily ksat value
+            # give days with melt a ksat value for entire day
             if m['rain'] < m['mlt']:
                 m['soil_ksat'] = s['soil_ksat']
 
