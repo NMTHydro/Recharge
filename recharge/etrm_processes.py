@@ -81,7 +81,7 @@ class Processes(object):
     def run(self, date_range, out_pack=None, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None):
         """
-        I need a docstring
+        Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
         :param date_range:
         :param out_pack:
