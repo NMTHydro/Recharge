@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
-     initialize_tracker, set_constants
+     initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
@@ -35,8 +35,10 @@ class Processes(object):
 
     dgketchum 24 JUL 2016
     """
-    _tracker = None
+    _point_tracker = None
     _point_dict_key = None
+    _results_directory = None
+    _tabulated_dict = None
 
     def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
@@ -47,46 +49,38 @@ class Processes(object):
         self._point_dict = point_dict
         self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe']
 
-        self._output_an = {}
-        self._output_mo = {}
-        self._last_mo = {}
-        self._last_yr = {}
-
-        for key in self._outputs:
-            self._output_an.update({key: []})
-            self._output_mo.update({key: []})
-            self._last_mo.update({key: []})
-            self._last_yr.update({key: []})
-
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
         self._constants = set_constants()
 
+        # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
+        # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
+        # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
         if point_dict:
             self._static = initialize_static_dict(static_inputs, point_dict)
             print 'intitialized static dict:\n{}'.format(self._static)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
             print 'intitialized initial conditions dict:\n{}'.format(self._initial)
+            self._zeros, self._ones = 0.0, 1.0
 
         else:
             self._static = initialize_static_dict(static_inputs)
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
-
-        if point_dict:
-            self._zeros, self._ones = 0.0, 1.0
-        else:
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
+            # define the monthly and annual raster trackers #
+            self._raster_tracker = initialize_raster_tracker(self._outputs, self._shape)
+            print self._raster_tracker
 
         self._master = initialize_master_dict(self._zeros)
 
-    def run(self, date_range, out_pack=None, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None):
+    def run(self, date_range, results_path=None, ndvi_path=None, prism_path=None, penman_path=None,
+            point_dict=None, point_dict_key=None, polygons=None):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
         :param date_range:
-        :param out_pack:
+        :param results_path:
         :param ndvi_path:
         :param prism_path:
         :param penman_path:
@@ -94,6 +88,7 @@ class Processes(object):
         :param point_dict_key:
         :return:
         """
+
         self._point_dict_key = point_dict_key
         m = self._master
         s = self._static
@@ -111,10 +106,12 @@ class Processes(object):
                                                       b=day.timetuple().tm_yday, c=day.year)
 
             if day == start_date:
+
                 m['first_day'] = True
                 m['albedo'] = 0.45
                 m['swe'] = _zeros  # this should be initialized correctly using simulation results
                 s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
+
                 if self._point_dict:
                     m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
                     m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
@@ -123,6 +120,10 @@ class Processes(object):
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+
+                    self._results_directory = self._raster.make_results_dir(results_path, polygons)
+                    self._tabulated_dict = initialize_tabular_dict(polygons, self._outputs)
+
             else:
                 m['first_day'] = False
 
@@ -148,11 +149,11 @@ class Processes(object):
             self._do_mass_balance()
 
             if day == start_date:
-                self._tracker = initialize_tracker(self._master)
+                self._point_tracker = initialize_point_tracker(self._master)
 
             if not point_dict:
-                self._raster.update_save_raster(m, self._output_an, self._output_mo, self._last_yr,
-                                                self._last_mo, self._outputs, day, out_pack, save_specific_dates=None,
+                self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
+                                                results_path, shapefiles=polygons, save_specific_dates=None,
                                                 save_outputs=None)
 
                 self._do_accumulations()
@@ -164,9 +165,8 @@ class Processes(object):
                 self._update_point_tracker(day)
 
             if point_dict and day == end_date:
-                self._get_tracker_summary(self._tracker, point_dict_key)
-
-                return self._tracker
+                self._get_tracker_summary(self._point_tracker, point_dict_key)
+                return self._point_tracker
 
     def _do_dual_crop_coefficient(self):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
@@ -527,11 +527,11 @@ class Processes(object):
             list_ = []
             for item in tracker_from_master:
                 list_.append(item[raster_point])
-            self._tracker.loc[date] = list_
+            self._point_tracker.loc[date] = list_
 
         else:
             # print 'master: {}'.format(m)
-            self._tracker.loc[date] = tracker_from_master
+            self._point_tracker.loc[date] = tracker_from_master
 
     def _do_daily_raster_load(self, ndvi, prism, penman, date):
 

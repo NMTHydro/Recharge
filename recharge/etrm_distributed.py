@@ -60,9 +60,7 @@ if __name__ == '__main__':
     prism_path = os.path.join(dynamic_inputs_path, 'PRISM')
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
     output_path = os.path.join('F:\\', 'ETRM_Results')
-    out_date = datetime.now()
-    out_pack = (output_path, out_date)
-    get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, out_pack)
+    get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path)
 
 # ============= EOF =============================================
 

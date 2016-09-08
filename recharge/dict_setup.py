@@ -22,7 +22,7 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-from numpy import ones
+from numpy import zeros
 import os
 from datetime import datetime
 from pandas import DataFrame
@@ -123,7 +123,7 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     return initial_cond_dict
 
 
-def initialize_tracker(master):
+def initialize_point_tracker(master):
 
     """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
@@ -134,5 +134,38 @@ def initialize_tracker(master):
     tracker = DataFrame(columns=tracker_keys)
 
     return tracker
+
+
+def initialize_raster_tracker(tracked_outputs, shape):
+
+        _zeros = zeros(shape)
+        raster_track_dict = {'output_an': {}, 'output_mo': {}, 'last_mo': {}, 'last_yr': {}}
+        for super_key, super_val in raster_track_dict.iteritems():
+            for key in tracked_outputs:
+                raster_track_dict[super_key].update({key: _zeros})
+
+        return raster_track_dict
+
+
+def initialize_tabular_dict(shapes, outputs):
+
+            folders = os.listdir(shapes)
+            af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
+            tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
+            tabular_output = DataFrame(columns=tabular_cols)
+            tab_dict = {}
+            for in_fold in folders:
+                region_type = os.path.basename(in_fold).strip('_Polygons')
+                tab_dict.update({region_type: {}})
+                os.chdir(os.path.join(shapes, in_fold))
+                for root, dirs, files in os.walk(".", topdown=False):
+                    for element in files:
+                        if element.endswith('.shp'):
+                            sub_region = element.strip('.shp')
+                            tab_dict[region_type].update({sub_region: tabular_output})
+
+            print 'your tabular results dict:\n'.format(tab_dict)
+
+            return tab_dict
 
 # ============= EOF =============================================

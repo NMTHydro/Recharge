@@ -45,64 +45,98 @@ class Rasters(object):
             ras = maximum(ras, min_val)
         return ras
 
-    def update_save_raster(self, master, annual_dict, monthly_dict, last_month_master, last_year_master,
-                           outputs, date_object, raster_output_data, shapefiles=None,
-                           save_specific_dates=None, save_outputs=None):
+    def make_results_dir(self, out_path, shapes):
+        empties = ['annual_rasters', 'monthly_rasters', 'ETRM_14_yr_rasters', 'annual_tabulated', 'monthly_tabulated']
+        now = datetime.now()
+        tag = now.strftime('%Y_%m_%d')
+        folder = 'ETRM_Results_{}'.format(tag)
+        os.chdir(out_path)
+        new_dir = os.path.join(out_path, folder)
 
+        if not os.path.isdir(folder):
+            os.makedirs(new_dir)
+            for item in empties:
+                empty = os.path.join(new_dir, item)
+                os.makedirs(empty)
+
+            region_types = os.listdir(shapes)
+            for tab_folder in ['annual_tabulated', 'monthly_tabulated']:
+                for region_type in region_types:
+                    a, b = region_type.split('_P')
+                    os.makedirs(os.path.join(new_dir, tab_folder, a))
+
+        return None
+
+    def update_save_raster(self, master, output_tracker, tab_dict, outputs, date_object, raster_output_path,
+                           shapefiles=None, save_specific_dates=None, save_outputs=None):
+        
+        # raster_track_dict = {'output_an': {'output': raster}, 'output_mo': {{'output': raster}},
+        #                      'last_mo': {{'output': raster}}, 'last_yr': {{'output': raster}}}
+        
+        # outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe']
+        
         mo_date = monthrange(date_object.year, date_object.month)
 
+        # save data for a certain day
         if save_specific_dates:
-            # save data for a certain day
-            for element in save_outputs:
-                self._update(master, monthly_dict, last_month_master, element, master['first_day'])
-                written_raster = self._write_raster(monthly_dict, element, date_object, raster_output_data,
-                                                    period='monthly')
-                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
-                                          outputs, master['first_day'])
+            if date_object in save_specific_dates:
+                for element in save_outputs:
+                    self._update_raster_tracker(master, output_tracker, element)
+                    written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+                                                        period='monthly')
+                    self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
+                                              date_object, outputs)
 
         # save monthly data
         if date_object.day == mo_date[1]:
             for element in outputs:
-                self._update(master, monthly_dict, last_month_master, element, master['first_day'])
-                written_raster = self._write_raster(monthly_dict, element, date_object, raster_output_data,
+                self._update_raster_tracker(master, output_tracker, element)
+                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
                                                     period='monthly')
-                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
-                                          outputs, master['first_day'])
+                self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
+                                          date_object, outputs)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in outputs:
-                self._update(master, annual_dict, last_year_master, element, master['first_day'])
-                written_raster = self._write_raster(annual_dict, element, date_object, raster_output_data,
+                self._update_raster_tracker(master, output_tracker, element)
+                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
                                                     period='annual')
-                self._sum_raster_by_shape(shapefiles, raster_output_data, written_raster, element, date_object,
-                                          outputs, master['first_day'])
+                self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
+                                          date_object, outputs)
 
         return None
 
-    def _update(self, master_dict, previous_master, cumulative_dict, var, first):
+    def _update_raster_tracker(self, master_dict, raster_output_tracker, var):
+        """ Updates the cummulative rasters each period as indicated.
 
-        if first:
-            cumulative_dict[var] = master_dict[var]
-            previous_master[var] = master_dict[var]
-        else:
-            cumulative_dict[var] = master_dict[var] - previous_master[var]
-            previous_master[var] = master_dict[var]
+        This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
+
+        :param master_dict: master from etrm_processes.Processes
+        :param previous_master: last month's master dict
+        :param cumulative_dict: the difference between this dict and last
+        :param var: vars are all accumulation terms from master
+        :param first: identify first day
+        :return: None
+        """
+
+        raster_output_tracker['output_an'][var] = master_dict[var] - raster_output_tracker['last_yr'][var]
+        raster_output_tracker['output_mo'][var] = master_dict[var] - raster_output_tracker['last_mo'][var]
+        raster_output_tracker['last_yr'][var] = raster_output_tracker['output_an'][var]
+        raster_output_tracker['last_mo'][var] = raster_output_tracker['output_mo'][var]
 
         return None
 
-    def _write_raster(self, dictionary, key, date, raster_output_data, period=None):
+    def _write_raster(self, dictionary, key, date, out_path, period=None):
 
-        out_path, out_date_tag = raster_output_data
-        out_date_tag = datetime.strftime(out_date_tag.now(), '%d_%m_%Y')
         print "Saving {}_{}_{}".format(key, date.month, date.year)
 
         if period == 'annual':
             file_ = '{}.tif'.format(key)
-            filename = os.path.join(out_path, 'Annual_results', out_date_tag, file_)
+            filename = os.path.join(out_path, 'Annual_results', file_)
         elif period == 'monthly':
             file_ = '{}.tif'.format(key)
-            filename = os.path.join(out_path, 'Monthly_results', out_date_tag, file_)
+            filename = os.path.join(out_path, 'Monthly_results', file_)
 
         dataset = dictionary[key]
         driver = gdal.GetDriverByName('GTiff')
@@ -120,25 +154,9 @@ class Rasters(object):
         output_band.WriteArray(dictionary[key], 0, 0)
         return filename
 
-    def _sum_raster_by_shape(self, shapes, temp_folder, raster_name, parameter, date, outputs,
-                             first):
-        folders = os.listdir(shapes)
-        if first:
-            af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
-            tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
-            tabular_output = DataFrame(columns=tabular_cols)
-            tabular_dict = {}
-            for in_fold in folders:
-                region_type = os.path.basename(in_fold).strip('_Polygons')
-                tabular_dict.update({region_type: {}})
-                os.chdir(os.path.join(shapes,in_fold))
-                for root, dirs, files in os.walk(".", topdown=False):
-                    for element in files:
-                        if element.endswith('.shp'):
-                            sub_region = element.strip('.shp')
-                            tabular_dict[region_type].update({sub_region: tabular_output})
+    def _sum_raster_by_shape(self, tabular_dict, shapes, temp_folder, raster_name, parameter, date):
 
-        print 'your tabular results dict:\n'.format(tabular_dict)
+        folders = os.listdir(shapes)
 
         for in_fold in folders:
             print in_fold
@@ -181,5 +199,6 @@ class Rasters(object):
         # print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
         raster_open = gdal.Open('{a}\\{b}'.format(a=input_path, b=filename))
         return raster_open
+
 
 # ============= EOF =============================================
