@@ -45,6 +45,18 @@ class Rasters(object):
             ras = maximum(ras, min_val)
         return ras
 
+    def get_raster_geo_attributes(self, statics_path):
+
+        statics = [filename for filename in os.listdir(statics_path) if filename.endswith('.tif')]
+        file_name = statics[0]
+        dataset = gdal.Open(os.path.join(statics_path, file_name))
+        band = dataset.GetRasterBand(1)
+        raster_geo_dict = {'cols': dataset.RasterXSize, 'rows': dataset.RasterYSize, 'bands': dataset.RasterCount,
+                           'data_type': band.DataType, 'projection': dataset.GetProjection(),
+                           'geotransform': dataset.GetGeoTransform()}
+
+        return raster_geo_dict
+
     def make_results_dir(self, out_path, shapes):
         empties = ['annual_rasters', 'monthly_rasters', 'ETRM_14_yr_rasters', 'annual_tabulated', 'monthly_tabulated']
         now = datetime.now()
@@ -58,7 +70,6 @@ class Rasters(object):
             for item in empties:
                 empty = os.path.join(new_dir, item)
                 os.makedirs(empty)
-
             region_types = os.listdir(shapes)
             for tab_folder in ['annual_tabulated', 'monthly_tabulated']:
                 for region_type in region_types:
@@ -68,7 +79,7 @@ class Rasters(object):
         return None
 
     def update_save_raster(self, master, output_tracker, tab_dict, outputs, date_object, raster_output_path,
-                           shapefiles=None, save_specific_dates=None, save_outputs=None):
+                           geo_attributes, shapefiles=None, save_specific_dates=None, save_outputs=None):
         
         # raster_track_dict = {'output_an': {'output': raster}, 'output_mo': {{'output': raster}},
         #                      'last_mo': {{'output': raster}}, 'last_yr': {{'output': raster}}}
@@ -83,27 +94,36 @@ class Rasters(object):
                 for element in save_outputs:
                     self._update_raster_tracker(master, output_tracker, element)
                     written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-                                                        period='monthly')
+                                                        geo_attributes, period='monthly')
                     self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
-                                              date_object, outputs)
-
+                                              date_object)
+        # FOR TESTING: save 3rd day #
+        if date_object.day == 03:
+            print 'attempting to update/save day 3: {}'.format(date_object)
+            print 'outputs: {}'.format(outputs)
+            for element in outputs:
+                self._update_raster_tracker(master, output_tracker, element)
+                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+                                                    geo_attributes, period='monthly')
+                self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
+                                          date_object)
         # save monthly data
         if date_object.day == mo_date[1]:
             for element in outputs:
                 self._update_raster_tracker(master, output_tracker, element)
                 written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-                                                    period='monthly')
+                                                    geo_attributes, period='monthly')
                 self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
-                                          date_object, outputs)
+                                          date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in outputs:
                 self._update_raster_tracker(master, output_tracker, element)
                 written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-                                                    period='annual')
+                                                    geo_attributes, period='annual')
                 self._sum_raster_by_shape(tab_dict, shapefiles, raster_output_path, written_raster, element,
-                                          date_object, outputs)
+                                          date_object)
 
         return None
 
@@ -127,31 +147,30 @@ class Rasters(object):
 
         return None
 
-    def _write_raster(self, dictionary, key, date, out_path, period=None):
+    def _write_raster(self, output_raster_dict, key, date, out_path, raster_geometry, period=None):
 
         print "Saving {}_{}_{}".format(key, date.month, date.year)
 
         if period == 'annual':
-            file_ = '{}.tif'.format(key)
+            file_ = '{}_{}.tif'.format(key, date.year)
             filename = os.path.join(out_path, 'Annual_results', file_)
+            dataset = output_raster_dict['output_an'][key]
         elif period == 'monthly':
-            file_ = '{}.tif'.format(key)
+            file_ = '{}_{}_{}.tif'.format(key, date.month, date.year)
             filename = os.path.join(out_path, 'Monthly_results', file_)
+            dataset = output_raster_dict['output_mo'][key]
+        else:
+            dataset = None
+            filename = None
 
-        dataset = dictionary[key]
         driver = gdal.GetDriverByName('GTiff')
-        cols = dataset.RasterXSize
-        rows = dataset.RasterYSize
-        bands = dataset.RasterCount
-        band = dataset.GetRasterBand(1)
-        data_type = band.DataType
-        out_data_set = driver.Create(filename, cols, rows, bands, data_type)
-        geotransform = dataset.GetGeoTransform()
-        out_data_set.SetGeoTransform(geotransform)
-        projection = dataset.GetProjection()
-        out_data_set.SetProjection(projection)
+        out_data_set = driver.Create(filename, raster_geometry['cols'], raster_geometry['rows'],
+                                     raster_geometry['bands'], raster_geometry['data_type'])
+        out_data_set.SetGeoTransform(raster_geometry['geotransform'])
+        out_data_set.SetProjection(raster_geometry['projection'])
         output_band = out_data_set.GetRasterBand(1)
-        output_band.WriteArray(dictionary[key], 0, 0)
+        output_band.WriteArray(output_raster_dict[key], 0, 0)
+
         return filename
 
     def _sum_raster_by_shape(self, tabular_dict, shapes, temp_folder, raster_name, parameter, date):

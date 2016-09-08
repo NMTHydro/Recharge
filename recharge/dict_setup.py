@@ -155,7 +155,7 @@ def initialize_tabular_dict(shapes, outputs):
             tabular_output = DataFrame(columns=tabular_cols)
             tab_dict = {}
             for in_fold in folders:
-                region_type = os.path.basename(in_fold).strip('_Polygons')
+                region_type, toss = in_fold.split('_Poly')
                 tab_dict.update({region_type: {}})
                 os.chdir(os.path.join(shapes, in_fold))
                 for root, dirs, files in os.walk(".", topdown=False):
@@ -164,8 +164,18 @@ def initialize_tabular_dict(shapes, outputs):
                             sub_region = element.strip('.shp')
                             tab_dict[region_type].update({sub_region: tabular_output})
 
-            print 'your tabular results dict:\n'.format(tab_dict)
+            # print 'your tabular results dict:\n{}'.format(tab_dict)
 
             return tab_dict
+
+
+def initialize_master_window(master):
+    window = {}
+    for key, val in master.iteritems():
+        try:
+            window.update({key: val[480:485, 940:945]})
+        except TypeError:
+            pass
+    return window
 
 # ============= EOF =============================================

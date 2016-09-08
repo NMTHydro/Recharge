@@ -20,7 +20,8 @@ from datetime import datetime, timedelta
 from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
-     initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict
+     initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict,\
+     initialize_master_window
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
@@ -39,6 +40,7 @@ class Processes(object):
     _point_dict_key = None
     _results_directory = None
     _tabulated_dict = None
+    _master_window = None
 
     def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
@@ -70,7 +72,7 @@ class Processes(object):
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
             # define the monthly and annual raster trackers #
             self._raster_tracker = initialize_raster_tracker(self._outputs, self._shape)
-            print self._raster_tracker
+            self._raster_geo_attributes = self._raster.get_raster_geo_attributes(static_inputs)
 
         self._master = initialize_master_dict(self._zeros)
 
@@ -150,13 +152,15 @@ class Processes(object):
 
             if day == start_date:
                 self._point_tracker = initialize_point_tracker(self._master)
+                self._master_window = initialize_master_window(self._master)
 
             if not point_dict:
-                self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
-                                                results_path, shapefiles=polygons, save_specific_dates=None,
-                                                save_outputs=None)
-
                 self._do_accumulations()
+                self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
+                                                results_path, self._raster_geo_attributes,
+                                                shapefiles=polygons, save_specific_dates=None,
+                                                save_outputs=None)
+                self._update_master_window()
 
                 if self._raster_point:
                     self._update_point_tracker(day, self._raster_point)
@@ -566,6 +570,10 @@ class Processes(object):
         m['ppt'] = max(m['ppt'], 0.0)
         m['etrs'] = ts['etrs_pm'][date]
         m['rg'] = ts['rg'][date]
+
+    def _update_master_window(self):
+        for key, val in self._master_window.iteritems():
+            self._master_window.update({key: self._master[key][480:485, 940:945]})
 
     def _cells(self, raster):
         return raster[480:485, 940:945]
