@@ -18,6 +18,7 @@
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp
 from datetime import datetime, timedelta
 from dateutil import rrule
+import os
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
      initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict,\
@@ -171,6 +172,10 @@ class Processes(object):
             if point_dict and day == end_date:
                 self._get_tracker_summary(self._point_tracker, point_dict_key)
                 return self._point_tracker
+            elif day == end_date:
+                for key, val in self._tabulated_dict:
+                    pass
+                self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, results_path)
 
     def _do_dual_crop_coefficient(self):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
@@ -571,6 +576,33 @@ class Processes(object):
         m['etrs'] = ts['etrs_pm'][date]
         m['rg'] = ts['rg'][date]
 
+    def _save_tabulated_results_to_csv(self, tabulated_results, results_directories, polygons):
+        folders = os.listdir(polygons)
+        for in_fold in folders:
+            print in_fold
+            region_type = os.path.basename(in_fold).replace('_Polygons', '')
+            os.chdir(os.path.join(polygons, in_fold))
+            for root, dirs, files in os.walk(".", topdown=False):
+                for element in files:
+                    if element.endswith('.shp'):
+                        sub_region = element.strip('.shp')
+
+                        df_month = tabulated_results[region_type][sub_region]
+                        df_annual = df_month.resample('A').sum()
+
+                        save_loc_annu = os.path.join(results_directories['root'],
+                                                     results_directories['annual_tabulated'],
+                                                     region_type, '{}.csv'.format(sub_region))
+
+                        save_loc_month = os.path.join(results_directories['root'],
+                                                      results_directories['monthly_tabulated'],
+                                                      region_type, '{}.csv'.format(sub_region))
+                        dfs = [df_month, df_annual]
+                        locations = [save_loc_month, save_loc_annu]
+                        for df, location in zip(dfs, locations):
+                            print 'this should be your csv: {}'.format(location)
+                            df.to_csv(location, na_rep='nan', index_label='Date')
+
     def _update_master_window(self):
         for key, val in self._master_window.iteritems():
             self._master_window.update({key: self._master[key][480:485, 940:945]})
@@ -583,10 +615,10 @@ class Processes(object):
         print 'summary stats for {}:\n{}'.format(name, tracker.describe())
         print 'a look at vaporization:'
         print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
-                                                                                      tracker['evap_2'].sum(),
-                                                                                      tracker['evap_1'].sum() +
-                                                                                      tracker['evap_2'].sum(),
-                                                                                      tracker['evap'].sum())
+                                                                                        tracker['evap_2'].sum(),
+                                                                                        tracker['evap_1'].sum() +
+                                                                                        tracker['evap_2'].sum(),
+                                                                                        tracker['evap'].sum())
         print 'total transpiration = {}'.format(tracker['transp'].sum())
         depletions = ['drew', 'de', 'dr']
         capacities = [s['rew'], s['tew'], s['taw']]

@@ -23,7 +23,7 @@ dgketchum 24 JUL 2016
 """
 
 from osgeo import gdal, ogr
-from numpy import array, ones, maximum, where, zeros, count_nonzero, sum
+from numpy import array, ones, maximum, where, zeros, count_nonzero, isnan
 from calendar import monthrange
 from datetime import datetime
 from pandas import DataFrame
@@ -66,6 +66,7 @@ class Rasters(object):
         os.chdir(out_path)
         new_dir = os.path.join(out_path, folder)
         results_directories = {x: None for x in empties}
+        results_directories['root'] = os.path.join(out_path, folder)
         if not os.path.isdir(folder):
             os.makedirs(new_dir)
             for item in empties:
@@ -113,16 +114,16 @@ class Rasters(object):
                     self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
                                               date_object, raster_output_path)
         # FOR TESTING: save 3rd day #
-        if date_object.day == 03:
-            print 'attempting to update/save day 3: {}'.format(date_object)
-            print 'outputs: {}'.format(outputs)
-            for element in outputs:
-                self._update_raster_tracker(master, output_tracker, element)
-                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-                                                    geo_attributes, results_dir, period='monthly')
-
-                self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
-                                          date_object, raster_output_path)
+        # if date_object.day == 03:
+        #     print 'attempting to update/save day 3: {}'.format(date_object)
+        #     print 'outputs: {}'.format(outputs)
+        #     for element in outputs:
+        #         self._update_raster_tracker(master, output_tracker, element)
+        #         written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+        #                                             geo_attributes, results_dir, period='monthly')
+        #
+        #         self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
+        #                                   date_object, raster_output_path)
 
         # save monthly data
         if date_object.day == mo_date[1]:
@@ -168,7 +169,7 @@ class Rasters(object):
 
     def _write_raster(self, output_raster_dict, key, date, out_path, raster_geometry, results_directory, period=None):
 
-        print "Saving {}_{}_{}".format(key, date.month, date.year)
+        # print "Saving {}_{}_{}".format(key, date.month, date.year)
 
         if period == 'annual':
             file_ = '{}_{}.tif'.format(key, date.year)
@@ -196,13 +197,12 @@ class Rasters(object):
                              output_path):
 
         folders = os.listdir(shapes)
-
+        print 'date : {}'.format(date.strftime('%B %Y'))
         for in_fold in folders:
             print in_fold
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
             os.chdir(os.path.join(shapes, in_fold))
             for root, dirs, files in os.walk(".", topdown=False):
-                first = True
                 for element in files:
                     if element.endswith('.shp'):
                         sub_region = element.strip('.shp')
@@ -210,38 +210,39 @@ class Rasters(object):
                         polygon = ogr.Open(shp_name)
                         layer = polygon.GetLayer()
                         driver = gdal.GetDriverByName('GTiff')
-                        if first:
-                            temp_raster = os.path.join(output_path, 'temp.tif')
-                            mask_raster = driver.Create(temp_raster, geo_attributes['cols'], geo_attributes['rows'], 1,
-                                                        geo_attributes['data_type'])
-                            mask_raster.SetProjection(layer.GetSpatialRef().ExportToWkt())
-                            mask_raster.SetGeoTransform(geo_attributes['geotransform'])
-                            raster_band = mask_raster.GetRasterBand(1)
-                            raster_band.SetNoDataValue(0.0)
-                            raster_band.Fill(0.0)
-                            gdal.RasterizeLayer(mask_raster, [1], layer, options=["ALL_TOUCHED=TRUE",
-                                                                                  "OGRLayerShadow=FALSE"])
-                            mask_raster.FlushCache()
-                            mask_array = mask_raster.GetRasterBand(1).ReadAsArray()
-                            mask_array = array(mask_array)
-                            first = False
-                            print 'mask array is {} cells, of {}, or {}%'.format(count_nonzero(mask_array),
-                                                                                 mask_array.size,
-                                                                                 (float(count_nonzero(mask_array)) /
-                                                                                  mask_array.size) * 100)
+                        temp_raster = os.path.join(output_path, 'temp.tif')
+                        mask_raster = driver.Create(temp_raster, geo_attributes['cols'], geo_attributes['rows'], 1,
+                                                    geo_attributes['data_type'])
+                        mask_raster.SetProjection(layer.GetSpatialRef().ExportToWkt())
+                        mask_raster.SetGeoTransform(geo_attributes['geotransform'])
+                        raster_band = mask_raster.GetRasterBand(1)
+                        raster_band.SetNoDataValue(0.0)
+                        raster_band.Fill(0.0)
+                        gdal.RasterizeLayer(mask_raster, [1], layer, options=["ALL_TOUCHED=TRUE",
+                                                                              "OGRLayerShadow=FALSE"])
+                        mask_raster.FlushCache()
+                        mask_array = mask_raster.GetRasterBand(1).ReadAsArray()
+                        del mask_raster
+                        mask_array = array(mask_array)
+                        print 'mask array is {} cells, of {}, or {}%'.format(count_nonzero(mask_array),
+                                                                             mask_array.size,
+                                                                             (float(count_nonzero(mask_array)) /
+                                                                              mask_array.size) * 100)
 
                         raster_obj = gdal.Open(raster)
                         param_obj = array(raster_obj.GetRasterBand(1).ReadAsArray(), dtype=float)
+                        param_obj = where(isnan(param_obj), zeros(param_obj.shape), param_obj)
+                        param_obj = where(param_obj < 0, zeros(param_obj.shape), param_obj)
                         param_obj = where(mask_array > 0, param_obj, zeros(param_obj.shape))
                         param_sum = param_obj.sum()
                         param_cubic_meters = (param_sum / 1000) * (250 ** 2)
                         param_acre_feet = param_cubic_meters / 1233.48
                         df = tabular_dict[region_type][sub_region]
-                        print 'df:\n{}'.format(df)
+                        print '{} {} = {} AF'.format(os.path.basename(shp_name).replace('.shp', ''),
+                                                     parameter, param_acre_feet)
                         df['{}_[cbm]'.format(parameter)].loc[date] = param_cubic_meters
                         df['{}_[AF]'.format(parameter)].loc[date] = param_acre_feet
-
-                        return None
+        return None
 
     def _open_raster(self, input_path, filename):
         # print ' raster name is {a}\\{b}'.format(a=input_path, b=filename)
