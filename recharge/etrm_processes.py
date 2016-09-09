@@ -124,7 +124,7 @@ class Processes(object):
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
                     self._results_directory = self._raster.make_results_dir(results_path, polygons)
-                    self._tabulated_dict = initialize_tabular_dict(polygons, self._outputs)
+                    self._tabulated_dict = initialize_tabular_dict(polygons, self._outputs, date_range)
 
             else:
                 m['first_day'] = False
@@ -157,7 +157,7 @@ class Processes(object):
             if not point_dict:
                 self._do_accumulations()
                 self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
-                                                results_path, self._raster_geo_attributes,
+                                                results_path, self._raster_geo_attributes, self._results_directory,
                                                 shapefiles=polygons, save_specific_dates=None,
                                                 save_outputs=None)
                 self._update_master_window()

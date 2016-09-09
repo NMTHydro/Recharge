@@ -25,7 +25,7 @@ dgketchum 24 JUL 2016
 from numpy import zeros
 import os
 from datetime import datetime
-from pandas import DataFrame
+from pandas import DataFrame, date_range
 
 
 from recharge.raster_manager import Rasters
@@ -147,12 +147,13 @@ def initialize_raster_tracker(tracked_outputs, shape):
         return raster_track_dict
 
 
-def initialize_tabular_dict(shapes, outputs):
+def initialize_tabular_dict(shapes, outputs, date_range_):
 
             folders = os.listdir(shapes)
             af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
             tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
-            tabular_output = DataFrame(columns=tabular_cols)
+            ind = date_range(date_range_[0], date_range_[1])
+            tabular_output = DataFrame(index=ind, columns=tabular_cols).fillna(0.0)
             tab_dict = {}
             for in_fold in folders:
                 region_type, toss = in_fold.split('_Poly')
