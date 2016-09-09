@@ -100,6 +100,7 @@ class Processes(object):
         c = self._constants
         _zeros = self._zeros
         start_date, end_date = date_range
+        print 'simulation start: {}, simulation end: {}'.format(start_date, end_date)
         start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
         print 'start time :{}'.format(start_time)
@@ -172,10 +173,10 @@ class Processes(object):
             if point_dict and day == end_date:
                 self._get_tracker_summary(self._point_tracker, point_dict_key)
                 return self._point_tracker
+
             elif day == end_date:
-                for key, val in self._tabulated_dict:
-                    pass
-                self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, results_path)
+                'last day: saving tabulated data'
+                self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, polygons)
 
     def _do_dual_crop_coefficient(self):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
@@ -577,31 +578,34 @@ class Processes(object):
         m['rg'] = ts['rg'][date]
 
     def _save_tabulated_results_to_csv(self, tabulated_results, results_directories, polygons):
+
+        print 'results directories: {}'.format(results_directories)
+
         folders = os.listdir(polygons)
         for in_fold in folders:
-            print in_fold
+            print 'saving tab data for input folder: {}'.format(in_fold)
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
-            os.chdir(os.path.join(polygons, in_fold))
-            for root, dirs, files in os.walk(".", topdown=False):
-                for element in files:
-                    if element.endswith('.shp'):
-                        sub_region = element.strip('.shp')
+            files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
+            print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
+            for element in files:
+                if element.endswith('.shp'):
+                    sub_region = element.strip('.shp')
 
-                        df_month = tabulated_results[region_type][sub_region]
-                        df_annual = df_month.resample('A').sum()
+                    df_month = tabulated_results[region_type][sub_region]
+                    df_annual = df_month.resample('A').sum()
 
-                        save_loc_annu = os.path.join(results_directories['root'],
-                                                     results_directories['annual_tabulated'],
-                                                     region_type, '{}.csv'.format(sub_region))
+                    save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
+                                                 '{}.csv'.format(sub_region))
 
-                        save_loc_month = os.path.join(results_directories['root'],
-                                                      results_directories['monthly_tabulated'],
-                                                      region_type, '{}.csv'.format(sub_region))
-                        dfs = [df_month, df_annual]
-                        locations = [save_loc_month, save_loc_annu]
-                        for df, location in zip(dfs, locations):
-                            print 'this should be your csv: {}'.format(location)
-                            df.to_csv(location, na_rep='nan', index_label='Date')
+                    save_loc_month = os.path.join(results_directories['root'],
+                                                  results_directories['monthly_tabulated'][region_type],
+                                                  '{}.csv'.format(sub_region))
+                    dfs = [df_month, df_annual]
+                    locations = [save_loc_month, save_loc_annu]
+                    for df, location in zip(dfs, locations):
+                        print 'this should be your csv: {}'.format(location)
+                        df.to_csv(location, na_rep='nan', index_label='Date')
+        return None
 
     def _update_master_window(self):
         for key, val in self._master_window.iteritems():

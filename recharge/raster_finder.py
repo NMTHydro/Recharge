@@ -31,7 +31,7 @@ rta = Rasters()
 
 
 def get_ndvi(in_path, previous_kcb, date_object):
-    print date_object
+    # print date_object
     doy = date_object.timetuple().tm_yday
     if date_object.year == 2000:
         obj = [1, 49, 81, 113, 145, 177, 209, 241, 273, 305, 337]
