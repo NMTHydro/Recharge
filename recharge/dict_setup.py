@@ -22,7 +22,7 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-from numpy import zeros
+from numpy import zeros, isnan, count_nonzero, where, ones
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range
@@ -76,6 +76,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
     # convert rasters to arrays
     # give variable names to each raster"""
 
+    print 'static inputs path: {}'.format(inputs_path)
     static_keys = ['bed_ksat', 'plant_height', 'quat_deposits', 'root_z', 'soil_ksat', 'taw', 'tew']
 
     ras = Rasters()
@@ -92,8 +93,45 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 static_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
 
     else:
-        static_arrays = [ras.convert_raster_to_array(inputs_path, filename, minimum_value=0.0) for filename in statics]
+        static_arrays = [ras.convert_raster_to_array(inputs_path, filename) for filename in statics]
         for key, data in zip(static_keys, static_arrays):
+            static_dict.update({key: data})
+
+        for key, data in zip(static_keys, static_arrays):
+            print ''
+            print '{} has {} values of zero'.format(key, count_nonzero(where(data == 0.0, ones(data.shape),
+                                                                             zeros(data.shape))))
+            print '{} has {} values < zero'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
+                                                                            zeros(data.shape))))
+            if key == 'tew':
+                min_val = 15
+                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                                                                                   ones(data.shape),
+                                                                                   zeros(data.shape))), min_val)
+                data = where(data <= min_val, ones(data.shape) * min_val, data)
+
+            if key == 'soil_ksat':
+                min_val = 20
+                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                                                                                   ones(data.shape),
+                                                                                   zeros(data.shape))), min_val)
+                data = where(data <= min_val, ones(data.shape) * min_val, data)
+
+            if key == 'root_z':
+                min_val = 100
+                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                                                                                   ones(data.shape),
+                                                                                   zeros(data.shape))), min_val)
+                data = where(data < min_val, ones(data.shape) * min_val, data)
+
+            if key == 'quat_deposits':
+                min_val = 250
+                print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
+                                                                        ones(data.shape),
+                                                                        zeros(data.shape))), min_val)
+
+                static_dict['taw'] = where(data > 0.0, ones(data.shape) * min_val, static_dict['taw'])
+
             static_dict.update({key: data})
 
     return static_dict
@@ -119,7 +157,12 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     else:
         initial_cond_arrays = [ras.convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
         for key, data in zip(initial_cond_keys, initial_cond_arrays):
+            data = where(isnan(data), zeros(data.shape), data)
             initial_cond_dict.update({key: data})
+            print '{} has {} nan values'.format(key, count_nonzero(isnan(data)))
+            print '{} has {} negative values'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
+                                                                              zeros(data.shape))))
+
     return initial_cond_dict
 
 
@@ -139,7 +182,8 @@ def initialize_point_tracker(master):
 def initialize_raster_tracker(tracked_outputs, shape):
 
         _zeros = zeros(shape)
-        raster_track_dict = {'output_an': {}, 'output_mo': {}, 'last_mo': {}, 'last_yr': {}}
+        raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
+                             'last_day': {}}
         for super_key, super_val in raster_track_dict.iteritems():
             for key in tracked_outputs:
                 raster_track_dict[super_key].update({key: _zeros})
@@ -152,7 +196,7 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
             folders = os.listdir(shapes)
             af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
             tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
-            ind = date_range(date_range_[0], date_range_[1])
+            ind = date_range(date_range_[0], date_range_[1], freq='M')
             tabular_output = DataFrame(index=ind, columns=tabular_cols).fillna(0.0)
             tab_dict = {}
             for in_fold in folders:

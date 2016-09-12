@@ -31,7 +31,7 @@ from recharge.etrm_processes import Processes
 
 set_printoptions(linewidth=700, precision=2)
 
-simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
+simulation_period = datetime(2000, 1, 1), datetime(2000, 1, 31)
 
 extent = []  # we should eventually have a program to run etrm on a given extent
 
@@ -44,7 +44,8 @@ def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, s
 
     etrm = Processes(static_inputs_path, initial_conditions_path)
 
-    etrm.run(date_range, raster_out_data, ndvi, prism, penman, polygons=clip_polygons)
+    etrm.run(date_range, results_path=raster_out_data, ndvi_path=ndvi, prism_path=prism,
+             penman_path=penman, polygons=clip_polygons)
 
     return None
 
@@ -53,9 +54,9 @@ if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    static_inputs_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'OSG_Data', 'current_use')
     initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'Array_Results', 'initialize')
     dynamic_inputs_path = os.path.join('F:\\', 'ETRM_Inputs')
+    static_inputs_path = os.path.join(dynamic_inputs_path, 'current_use')
     ndvi_path = os.path.join(dynamic_inputs_path, 'NDVI', 'NDVI_std_all')
     prism_path = os.path.join(dynamic_inputs_path, 'PRISM')
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')

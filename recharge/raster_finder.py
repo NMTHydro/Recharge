@@ -34,29 +34,9 @@ def get_ndvi(in_path, previous_kcb, date_object):
     # print date_object
     doy = date_object.timetuple().tm_yday
     if date_object.year == 2000:
-        obj = [1, 49, 81, 113, 145, 177, 209, 241, 273, 305, 337]
-        if doy < 49:
-            start = 1
-            nd = 48
-            raster = 'T{}_{}_2000_etrf_subset_001_048_ndvi_daily.tif'.format(str(start).rjust(3, '0'),
-                                                                             str(nd).rjust(3, '0'))
-            ndvi = rta.convert_raster_to_array(in_path, raster, band=doy)
-            kcb = ndvi * 1.25
-        else:
-            for num in obj[1:]:
-                diff = doy - num
-                if 0 <= diff <= 31:
-                    pos = obj.index(num)
-                    start = obj[pos]
-                    band = diff + 1
-                    if num == 337:
-                        nd = num + 29
-                    else:
-                        nd = num + 31
-                    raster = 'T{}_{}_2000_etrf_subset_001_048_ndvi_daily.tif'.format(str(start).rjust(3, '0'),
-                                                                                     str(nd).rjust(3, '0'))
-                    ndvi = rta.convert_raster_to_array(in_path, raster, minimum_value=0.001, band=band)
-                    kcb = ndvi * 1.25
+        raster = '{}_{}.tif'.format(date_object.year, doy)
+        ndvi = rta.convert_raster_to_array(in_path, raster, band=1)
+        kcb = ndvi * 1.25
 
     elif date_object.year == 2001:
         obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
@@ -72,7 +52,7 @@ def get_ndvi(in_path, previous_kcb, date_object):
                 else:
                     nd = num + 15
                 raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
-                ndvi = rta.convert_raster_to_array(in_path, raster, minimum_value=0.001, band=band)
+                ndvi = rta.convert_raster_to_array(in_path, raster, band=band)
                 kcb = ndvi * 1.25
 
     else:
@@ -88,10 +68,11 @@ def get_ndvi(in_path, previous_kcb, date_object):
                 else:
                     nd = num + 15
                 raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
-                ndvi = rta.convert_raster_to_array(in_path, raster, minimum_value=0.001, band=band)
+                ndvi = rta.convert_raster_to_array(in_path, raster, band=band)
                 kcb = ndvi * 1.25
 
     kcb = where(isnan(kcb) == True, previous_kcb, kcb)
+    kcb = where(abs(kcb) > 100., previous_kcb, kcb)
     return kcb
 
 
@@ -103,15 +84,10 @@ def get_prism(in_path, date_object, variable='precip'):
         raster = 'PRISMD2_NMHW2mi_{}{}{}.tif'.format(date_object.year,
                                                      str(date_object.month).rjust(2, '0'),
                                                      str(date_object.day).rjust(2, '0'))
-        ppt = rta.convert_raster_to_array(path, raster, minimum_value=0.0)
+        # print 'ppt raster: {}'.format(raster)
+        ppt = rta.convert_raster_to_array(path, raster)
 
-        dday_tom = date_object + timedelta(days=1)
-        raster_tom = 'PRISMD2_NMHW2mi_{}{}{}.tif'.format(date_object.year,
-                                                         str(dday_tom.month).rjust(2, '0'),
-                                                         str(dday_tom.day).rjust(2, '0'))
-        ppt_tom = rta.convert_raster_to_array(path, raster_tom, minimum_value=0.0)
-
-        return ppt, ppt_tom
+        return ppt
 
     elif variable == 'min_temp':
         if date_object.year in [2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]:
@@ -144,18 +120,18 @@ def get_penman(in_path, date_object, variable='etrs'):
 
     if variable == 'etrs':
         raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        etrs = rta.convert_raster_to_array(in_path, raster,
-                                           minimum_value=0.0)
+        etrs = rta.convert_raster_to_array(in_path, raster)
+
         return etrs
     elif variable == 'rlin':
         raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        rlin = rta.convert_raster_to_array(in_path, raster,
-                                           minimum_value=0.0)
+        rlin = rta.convert_raster_to_array(in_path, raster)
+
         return rlin
     elif variable == 'rg':
         raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        rg = rta.convert_raster_to_array(in_path, raster,
-                                         minimum_value=0.0)
+        rg = rta.convert_raster_to_array(in_path, raster)
+
         return rg
 
 # ============= EOF =============================================

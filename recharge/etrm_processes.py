@@ -15,7 +15,7 @@
 # ===============================================================================
 
 
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, count_nonzero
 from datetime import datetime, timedelta
 from dateutil import rrule
 import os
@@ -98,22 +98,26 @@ class Processes(object):
         if point_dict:
             s = s[self._point_dict_key]
         c = self._constants
-        _zeros = self._zeros
+        
         start_date, end_date = date_range
         print 'simulation start: {}, simulation end: {}'.format(start_date, end_date)
         start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
         print 'start time :{}'.format(start_time)
         for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
+
             if not point_dict:
+                print ''
                 print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
                                                       b=day.timetuple().tm_yday, c=day.year)
+                self._zeros = zeros(self._shape)
+                self._ones = ones(self._shape)
 
             if day == start_date:
 
                 m['first_day'] = True
-                m['albedo'] = 0.45
-                m['swe'] = _zeros  # this should be initialized correctly using simulation results
+                m['albedo'] = self._ones * 0.45
+                m['swe'] = self._zeros  # this should be initialized correctly using simulation results
                 s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
 
                 if self._point_dict:
@@ -144,6 +148,8 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
+            print 'soil_ksat nan values = {}'.format(count_nonzero(isnan(m['soil_ksat'])))
+
             self._do_dual_crop_coefficient()
 
             self._do_snow()
@@ -163,6 +169,7 @@ class Processes(object):
                                                 shapefiles=polygons, save_specific_dates=None,
                                                 save_outputs=None)
                 self._update_master_window()
+                # print 'window into fluxes:\n{}'.format(self._master_window)
 
                 if self._raster_point:
                     self._update_point_tracker(day, self._raster_point)
@@ -175,7 +182,7 @@ class Processes(object):
                 return self._point_tracker
 
             elif day == end_date:
-                'last day: saving tabulated data'
+                print 'last day: saving tabulated data'
                 self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, polygons)
 
     def _do_dual_crop_coefficient(self):
@@ -187,38 +194,65 @@ class Processes(object):
         if self._point_dict:
             s = s[self._point_dict_key]
         c = self._constants
-        _ones = self._ones
-        _zeros = self._zeros
 
         plant_exponent = s['plant_height'] * 0.5 + 1
-        numerator_term = maximum(m['kcb'] - c['kc_min'], _ones * 0.001)
-        denominator_term = maximum((c['kc_max'] - c['kc_min']), _ones * 0.001)
+        numerator_term = maximum(m['kcb'] - c['kc_min'], self._ones * 0.001)
+        denominator_term = maximum((c['kc_max'] - c['kc_min']), self._ones * 0.001)
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
-        cover_fraction_upper_bound = minimum(cover_fraction_unbound, _ones)
-        m['fcov'] = maximum(cover_fraction_upper_bound, _ones * 0.001)  # covered fraction of ground
-        m['few'] = maximum(1 - m['fcov'], _ones * 0.001)  # uncovered fraction of ground
+        cover_fraction_upper_bound = minimum(cover_fraction_unbound, self._ones)
+        m['fcov'] = maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
+        m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
 
+        # print 'f_cov: {}'.format(self._cells(m['fcov']))
+        # print 'few: {}'.format(self._cells(m['few']))
         ####
         # transpiration
         m['ks'] = ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw']))
-        m['ks'] = minimum(m['ks'], _ones + 0.001)
+        m['ks'] = minimum(m['ks'], self._ones + 0.001)
+        m['ks'] = maximum(self._zeros, m['ks'])
         m['transp'] = m['ks'] * m['kcb'] * m['etrs']
-        m['transp'] = maximum(_zeros, m['transp'])
+        m['transp'] = maximum(self._zeros, m['transp'])
 
         ####
         # stage 2 coefficient
-        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), _ones)
+        print '{} of tew, {} of pde, and {} of rew are nan'.format(count_nonzero(isnan(s['tew'])),
+                                                                   count_nonzero(isnan(m['pde'])),
+                                                                   count_nonzero(isnan(s['rew'])))
+
+        print '{} of tew, {} of pde, and {} of rew are zero or less'.format(count_nonzero(where(s['tew'] <= self._zeros,
+                                                                                                self._ones, self._zeros)),
+                                                                            count_nonzero(where(m['pde'] <= self._zeros,
+                                                                                                self._ones, self._zeros)),
+                                                                            count_nonzero(where(s['rew'] <= self._zeros,
+                                                                                                self._ones, self._zeros)))
+
+        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
+        if self._point_dict:
+            if m['kr'] < 0.0:
+                m['kr'] = 0.01
+        else:
+            m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
+        print '{} cells are nan in kr'.format(count_nonzero(isnan(m['kr'])))
 
         ####
         # check for stage 1 evaporation, i.e. drew < rew
         # this evaporation rate is limited only by available energy, and water in the rew
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs'])
-        st_1_dur = minimum(st_1_dur, _ones)
-        m['st_1_dur'] = maximum(st_1_dur, _zeros)
+        # print 'initial calculation of st_1_dur = {}'.format(self._cells(st_1_dur))
+        st_1_dur = minimum(st_1_dur, self._ones * 0.99)
+        m['st_1_dur'] = maximum(st_1_dur, self._zeros)
+        # print 'bounded calculation of st_1_dur = {}'.format(self._cells(m['st_1_dur']))
+        print '{} cells are nan in st_1_dur'.format(count_nonzero(isnan(m['st_1_dur'])))
         m['st_2_dur'] = (1 - m['st_1_dur'])
+        # print 'rew: {}, pdrew: {}, kemax: {}, etrs: {}'.format(self._cells(s['rew']), self._cells(m['pdrew']),
+        #                                                        (c['ke_max']), self._cells(m['etrs']))
 
         m['ke_init'] = (m['st_1_dur'] + (m['st_2_dur'] * m['kr'])) * (c['kc_max'] - (m['ks'] * m['kcb']))
+
         if self._point_dict:
+            if m['ke_init'] < 0.0:
+                m['adjust_ke'] = 'True'
+                m['ke'] = 0.0
             if m['ke_init'] > m['few'] * c['kc_max']:
                 m['adjust_ke'] = 'True'
                 m['ke'] = m['few'] * c['kc_max']
@@ -229,9 +263,12 @@ class Processes(object):
                 ke_adjustment = 1.0
         else:
             m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
-            ke_adjustment = where(m['ke_init'] > m['few'] * c['kc_max'], m['ke'] / m['ke_init'], _ones)
+            m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape), m['ke'])
+            ke_adjustment = where(m['ke_init'] > m['few'] * c['kc_max'], m['ke'] / m['ke_init'], self._ones)
 
-        m['ke'] = minimum(m['ke'], _ones)
+        m['ke'] = minimum(m['ke'], self._ones)
+
+        # print 'etrs: {}'.format(self._mm_af(m['etrs']))
 
         # m['evap'] = m['ke'] * m['etrs']
         m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
@@ -239,6 +276,17 @@ class Processes(object):
         m['evap'] = m['evap_1'] + m['evap_2']
 
         m['eta'] = m['transp'] + m['evap']
+
+        for key, val in m.iteritems():
+            nan_ct = count_nonzero(isnan(val))
+            if nan_ct > 0:
+                print '{} has {} nan values'.format(key, nan_ct)
+            try:
+                neg_ct = count_nonzero(where(val < 0.0, ones(val.shape), zeros(val.shape)))
+                if neg_ct > 0:
+                    print '{} has {} negative values'.format(key, neg_ct)
+            except AttributeError:
+                pass
 
     def _do_snow(self):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
@@ -280,8 +328,6 @@ class Processes(object):
         """
         m = self._master
         c = self._constants
-        _ones = self._ones
-        _zeros = self._zeros
 
         temp = m['temp']
         palb = m['albedo']
@@ -307,9 +353,9 @@ class Processes(object):
             if m['albedo'] < c['a_min']:
                 m['albedo'] = c['a_min']
         else:
-            m['snow_fall'] = where(temp < 0.0, m['ppt'], _zeros)
-            m['rain'] = where(temp >= 0.0, m['ppt'], _zeros)
-            alb = where(m['snow_fall'] > 3.0, _ones * c['a_max'], palb)
+            m['snow_fall'] = where(temp < 0.0, m['ppt'], self._zeros)
+            m['rain'] = where(temp >= 0.0, m['ppt'], self._zeros)
+            alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
             alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
             alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
             alb = where(alb < c['a_min'], c['a_min'], alb)
@@ -317,7 +363,7 @@ class Processes(object):
 
         m['swe'] += m['snow_fall']
 
-        mlt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'], _zeros)
+        mlt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'], self._zeros)
         m['mlt'] = minimum(m['swe'], mlt_init)
 
         m['swe'] -= m['mlt']
@@ -342,9 +388,11 @@ class Processes(object):
         """
         m = self._master
         s = self._static
-        _zeros = self._zeros
 
         water = m['rain'] + m['mlt']
+        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
+        print 'rain: {}, melt: {}, water: {}'.format(self._mm_af(m['rain']),
+                                                     self._mm_af(m['mlt']), self._mm_af(water))
 
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
@@ -453,24 +501,35 @@ class Processes(object):
             # impose limits on vaporization according to present depletions #
             # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
             m['evap_1'] = where(m['evap_1'] > s['rew'] - m['drew'], s['rew'] - m['drew'], m['evap_1'])
+            m['evap_1'] = where(m['evap_1'] < 0.0, zeros(m['evap'].shape), m['evap_1'])
             m['evap_2'] = where(m['evap_2'] > s['tew'] - m['de'], s['tew'] - m['de'], m['evap_2'])
             m['transp'] = where(m['transp'] > s['taw'] - m['dr'], s['taw'] - m['dr'], m['transp'])
-
+            print 'evap 1: {}, evap_2: {}, tanspiration: {}'.format(self._mm_af(m['evap_1']), self._mm_af(m['evap_2']),
+                                                                    self._mm_af(m['transp']))
             # water balance through skin layer #
-            water = where(water < m['drew'] + m['evap_1'], _zeros, water - m['drew'] - m['evap_1'])
-            m['drew'] = where(water >= m['pdrew'] + m['evap_1'], _zeros, m['pdrew'] + m['evap_1'] - water)
+            water = where(water < m['drew'] + m['evap_1'], self._zeros, water - m['drew'] - m['evap_1'])
+            print 'water through skin layer: {}'.format(self._mm_af(water))
+            m['drew'] = where(water >= m['pdrew'] + m['evap_1'], self._zeros, m['pdrew'] + m['evap_1'] - water)
             m['drew'] = where(water < m['pdrew'] + m['evap_1'], m['pdrew'] + m['evap'] - water, m['drew'])
-            m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], _zeros)
+            m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], self._zeros)
             water = where(water > m['soil_ksat'], m['soil_ksat'], water)
 
             # water balance through the stage 2 evaporation layer #
-            m['de'] = where(water >= m['pde'] + m['evap_2'], _zeros, m['pde'] + m['evap_2'] - water)
+            m['de'] = where(water >= m['pde'] + m['evap_2'], self._zeros, m['pde'] + m['evap_2'] - water)
             m['de'] = where(water < m['pde'] + m['evap_2'], m['pde'] + m['evap_2'] - water, m['de'])
+            m['de'] = where(m['de'] < 0.0, zeros(m['de'].shape), m['de'])
+            print 'de has {} negative values'.format(count_nonzero(where(m['de'] < 0.0, ones(m['de'].shape),
+                                                                         zeros(m['de'].shape))))
+            print 'pde has {} negative values'.format(count_nonzero(where(m['pde'] < 0.0, ones(m['pde'].shape),
+                                                                          zeros(m['pde'].shape))))
             water = where(water >= m['pde'] + m['evap_2'], water - m['pde'] - m['evap_2'], water)
+            print 'water through  de  layer: {}'.format(self._mm_af(water))
 
             # water balance through the root zone layer #
-            m['dp_r'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], _zeros)
-            m['dr'] = where(water >= m['pdr'] + m['transp'], _zeros, m['pdr'] + m['transp'] - water)
+            m['dp_r'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
+            print 'deep percolation total: {}'.format(self._mm_af(m['dp_r']))
+            # print 'deep percolation: {}'.format(self._cells(m['dp_r']))
+            m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
             m['dr'] = where(water < m['pdr'] + m['transp'], m['pdr'] + m['transp'] - water, m['dr'])
 
         return None
@@ -481,22 +540,20 @@ class Processes(object):
         :return: None
         """
         m = self._master
-        _ones = self._ones
-        _zeros = self._zeros
 
         m['tot_infil'] += m['dp_r']
-        m['tot_infil'] = maximum(m['infil'], _zeros)
-
-        prev_et = m['tot_eta']
         m['tot_ref_et'] += m['etrs']
-        m['tot_eta'] = m['tot_eta'] + m['evap'] + m['transp']
-        m['et_ind'] = m['tot_eta'] / m['tot_ref_et']
-        m['tot_eta'] = where(isnan(m['tot_eta']) == True, prev_et, m['tot_eta'])
-        m['tot_eta'] = maximum(m['tot_eta'], _ones * 0.001)
-
-        m['tot_precip'] += m['rain'] + m['snow_fall']
+        m['tot_eta'] += m['eta']
+        m['tot_precip'] += m['ppt']
         m['tot_ro'] += m['ro']
         m['tot_swe'] += m['swe']
+
+        print 'dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(self._mm_af(m['dp_r']),
+                                                                             self._mm_af(m['etrs']),
+                                                                             self._mm_af(m['eta']),
+                                                                             self._mm_af(m['ppt']),
+                                                                             self._mm_af(m['ro']),
+                                                                             self._mm_af(m['swe']))
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -520,6 +577,7 @@ class Processes(object):
                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                             (m['pdrew'] - m['drew'])))
         m['tot_mass'] += abs(m['mass'])
+        print 'total mass balance error: {}'.format(self._mm_af(m['tot_mass']))
         m['tot_mass'] += m['mass']
 
     def _update_point_tracker(self, date, raster_point=None):
@@ -549,20 +607,29 @@ class Processes(object):
 
         m['pkcb'] = m['kcb']
         m['kcb'] = get_ndvi(ndvi, m['pkcb'], date)
-        # self._print_check(m['kcb'], 'daily kcb')
+        print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
+
         m['min_temp'] = get_prism(prism, date, variable='min_temp')
-        # self._print_check(m['min_temp'], 'daily min_temp')
         m['max_temp'] = get_prism(prism, date, variable='max_temp')
-        # self._print_check(m['max_temp'], 'daily max_temp')
+
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-        # self._print_check(m['temp'], 'daily temp')
-        m['ppt'], m['ppt_tom'] = get_prism(prism, date, variable='precip')
-        # need to ensure nonnegative ppt
-        # self._print_check(m['ppt'], 'daily ppt')
+        print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
+
+        m['ppt'] = get_prism(prism, date, variable='precip')
+        m['ppt'] = where(m['ppt'] < self._zeros, self._zeros, m['ppt'])
+        print 'raw ppt nan values = {}'.format(count_nonzero(isnan(m['ppt'])))
+        # print 'ppt min {} ppt max on day {} is {}'.format(m['ppt'].min(), date, m['ppt'].max())
+        # print 'total ppt et on {}: {:.2e} AF'.format(date, (m['ppt'].sum() / 1000) * (250 ** 2) / 1233.48)
+
         m['etrs'] = get_penman(penman, date, variable='etrs')
-        # self._print_check(m['etrs'], 'daily etrs')
+        print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
+        m['etrs'] = where(m['etrs'] < self._zeros, self._zeros, m['etrs'])
+        m['etrs'] = where(isnan(m['etrs']), self._zeros, m['etrs'])
+        print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
+        # print 'total ref et on {}: {:.2e} AF'.format(date, (m['etrs'].sum() / 1000) * (250 ** 2) / 1233.48)
+
         m['rg'] = get_penman(penman, date, variable='rg')
-        # self._print_check(m['rg'], 'daily rg')
+
         return None
 
     def _do_daily_point_load(self, point_dict, date):
@@ -572,7 +639,7 @@ class Processes(object):
         m['min_temp'] = ts['min temp'][date]
         m['max_temp'] = ts['max temp'][date]
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-        m['ppt'], m['ppt_tom'] = ts['precip'][date], ts['precip'][date + timedelta(days=1)]
+        m['ppt'] = ts['precip'][date]
         m['ppt'] = max(m['ppt'], 0.0)
         m['etrs'] = ts['etrs_pm'][date]
         m['rg'] = ts['rg'][date]
@@ -592,6 +659,7 @@ class Processes(object):
                     sub_region = element.strip('.shp')
 
                     df_month = tabulated_results[region_type][sub_region]
+
                     df_annual = df_month.resample('A').sum()
 
                     save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
@@ -600,6 +668,7 @@ class Processes(object):
                     save_loc_month = os.path.join(results_directories['root'],
                                                   results_directories['monthly_tabulated'][region_type],
                                                   '{}.csv'.format(sub_region))
+
                     dfs = [df_month, df_annual]
                     locations = [save_loc_month, save_loc_annu]
                     for df, location in zip(dfs, locations):
@@ -649,5 +718,8 @@ class Processes(object):
         print 'raster is {}'.format(category)
         print 'example values from data: {}'.format(self._cells(variable))
         print ''
+
+    def _mm_af(self, param):
+        return '{:.2e}'.format((param.sum() / 1000) * (250**2) / 1233.48)
 
 # ============= EOF =============================================

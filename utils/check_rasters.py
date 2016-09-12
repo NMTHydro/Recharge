@@ -25,39 +25,39 @@ import os
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 from dateutil import rrule
 from datetime import datetime
-from numpy import isnan
+from numpy import where, zeros
 
-simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
+simulation_period = datetime(2000, 1, 1), datetime(2013, 12, 31)
 
 
 def check_rasters(ndvi, prism, penman, period):
     roots = [ndvi, prism, penman]
-
+    total = 0.0
     for day in rrule.rrule(rrule.DAILY, dtstart=period[0], until=period[1]):
 
         # print ''
         # print 'day : {}'.format(day)
-        ndvi = get_ndvi(roots[0], 0.0, day)
+        # ndvi = get_ndvi(roots[0], 0.0, day)
         # print 'type = {}'.format(type(ndvi))
         # print 'ndvi: min = {} max = {}, mean = {}'.format(ndvi.min(), ndvi.max(), ndvi.mean())
-        pm = get_penman(roots[2], day)
+        # pm = get_penman(roots[2], day)
         # print 'pm: min = {} max = {}, mean = {}'.format(pm.min(), pm.max(), pm.mean())
-        ppt, ppt_tom = get_prism(roots[1], day, variable='precip')
+        ppt = get_prism(roots[1], day, variable='precip')
+        ppt = where(ppt < 0.0, zeros(ppt.shape), ppt)
+        sum = (ppt.sum() / 1000) * (250 ** 2) / 1233.48
+        total += sum
+        # print 'sum precip = {:.2e}'.format(sum)
+        if sum > 1.0e+7:
+            print ''
+            print 'high precip on {}: {:.2e} AF'.format(day.strftime('%Y-%m-%d'), sum)
         # print 'ppt: min = {} max = {}, mean = {}'.format(ppt.min(), ppt.max(), ppt.mean())
-        min_temp = get_prism(roots[1], day, variable='min_temp')
+        # min_temp = get_prism(roots[1], day, variable='min_temp')
         # print 'min_temp: min = {} max = {}, mean = {}'.format(min_temp.min(), min_temp.max(), min_temp.mean())
-        max_temp = get_prism(roots[1], day, variable='max_temp')
+        # max_temp = get_prism(roots[1], day, variable='max_temp')
         # print 'max_temp: min = {} max = {}, mean = {}'.format(max_temp.min(), max_temp.max(), max_temp.mean())
-        dct = {'ndvi': ndvi, 'pm': pm, 'ppt': ppt, 'min_temp': min_temp, 'max_temp': max_temp}
-        for key, item in dct.iteritems():
-            if item.max() > 100:
-                print ''
-                print 'on {} you have a high maximum {} = {}'.format(day, key, item.max())
-                print ''
-            if isnan(item.sum()):
-                print ''
-                print 'on {} you have a nan somewhere in {}'.format(day, key)
-
+        # dct = {'ndvi': ndvi, 'pm': pm, 'ppt': ppt, 'min_temp': min_temp, 'max_temp': max_temp}
+        # for key, item in dct.iteritems():
+    print 'total precip: {}'.format(total)
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
