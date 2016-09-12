@@ -112,16 +112,17 @@ class Rasters(object):
                     self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
                                               date_object, raster_output_path)
         # # FOR TESTING: calculate  xth day #
-        # if date_object.day in range(28):
-        #     print 'attempting to update/save day: {}'.format(date_object)
-        #     print 'outputs: {}'.format(outputs)
-        #     for element in outputs:
-        #         self._update_raster_tracker(master, output_tracker, element)
-        #         written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-        #                                             geo_attributes, results_dir, period='monthly')
-        #
-        #         self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
-        #                                   date_object, raster_output_path)
+        if date_object.day == 03:
+            print 'attempting to update/save day: {}'.format(date_object)
+            print 'outputs: {}'.format(outputs)
+            for element in outputs:
+                print 'saving {} raster'.format(element)
+                self._update_raster_tracker(master, output_tracker, element)
+                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+                                                    geo_attributes, results_dir, period='monthly')
+
+                self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
+                                          date_object, raster_output_path)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
@@ -132,6 +133,16 @@ class Rasters(object):
                 self._update_raster_tracker(master, output_tracker, element)
                 written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
                                                     geo_attributes, results_dir, period='monthly')
+
+                self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
+                                          date_object, raster_output_path)
+
+        # save annual data
+        if date_object.day == 31 and date_object.month == 12:
+            for element in outputs:
+                self._update_raster_tracker(master, output_tracker, element)
+                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+                                                    geo_attributes, results_dir, period='annual')
 
                 self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
                                           date_object, raster_output_path)
