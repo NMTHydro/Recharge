@@ -41,7 +41,7 @@ save_outputs = []
 
 
 def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, statics, initials,
-                             clip_polygons):
+                             clip_polygons, tabulation_frequency='daily'):
 
     etrm = Processes(date_range, raster_out_data, clip_polygons, statics, initials)
 

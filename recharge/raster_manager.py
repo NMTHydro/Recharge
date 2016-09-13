@@ -34,8 +34,10 @@ import recharge.dict_setup
 
 
 class Rasters(object):
-    def __init__(self, path_to_representative_raster, polygons, outputs, simulation_period, output_root):
+    def __init__(self, path_to_representative_raster, polygons, outputs, simulation_period, output_root,
+                 write_frequency=None):
 
+        self._write_freq = write_frequency
         self._polygons = polygons
         self._outputs = outputs
         self._geo = get_geo(path_to_representative_raster)
@@ -45,7 +47,7 @@ class Rasters(object):
         self._simulation_period = simulation_period
         self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period)
 
-    def update_save_raster(self, master, date_object, save_specific_dates=None):
+    def update_raster_obj(self, master, date_object, save_specific_dates=None):
 
         mo_date = monthrange(date_object.year, date_object.month)
 
@@ -55,9 +57,17 @@ class Rasters(object):
                 for element in self._outputs:
                     self._write_raster(element, date_object, period='day', master=master)
 
+        # save daily data (this will take a long time)
+        if self._write_freq == 'daily':
+            for element in self._outputs:
+                data_array = master[element]
+                self._sum_raster_by_shape(data_array, element, date_object)
+
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
         if date_object.day == mo_date[1]:
+            print ''
+            print 'saveing monthly data for {}'.format(date_object)
             for element in self._outputs:
                 data_array = master[element]
                 self._update_raster_tracker(master, element)
@@ -72,7 +82,8 @@ class Rasters(object):
                 self._write_raster(element, date_object, period='annual')
                 self._sum_raster_by_shape(data_array, element, date_object)
 
-        if date_object == self._simulation_period:
+        if date_object == self._simulation_period[1]:
+            print 'saving the simulation master tracker'
             save_csv(self._tabular_dict, self._results_dir, self._polygons)
         return None
 
@@ -112,11 +123,6 @@ class Rasters(object):
             filename = os.path.join(self._results_dir['root'], self._results_dir['monthly_rasters'], file_)
             array_to_save = self._output_tracker['current_month'][key]
 
-        elif period == 'daily':
-            file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
-            filename = os.path.join(self._results_dir['root'], self._results_dir['daily_rasters'], file_)
-            array_to_save = master[key]
-
         else:
             array_to_save = None
             filename = None
@@ -133,12 +139,12 @@ class Rasters(object):
     def _sum_raster_by_shape(self, param_obj, parameter, date):
 
         folders = os.listdir(self._polygons)
-        # print 'processing parameter: {}'.format(parameter)
+        print 'processing parameter: {}'.format(parameter)
         for in_fold in folders:
-            # print 'input geo shapes folder: {}'.format(in_fold)
+            print 'input geo shapes folder: {}'.format(in_fold)
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
             shape_files = os.listdir(os.path.join(self._polygons, in_fold))
-            # print 'files in region {}:\n{}'.format(region_type, files)
+            print 'files in region {}:\n{}'.format(region_type, shape_files)
             for geometry in shape_files:
                 if geometry.endswith('.shp'):
                     sub_region = geometry.strip('.shp')
@@ -176,6 +182,49 @@ class Rasters(object):
                                                    parameter, param_acre_feet)
                     df['{}_[cbm]'.format(parameter)].loc[date] = param_cubic_meters
                     df['{}_[AF]'.format(parameter)].loc[date] = param_acre_feet
+        return None
+
+    def save_tabulated_results_to_csv(self, results_directories, polygons):
+        print 'results directories: {}'.format(results_directories)
+
+        folders = os.listdir(polygons)
+        for in_fold in folders:
+            print 'saving tab data for input folder: {}'.format(in_fold)
+            region_type = os.path.basename(in_fold).replace('_Polygons', '')
+            files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
+            print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
+            for element in files:
+                if element.endswith('.shp'):
+                    sub_region = element.strip('.shp')
+
+                    df = self._tabular_dict[region_type][sub_region]
+
+                    if self._write_freq == 'daily':
+                        df_month = df.resample('M').sum()
+                    else:
+                        df_month = self._tabular_dict[region_type][sub_region]
+                    # print 'df for {} {}'.format(region_type, sub_region)
+                    # print df_month.describe()
+
+                    df_annual = df_month.resample('A').sum()
+
+                    save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
+                                                 '{}.csv'.format(sub_region))
+
+                    save_loc_month = os.path.join(results_directories['root'],
+                                                  results_directories['monthly_tabulated'][region_type],
+                                                  '{}.csv'.format(sub_region))
+
+                    if self._write_freq == 'daily':
+                        dfs = [df_month, df_annual]
+                        locations = [save_loc_month, save_loc_annu]
+                    else:
+                        dfs = [df_month, df_annual]
+                        locations = [save_loc_month, save_loc_annu]
+
+                    for df, location in zip(dfs, locations):
+                        print 'this should be your location csv: {}'.format(location)
+                        df.to_csv(location, na_rep='nan', index_label='Date')
         return None
 
 

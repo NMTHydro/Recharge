@@ -14,13 +14,10 @@
 # limitations under the License.
 # ===============================================================================
 
-from osgeo import gdal, ogr
-from numpy import array, where, zeros, isnan
-from calendar import monthrange
+from osgeo import gdal
+from numpy import array
 from datetime import datetime
 import os
-
-from tools import millimeter_to_acreft as mm_af
 
 
 def convert_raster_to_array(input_raster_path, raster,
@@ -42,8 +39,8 @@ def get_raster_geo_attributes(statics_path):
 
 
 def make_results_dir(out_path, shapes):
-    empties = ['annual_rasters', 'monthly_rasters', 'daily_rasters', 'ETRM_14_yr_rasters', 'annual_tabulated',
-               'monthly_tabulated']
+    empties = ['annual_rasters', 'monthly_rasters', 'ETRM_14_yr_rasters', 'annual_tabulated',
+               'monthly_tabulated', 'daily_tabulated']
     now = datetime.now()
     tag = now.strftime('%Y_%m_%d')
     folder = 'ETRM_Results_{}'.format(tag)
@@ -58,7 +55,7 @@ def make_results_dir(out_path, shapes):
             os.makedirs(empty)
             results_directories[item] = empty
         region_types = os.listdir(shapes)
-        for tab_folder in ['annual_tabulated', 'monthly_tabulated']:
+        for tab_folder in ['annual_tabulated', 'monthly_tabulated', 'daily_tabulated']:
             results_directories[tab_folder] = {}
             for region_type in region_types:
                 a, b = region_type.split('_P')
@@ -70,7 +67,7 @@ def make_results_dir(out_path, shapes):
             empty = os.path.join(new_dir, item)
             results_directories[item] = os.path.join(empty)
         region_types = os.listdir(shapes)
-        for tab_folder in ['annual_tabulated', 'monthly_tabulated']:
+        for tab_folder in ['annual_tabulated', 'monthly_tabulated', 'daily_tabulated']:
             results_directories[tab_folder] = {}
             for region_type in region_types:
                 a, b = region_type.split('_P')

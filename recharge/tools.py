@@ -21,39 +21,14 @@ def millimeter_to_acreft(param):
     return '{:.2e}'.format((param.sum() / 1000) * (250**2) / 1233.48)
 
 
-def save_tabulated_results_to_csv(tabulated_results, results_directories, polygons):
+def save_master_tracker(tracker, raster_out_root):
 
-    print 'results directories: {}'.format(results_directories)
+    csv_path_filename = os.path.join(raster_out_root, 'etrm_master_tracker.csv')
+    print 'this should be your master tracker csv: {}'.format(csv_path_filename)
+    tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
-    folders = os.listdir(polygons)
-    for in_fold in folders:
-        print 'saving tab data for input folder: {}'.format(in_fold)
-        region_type = os.path.basename(in_fold).replace('_Polygons', '')
-        files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
-        print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
-        for element in files:
-            if element.endswith('.shp'):
-                sub_region = element.strip('.shp')
-
-                df_month = tabulated_results[region_type][sub_region]
-                # print 'df for {} {}'.format(region_type, sub_region)
-                # print df_month.describe()
-
-                df_annual = df_month.resample('A').sum()
-
-                save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
-                                             '{}.csv'.format(sub_region))
-
-                save_loc_month = os.path.join(results_directories['root'],
-                                              results_directories['monthly_tabulated'][region_type],
-                                              '{}.csv'.format(sub_region))
-
-                dfs = [df_month, df_annual]
-                locations = [save_loc_month, save_loc_annu]
-                for df, location in zip(dfs, locations):
-                    print 'this should be your csv: {}'.format(location)
-                    df.to_csv(location, na_rep='nan', index_label='Date')
     return None
+
 
 if __name__ == '__main__':
     pass

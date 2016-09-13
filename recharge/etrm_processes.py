@@ -24,6 +24,7 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 from tools import millimeter_to_acreft as mm_af
+from tools import save_master_tracker
 
 
 class Processes(object):
@@ -42,8 +43,9 @@ class Processes(object):
     _initial_depletions = None
 
     def __init__(self, date_range, output_root, polygons=None, static_inputs=None, initial_inputs=None,
-                 point_dict=None):
+                 point_dict=None, write_freq=None):
 
+        self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
         self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
@@ -67,7 +69,7 @@ class Processes(object):
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-            self._raster = Rasters(static_inputs, polygons, self._outputs, date_range, output_root)
+            self._raster = Rasters(static_inputs, polygons, self._outputs, date_range, output_root, write_freq)
 
         self._master = initialize_master_dict(self._zeros)
 
@@ -158,7 +160,7 @@ class Processes(object):
                     self._master_tracker = initialize_master_tracker(self._master)
 
             if not point_dict:
-                self._raster.update_save_raster(m, day)
+                self._raster.update_raster_obj(m, day)
 
                 self._update_master_tracker(day)
 
@@ -171,7 +173,7 @@ class Processes(object):
 
             elif day == end_date:
                 print 'last day: saving tabulated data'
-                return self._master_tracker
+                save_master_tracker(self._master_tracker, self._output_root)
 
     def _do_dual_crop_coefficient(self):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.

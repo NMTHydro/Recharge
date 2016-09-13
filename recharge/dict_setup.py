@@ -195,10 +195,12 @@ def initialize_raster_tracker(tracked_outputs, shape):
 def initialize_tabular_dict(shapes, outputs, date_range_):
 
             folders = os.listdir(shapes)
-            af_cbs_expand = [[x + '_[AF]', x + '_[cbm]'] for x in outputs]
+            af_cbs_expand = [['{}_[AF]'.format(x), '{}_[cbm]'.format(x)] for x in outputs]
             tabular_cols = [item for sublist in af_cbs_expand for item in sublist]
-            ind = date_range(date_range_[0], date_range_[1], freq='M')
+            print 'dataframe index: from {} to {}'.format(date_range_[0], date_range_[1])
+            ind = date_range(date_range_[0], date_range_[1], freq='D')
             tabular_output = DataFrame(index=ind, columns=tabular_cols).fillna(0.0)
+            print tabular_output
             tab_dict = {}
             for in_fold in folders:
                 region_type, toss = in_fold.split('_Poly')
