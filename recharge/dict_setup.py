@@ -50,22 +50,24 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
     return dictionary
 
 
-def initialize_master_dict(zeros):
+def initialize_master_dict(zeros_):
     """create an empty dict that will carry ETRM-derived values day to day"""
 
     master = dict()
-    master['pkcb'] = zeros
-    master['kcb'] = zeros
-    master['dp_r'] = zeros
-    master['tot_mass'] = zeros
-    master['tot_mass'] = zeros
-    master['tot_infil'] = zeros
-    master['tot_ref_et'] = zeros
-    master['infil'] = zeros
-    master['tot_eta'] = zeros
-    master['tot_precip'] = zeros
-    master['tot_ro'] = zeros
-    master['tot_swe'] = zeros
+    master['pkcb'] = zeros_
+    master['infil'] = zeros_
+    master['kcb'] = zeros_
+    master['dp_r'] = zeros_
+    master['tot_snow'] = zeros_
+    master['tot_rain'] = zeros_
+    master['tot_melt'] = zeros_
+    master['tot_mass'] = zeros_
+    master['tot_infil'] = zeros_
+    master['tot_ref_et'] = zeros_
+    master['tot_eta'] = zeros_
+    master['tot_precip'] = zeros_
+    master['tot_ro'] = zeros_
+    master['tot_swe'] = zeros_
 
     return master
 
@@ -98,37 +100,37 @@ def initialize_static_dict(inputs_path, point_dict=None):
             static_dict.update({key: data})
 
         for key, data in zip(static_keys, static_arrays):
-            print ''
-            print '{} has {} values of zero'.format(key, count_nonzero(where(data == 0.0, ones(data.shape),
-                                                                             zeros(data.shape))))
-            print '{} has {} values < zero'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
-                                                                            zeros(data.shape))))
+            # print ''
+            # print '{} has {} values of zero'.format(key, count_nonzero(where(data == 0.0, ones(data.shape),
+            #                                                                  zeros(data.shape))))
+            # print '{} has {} values < zero'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
+            #                                                                 zeros(data.shape))))
             if key == 'tew':
                 min_val = 15
-                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                                                                                   ones(data.shape),
-                                                                                   zeros(data.shape))), min_val)
+                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                #                                                                    ones(data.shape),
+                #                                                                    zeros(data.shape))), min_val)
                 data = where(data <= min_val, ones(data.shape) * min_val, data)
 
             if key == 'soil_ksat':
                 min_val = 20
-                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                                                                                   ones(data.shape),
-                                                                                   zeros(data.shape))), min_val)
+                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                #                                                                    ones(data.shape),
+                #                                                                    zeros(data.shape))), min_val)
                 data = where(data <= min_val, ones(data.shape) * min_val, data)
 
             if key == 'root_z':
                 min_val = 100
-                print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                                                                                   ones(data.shape),
-                                                                                   zeros(data.shape))), min_val)
+                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+                #                                                                    ones(data.shape),
+                #                                                                    zeros(data.shape))), min_val)
                 data = where(data < min_val, ones(data.shape) * min_val, data)
 
             if key == 'quat_deposits':
                 min_val = 250
-                print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
-                                                                        ones(data.shape),
-                                                                        zeros(data.shape))), min_val)
+                # print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
+                #                                                         ones(data.shape),
+                #                                                         zeros(data.shape))), min_val)
 
                 static_dict['taw'] = where(data > 0.0, ones(data.shape) * min_val, static_dict['taw'])
 
@@ -214,13 +216,16 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
             return tab_dict
 
 
-def initialize_master_window(master):
-    window = {}
-    for key, val in master.iteritems():
-        try:
-            window.update({key: val[480:485, 940:945]})
-        except TypeError:
-            pass
-    return window
+def initialize_master_tracker(master):
+
+    """ Create DataFrame to plot point time series, these are empty lists that will
+     be filled as the simulation progresses"""
+
+    tracker_keys = [key for key, val in master.iteritems()]
+    tracker_keys.sort()
+
+    tracker = DataFrame(columns=tracker_keys)
+
+    return tracker
 
 # ============= EOF =============================================

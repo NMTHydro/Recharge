@@ -31,7 +31,7 @@ from recharge.etrm_processes import Processes
 
 set_printoptions(linewidth=700, precision=2)
 
-simulation_period = datetime(2000, 1, 1), datetime(2000, 1, 31)
+simulation_period = datetime(2000, 1, 1), datetime(2000, 1, 10)
 
 extent = []  # we should eventually have a program to run etrm on a given extent
 
@@ -40,12 +40,17 @@ save_outputs = []
 
 
 def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, select_dates=None,
-                             select_outputs=None, clip_polygons=None):
+                             select_outputs=None, clip_polygons=None, save_csv=None):
 
     etrm = Processes(static_inputs_path, initial_conditions_path)
 
-    etrm.run(date_range, results_path=raster_out_data, ndvi_path=ndvi, prism_path=prism,
-             penman_path=penman, polygons=clip_polygons)
+    tracker = etrm.run(date_range, results_path=raster_out_data, ndvi_path=ndvi, prism_path=prism,
+                       penman_path=penman, polygons=clip_polygons)
+
+    # print 'tracker after etrm run: \n {}'.format(tracker)
+    csv_path_filename = os.path.join(save_csv, 'etrm_master_tracker.csv')
+    print 'this should be your csv: {}'.format(csv_path_filename)
+    tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
     return None
 
@@ -63,7 +68,7 @@ if __name__ == '__main__':
     output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
     output_path = os.path.join('F:\\', 'ETRM_Results')
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
-                             clip_polygons=output_polygons)
+                             clip_polygons=output_polygons, save_csv=output_path)
 
 # ============= EOF =============================================
 

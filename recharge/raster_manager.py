@@ -99,7 +99,7 @@ class Rasters(object):
         # raster_track_dict = {'output_an': {'output': raster}, 'output_mo': {{'output': raster}},
         #                      'last_mo': {{'output': raster}}, 'last_yr': {{'output': raster}}}
         
-        # outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe']
+        # outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe', 'tot_mass']
         
         mo_date = monthrange(date_object.year, date_object.month)
 
@@ -112,17 +112,19 @@ class Rasters(object):
                     self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
                                               date_object, raster_output_path)
         # # FOR TESTING: calculate  xth day #
-        if date_object.day == 03:
-            print 'attempting to update/save day: {}'.format(date_object)
-            print 'outputs: {}'.format(outputs)
-            for element in outputs:
-                print 'saving {} raster'.format(element)
-                self._update_raster_tracker(master, output_tracker, element)
-                written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
-                                                    geo_attributes, results_dir, period='monthly')
-
-                self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
-                                          date_object, raster_output_path)
+        # if date_object.day == 03:
+        #     print ''
+        #     print 'attempting to update/save day: {}'.format(date_object)
+        #     print 'outputs: {}'.format(outputs)
+        #     for element in outputs:
+        #         self._update_raster_tracker(master, output_tracker, element)
+        #         written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
+        #                                             geo_attributes, results_dir, period='monthly')
+        #
+        #         self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
+        #                                   date_object, raster_output_path)
+                # print 'saving {} raster, tracker total: {} AF'.format(element,
+                #                                                       self._mm_af(output_tracker['current_month'][element]))
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
@@ -140,7 +142,7 @@ class Rasters(object):
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in outputs:
-                self._update_raster_tracker(master, output_tracker, element)
+                self._update_raster_tracker(master, output_tracker, element, annual=True)
                 written_raster = self._write_raster(output_tracker, element, date_object, raster_output_path,
                                                     geo_attributes, results_dir, period='annual')
 
@@ -149,7 +151,7 @@ class Rasters(object):
 
         return None
 
-    def _update_raster_tracker(self, master_dict, raster_output_tracker, var):
+    def _update_raster_tracker(self, master_dict, raster_output_tracker, var, annual=False):
         """ Updates the cummulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
@@ -163,18 +165,24 @@ class Rasters(object):
         """
 
         # {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {}, 'last_day': {}}
+        # print 'update variable # {} # total: {} AF'.format(var, self._mm_af(master_dict[var]))
+        if annual:
+            raster_output_tracker['current_year'][var] = master_dict[var] - raster_output_tracker['last_yr'][var]
+            raster_output_tracker['last_yr'][var] = raster_output_tracker['current_year'][var]
 
-        raster_output_tracker['current_year'][var] = master_dict[var] - raster_output_tracker['last_yr'][var]
         raster_output_tracker['current_month'][var] = master_dict[var] - raster_output_tracker['last_mo'][var]
-        raster_output_tracker['last_yr'][var] = raster_output_tracker['current_year'][var]
         raster_output_tracker['last_mo'][var] = raster_output_tracker['current_month'][var]
+        # print 'updated variable $ {} # total: {} AF'.format(var,
+        #                                                     self._mm_af(raster_output_tracker['current_month'][var]))
+        # print 'check against tot_ref_et: {} AF'.format(self._mm_af(master_dict['tot_ref_et']))
+        # print 'check against tot_ppt: {} AF'.format(self._mm_af(master_dict['tot_precip']))
 
         return None
 
     def _write_raster(self, output_raster_dict, key, date, out_path, raster_geometry, results_directory, period=None,
                       master=None):
 
-        # print "Saving {}_{}_{}".format(key, date.month, date.year)
+        print "Saving {}_{}_{}".format(key, date.month, date.year)
 
         if period == 'annual':
             file_ = '{}_{}.tif'.format(key, date.year)
@@ -253,5 +261,7 @@ class Rasters(object):
                     df['{}_[AF]'.format(parameter)].loc[date] = param_acre_feet
         return None
 
+    def _mm_af(self, param):
+        return '{:.2e}'.format((param.sum() / 1000) * (250**2) / 1233.48)
 
 # ============= EOF =============================================

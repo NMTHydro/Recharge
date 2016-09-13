@@ -22,7 +22,7 @@ import os
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
      initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict,\
-     initialize_master_window
+     initialize_master_tracker
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 
@@ -41,7 +41,8 @@ class Processes(object):
     _point_dict_key = None
     _results_directory = None
     _tabulated_dict = None
-    _master_window = None
+    _master_tracker = None
+    _initial_depletions = None
 
     def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
@@ -50,7 +51,8 @@ class Processes(object):
         self._raster_point = raster_point
 
         self._point_dict = point_dict
-        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe']
+        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
+                         'tot_rain', 'tot_mlt', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -124,6 +126,7 @@ class Processes(object):
                     m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
                     m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
                     m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
+
                 else:
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
@@ -131,7 +134,7 @@ class Processes(object):
 
                     self._results_directory = self._raster.make_results_dir(results_path, polygons)
                     self._tabulated_dict = initialize_tabular_dict(polygons, self._outputs, date_range)
-
+                self._initial_depletions = m['dr'] + m['de'] + m['drew']
             else:
                 m['first_day'] = False
 
@@ -148,8 +151,6 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            print 'soil_ksat nan values = {}'.format(count_nonzero(isnan(m['soil_ksat'])))
-
             self._do_dual_crop_coefficient()
 
             self._do_snow()
@@ -158,18 +159,22 @@ class Processes(object):
 
             self._do_mass_balance()
 
+            self._do_accumulations()
+
             if day == start_date:
-                self._point_tracker = initialize_point_tracker(self._master)
-                self._master_window = initialize_master_window(self._master)
+                if self._point_dict:
+                    self._point_tracker = initialize_point_tracker(self._master)
+                else:
+                    self._master_tracker = initialize_master_tracker(self._master)
 
             if not point_dict:
-                self._do_accumulations()
                 self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
                                                 results_path, self._raster_geo_attributes, self._results_directory,
                                                 shapefiles=polygons, save_specific_dates=None,
-                                                save_outputs=None)
-                self._update_master_window()
-                # print 'window into fluxes:\n{}'.format(self._master_window)
+                                                save_outputs=self._outputs)
+
+                self._update_master_tracker(day)
+                # print 'window into fluxes:\n{}'.format(self._master_tracker)
 
                 if self._raster_point:
                     self._update_point_tracker(day, self._raster_point)
@@ -184,6 +189,7 @@ class Processes(object):
             elif day == end_date:
                 print 'last day: saving tabulated data'
                 self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, polygons)
+                return self._master_tracker
 
     def _do_dual_crop_coefficient(self):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
@@ -215,16 +221,16 @@ class Processes(object):
 
         ####
         # stage 2 coefficient
-        print '{} of tew, {} of pde, and {} of rew are nan'.format(count_nonzero(isnan(s['tew'])),
-                                                                   count_nonzero(isnan(m['pde'])),
-                                                                   count_nonzero(isnan(s['rew'])))
-
-        print '{} of tew, {} of pde, and {} of rew are zero or less'.format(count_nonzero(where(s['tew'] <= self._zeros,
-                                                                                                self._ones, self._zeros)),
-                                                                            count_nonzero(where(m['pde'] <= self._zeros,
-                                                                                                self._ones, self._zeros)),
-                                                                            count_nonzero(where(s['rew'] <= self._zeros,
-                                                                                                self._ones, self._zeros)))
+        # print '{} of tew, {} of pde, and {} of rew are nan'.format(count_nonzero(isnan(s['tew'])),
+        #                                                            count_nonzero(isnan(m['pde'])),
+        #                                                            count_nonzero(isnan(s['rew'])))
+        #
+        # print '{} of tew, {} of pde, and {} of rew are zero or less'.format(count_nonzero(where(s['tew'] <= self._zeros,
+        #                                                                                         self._ones, self._zeros)),
+        #                                                                     count_nonzero(where(m['pde'] <= self._zeros,
+        #                                                                                         self._ones, self._zeros)),
+        #                                                                     count_nonzero(where(s['rew'] <= self._zeros,
+        #                                                                                         self._ones, self._zeros)))
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
         if self._point_dict:
@@ -232,7 +238,7 @@ class Processes(object):
                 m['kr'] = 0.01
         else:
             m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
-        print '{} cells are nan in kr'.format(count_nonzero(isnan(m['kr'])))
+        # print '{} cells are nan in kr'.format(count_nonzero(isnan(m['kr'])))
 
         ####
         # check for stage 1 evaporation, i.e. drew < rew
@@ -242,7 +248,7 @@ class Processes(object):
         st_1_dur = minimum(st_1_dur, self._ones * 0.99)
         m['st_1_dur'] = maximum(st_1_dur, self._zeros)
         # print 'bounded calculation of st_1_dur = {}'.format(self._cells(m['st_1_dur']))
-        print '{} cells are nan in st_1_dur'.format(count_nonzero(isnan(m['st_1_dur'])))
+        # print '{} cells are nan in st_1_dur'.format(count_nonzero(isnan(m['st_1_dur'])))
         m['st_2_dur'] = (1 - m['st_1_dur'])
         # print 'rew: {}, pdrew: {}, kemax: {}, etrs: {}'.format(self._cells(s['rew']), self._cells(m['pdrew']),
         #                                                        (c['ke_max']), self._cells(m['etrs']))
@@ -252,7 +258,7 @@ class Processes(object):
         if self._point_dict:
             if m['ke_init'] < 0.0:
                 m['adjust_ke'] = 'True'
-                m['ke'] = 0.0
+                m['ke'] = 0.01
             if m['ke_init'] > m['few'] * c['kc_max']:
                 m['adjust_ke'] = 'True'
                 m['ke'] = m['few'] * c['kc_max']
@@ -263,7 +269,7 @@ class Processes(object):
                 ke_adjustment = 1.0
         else:
             m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
-            m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape), m['ke'])
+            m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape) + 0.01, m['ke'])
             ke_adjustment = where(m['ke_init'] > m['few'] * c['kc_max'], m['ke'] / m['ke_init'], self._ones)
 
         m['ke'] = minimum(m['ke'], self._ones)
@@ -273,20 +279,17 @@ class Processes(object):
         # m['evap'] = m['ke'] * m['etrs']
         m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
         m['evap_2'] = m['st_2_dur'] * m['kr'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
-        m['evap'] = m['evap_1'] + m['evap_2']
 
-        m['eta'] = m['transp'] + m['evap']
-
-        for key, val in m.iteritems():
-            nan_ct = count_nonzero(isnan(val))
-            if nan_ct > 0:
-                print '{} has {} nan values'.format(key, nan_ct)
-            try:
-                neg_ct = count_nonzero(where(val < 0.0, ones(val.shape), zeros(val.shape)))
-                if neg_ct > 0:
-                    print '{} has {} negative values'.format(key, neg_ct)
-            except AttributeError:
-                pass
+        # for key, val in m.iteritems():
+        #     nan_ct = count_nonzero(isnan(val))
+        #     if nan_ct > 0:
+        #         print '{} has {} nan values'.format(key, nan_ct)
+        #     try:
+        #         neg_ct = count_nonzero(where(val < 0.0, ones(val.shape), zeros(val.shape)))
+        #         if neg_ct > 0:
+        #             print '{} has {} negative values'.format(key, neg_ct)
+        #     except AttributeError:
+        #         pass
 
     def _do_snow(self):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
@@ -390,10 +393,9 @@ class Processes(object):
         s = self._static
 
         water = m['rain'] + m['mlt']
-        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
-        print 'rain: {}, melt: {}, water: {}'.format(self._mm_af(m['rain']),
-                                                     self._mm_af(m['mlt']), self._mm_af(water))
+        water_tracker = water
 
+        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
         if self._point_dict:  # point
@@ -401,7 +403,7 @@ class Processes(object):
             s = s[self._point_dict_key]
 
             # give days with melt a ksat value for entire day
-            if m['rain'] < m['mlt']:
+            if m['mlt'] > 0.0:
                 m['soil_ksat'] = s['soil_ksat']
 
             # update variables
@@ -434,17 +436,20 @@ class Processes(object):
             else:
                 m['adjust_transp'] = 'False'
 
+            m['evap'] = m['evap_1'] + m['evap_2']
+            m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
+
             # this is where a new day starts in terms of depletions (i.e. pdr vs dr) #
             # water balance through skin layer #
             m['drew_water'] = water
-            if water < m['drew'] + m['evap_1']:
+            if water < m['pdrew'] + m['evap_1']:
                 m['ro'] = 0.0
                 m['drew'] = m['pdrew'] + m['evap_1'] - water
                 if m['drew'] > s['rew']:
                     print 'why is drew greater than rew?'
                     m['drew'] = s['rew']
                 water = 0.0
-            elif water >= m['drew'] + m['evap_1']:
+            elif water >= m['pdrew'] + m['evap_1']:
                 m['drew'] = 0.0
                 water -= m['pdrew'] + m['evap_1']
                 if water > m['soil_ksat']:
@@ -458,7 +463,7 @@ class Processes(object):
 
             # water balance through the stage 2 evaporation layer #
             m['de_water'] = water
-            if water < m['de'] + m['evap_2']:
+            if water < m['pde'] + m['evap_2']:
                 m['de'] = m['pde'] + m['evap_2'] - water
                 if m['de'] > s['tew']:
                     print 'why is de greater than tew?'
@@ -475,13 +480,13 @@ class Processes(object):
 
             # water balance through the root zone #
             m['dr_water'] = water
-            if water < m['dr'] + m['transp']:
+            if water < m['pdr'] + m['transp']:
                 m['dp_r'] = 0.0
                 m['dr'] = m['pdr'] + m['transp'] - water
                 if m['dr'] > s['taw']:
                     print 'why is dr greater than taw?'
                     m['dr'] = s['taw']
-            elif water >= m['dr'] + m['transp']:
+            elif water >= m['pdr'] + m['transp']:
                 m['dr'] = 0.0
                 water -= m['pdr'] + m['transp']
                 if water > m['soil_ksat']:
@@ -496,41 +501,49 @@ class Processes(object):
             m['pde'] = m['de']
             m['pdrew'] = m['drew']
 
-            m['soil_ksat'] = where(m['rain'] < m['mlt'], s['soil_ksat'], m['soil_ksat'])
+            print 'rain: {}, melt: {}, water: {}'.format(self._mm_af(m['rain']),
+                                                         self._mm_af(m['mlt']), self._mm_af(water))
+
+            m['soil_ksat'] = where(m['mlt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
             # impose limits on vaporization according to present depletions #
             # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
-            m['evap_1'] = where(m['evap_1'] > s['rew'] - m['drew'], s['rew'] - m['drew'], m['evap_1'])
-            m['evap_1'] = where(m['evap_1'] < 0.0, zeros(m['evap'].shape), m['evap_1'])
-            m['evap_2'] = where(m['evap_2'] > s['tew'] - m['de'], s['tew'] - m['de'], m['evap_2'])
-            m['transp'] = where(m['transp'] > s['taw'] - m['dr'], s['taw'] - m['dr'], m['transp'])
-            print 'evap 1: {}, evap_2: {}, tanspiration: {}'.format(self._mm_af(m['evap_1']), self._mm_af(m['evap_2']),
-                                                                    self._mm_af(m['transp']))
+            m['evap_1'] = where(m['evap_1'] > s['rew'] - m['pdrew'], s['rew'] - m['drew'], m['evap_1'])
+            m['evap_1'] = where(m['evap_1'] < 0.0, zeros(m['evap_1'].shape), m['evap_1'])
+            m['evap_2'] = where(m['evap_2'] > s['tew'] - m['pde'], s['tew'] - m['pde'], m['evap_2'])
+            m['evap_2'] = where(m['evap_2'] < 0.0, zeros(m['evap_2'].shape), m['evap_2'])
+            m['transp'] = where(m['transp'] > s['taw'] - m['pdr'], s['taw'] - m['dr'], m['transp'])
+
+            m['evap'] = m['evap_1'] + m['evap_2']
+            m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
+
+            print 'evap 1: {}, evap_2: {}, transpiration: {}'.format(self._mm_af(m['evap_1']), self._mm_af(m['evap_2']),
+                                                                     self._mm_af(m['transp']))
+
             # water balance through skin layer #
-            water = where(water < m['drew'] + m['evap_1'], self._zeros, water - m['drew'] - m['evap_1'])
-            print 'water through skin layer: {}'.format(self._mm_af(water))
             m['drew'] = where(water >= m['pdrew'] + m['evap_1'], self._zeros, m['pdrew'] + m['evap_1'] - water)
-            m['drew'] = where(water < m['pdrew'] + m['evap_1'], m['pdrew'] + m['evap'] - water, m['drew'])
+            water = where(water < m['pdrew'] + m['evap_1'], self._zeros, water - m['pdrew'] - m['evap_1'])
+            # print 'water through skin layer: {}'.format(self._mm_af(water))
             m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], self._zeros)
             water = where(water > m['soil_ksat'], m['soil_ksat'], water)
 
             # water balance through the stage 2 evaporation layer #
             m['de'] = where(water >= m['pde'] + m['evap_2'], self._zeros, m['pde'] + m['evap_2'] - water)
-            m['de'] = where(water < m['pde'] + m['evap_2'], m['pde'] + m['evap_2'] - water, m['de'])
-            m['de'] = where(m['de'] < 0.0, zeros(m['de'].shape), m['de'])
-            print 'de has {} negative values'.format(count_nonzero(where(m['de'] < 0.0, ones(m['de'].shape),
-                                                                         zeros(m['de'].shape))))
-            print 'pde has {} negative values'.format(count_nonzero(where(m['pde'] < 0.0, ones(m['pde'].shape),
-                                                                          zeros(m['pde'].shape))))
-            water = where(water >= m['pde'] + m['evap_2'], water - m['pde'] - m['evap_2'], water)
-            print 'water through  de  layer: {}'.format(self._mm_af(water))
+
+            water = where(water < m['pde'] + m['evap_2'], self._zeros, water - (m['pde'] + m['evap_2']))
+            # print 'water through  de  layer: {}'.format(self._mm_af(water))
 
             # water balance through the root zone layer #
             m['dp_r'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
-            print 'deep percolation total: {}'.format(self._mm_af(m['dp_r']))
+            # print 'deep percolation total: {}'.format(self._mm_af(m['dp_r']))
             # print 'deep percolation: {}'.format(self._cells(m['dp_r']))
             m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
-            m['dr'] = where(water < m['pdr'] + m['transp'], m['pdr'] + m['transp'] - water, m['dr'])
+
+            m['storage_daily'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
+
+            print 'water: {}, out: {}, storage: {}'.format(self._mm_af(water_tracker),
+                                                           self._mm_af(m['ro'] + m['eta'] + m['dp_r']),
+                                                           self._mm_af(m['storage_daily']))
 
         return None
 
@@ -541,19 +554,34 @@ class Processes(object):
         """
         m = self._master
 
-        m['tot_infil'] += m['dp_r']
-        m['tot_ref_et'] += m['etrs']
-        m['tot_eta'] += m['eta']
-        m['tot_precip'] += m['ppt']
-        m['tot_ro'] += m['ro']
-        m['tot_swe'] += m['swe']
+        # strangely, these keys wouldn't update with augmented assignment
+        # i.e. m['tot_infil] += m['dp_r'] wasn't working
+        m['tot_infil'] = m['dp_r'] + m['tot_infil']
+        m['tot_ref_et'] = m['etrs'] + m['tot_ref_et']
+        m['tot_eta'] = m['eta'] + m['tot_eta']
+        m['tot_precip'] = m['ppt'] + m['tot_precip']
+        m['tot_rain'] = m['rain'] + m['tot_rain']
+        m['tot_melt'] = m['mlt'] + m['tot_melt']
+        m['tot_ro'] = m['ro'] + m['tot_ro']
+        m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
-        print 'dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(self._mm_af(m['dp_r']),
-                                                                             self._mm_af(m['etrs']),
-                                                                             self._mm_af(m['eta']),
-                                                                             self._mm_af(m['ppt']),
-                                                                             self._mm_af(m['ro']),
-                                                                             self._mm_af(m['swe']))
+        m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
+
+        if not self._point_dict:
+            print 'today dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}, stor {}'.format(self._mm_af(m['dp_r']),
+                                                                                                self._mm_af(m['etrs']),
+                                                                                                self._mm_af(m['eta']),
+                                                                                                self._mm_af(m['ppt']),
+                                                                                                self._mm_af(m['ro']),
+                                                                                                self._mm_af(m['swe']),
+                                                                                                self._mm_af(m['storage_daily']))
+
+            print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(self._mm_af(m['tot_infil']),
+                                                                                        self._mm_af(m['tot_ref_et']),
+                                                                                        self._mm_af(m['tot_eta']),
+                                                                                        self._mm_af(m['tot_precip']),
+                                                                                        self._mm_af(m['tot_ro']),
+                                                                                        self._mm_af(m['tot_swe']))
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -572,13 +600,15 @@ class Processes(object):
 
         :return:
         """
+
         m = self._master
         m['mass'] = m['rain'] + m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                             (m['pdrew'] - m['drew'])))
-        m['tot_mass'] += abs(m['mass'])
-        print 'total mass balance error: {}'.format(self._mm_af(m['tot_mass']))
-        m['tot_mass'] += m['mass']
+        print 'mass from _do_mass_balance: {}'.format(self._mm_af(m['mass']))
+        m['tot_mass'] = abs(m['mass']) + m['tot_mass']
+        if not self._point_dict:
+            print 'total mass balance error: {}'.format(self._mm_af(m['tot_mass']))
 
     def _update_point_tracker(self, date, raster_point=None):
 
@@ -607,17 +637,17 @@ class Processes(object):
 
         m['pkcb'] = m['kcb']
         m['kcb'] = get_ndvi(ndvi, m['pkcb'], date)
-        print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
+        # print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
 
         m['min_temp'] = get_prism(prism, date, variable='min_temp')
         m['max_temp'] = get_prism(prism, date, variable='max_temp')
 
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-        print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
+        # print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
 
         m['ppt'] = get_prism(prism, date, variable='precip')
         m['ppt'] = where(m['ppt'] < self._zeros, self._zeros, m['ppt'])
-        print 'raw ppt nan values = {}'.format(count_nonzero(isnan(m['ppt'])))
+        # print 'raw ppt nan values = {}'.format(count_nonzero(isnan(m['ppt'])))
         # print 'ppt min {} ppt max on day {} is {}'.format(m['ppt'].min(), date, m['ppt'].max())
         # print 'total ppt et on {}: {:.2e} AF'.format(date, (m['ppt'].sum() / 1000) * (250 ** 2) / 1233.48)
 
@@ -625,7 +655,7 @@ class Processes(object):
         print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         m['etrs'] = where(m['etrs'] < self._zeros, self._zeros, m['etrs'])
         m['etrs'] = where(isnan(m['etrs']), self._zeros, m['etrs'])
-        print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
+        # print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         # print 'total ref et on {}: {:.2e} AF'.format(date, (m['etrs'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         m['rg'] = get_penman(penman, date, variable='rg')
@@ -676,9 +706,23 @@ class Processes(object):
                         df.to_csv(location, na_rep='nan', index_label='Date')
         return None
 
-    def _update_master_window(self):
-        for key, val in self._master_window.iteritems():
-            self._master_window.update({key: self._master[key][480:485, 940:945]})
+    def _update_master_tracker(self, date):
+
+        m = self._master
+
+        master_keys_sorted = m.keys()
+        master_keys_sorted.sort()
+        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
+        tracker_from_master = []
+        for key in master_keys_sorted:
+            try:
+                tracker_from_master.append(self._mm_af(m[key]))
+            except AttributeError:
+                tracker_from_master.append(m[key])
+
+        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
+        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
+        self._master_tracker.loc[date] = tracker_from_master
 
     def _cells(self, raster):
         return raster[480:485, 940:945]
