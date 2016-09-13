@@ -19,13 +19,11 @@ from numpy import ones, zeros, maximum, minimum, where, isnan, exp, count_nonzer
 from datetime import datetime
 from dateutil import rrule
 
-from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
-     initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict,\
-     initialize_master_tracker
+from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
+    initialize_point_tracker, set_constants, initialize_master_tracker
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
 from tools import millimeter_to_acreft as mm_af
-from tools import save_tabulated_results_to_csv as save_tab_csv
 
 
 class Processes(object):
@@ -40,20 +38,16 @@ class Processes(object):
     """
     _point_tracker = None
     _point_dict_key = None
-    _results_directory = None
-    _tabulated_dict = None
     _master_tracker = None
     _initial_depletions = None
 
-    def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
+    def __init__(self, date_range, output_root, polygons=None, static_inputs=None, initial_inputs=None,
+                 point_dict=None):
 
-        self._raster_point = raster_point
-
+        self._date_range = date_range
         self._point_dict = point_dict
         self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
                          'tot_rain', 'tot_melt', 'soil_storage']
-
-        self._raster = Rasters(self._outputs, static_inputs)
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -64,24 +58,21 @@ class Processes(object):
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
         if point_dict:
             self._static = initialize_static_dict(static_inputs, point_dict)
-            print 'intitialized static dict:\n{}'.format(self._static)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
-            print 'intitialized initial conditions dict:\n{}'.format(self._initial)
             self._zeros, self._ones = 0.0, 1.0
 
         else:
+            self._polygons = polygons
             self._static = initialize_static_dict(static_inputs)
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-            # define the monthly and annual raster trackers #
-            self._raster_tracker = initialize_raster_tracker(self._outputs, self._shape)
-            self._raster_geo_attributes = self._raster.get_raster_geo_attributes(static_inputs)
+            self._raster = Rasters(static_inputs, polygons, self._outputs, date_range, output_root)
 
         self._master = initialize_master_dict(self._zeros)
 
-    def run(self, date_range, results_path=None, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, polygons=None):
+    def run(self, ndvi_path=None, prism_path=None, penman_path=None,
+            point_dict=None, point_dict_key=None):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
@@ -102,9 +93,8 @@ class Processes(object):
         if point_dict:
             s = s[self._point_dict_key]
         c = self._constants
-        
-        start_date, end_date = date_range
-        print 'simulation start: {}, simulation end: {}'.format(start_date, end_date)
+
+        start_date, end_date = self._date_range
         start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
         print 'start time :{}'.format(start_time)
@@ -134,8 +124,6 @@ class Processes(object):
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
-                    self._results_directory = self._raster.make_results_dir(results_path, polygons)
-                    self._tabulated_dict = initialize_tabular_dict(polygons, self._outputs, date_range)
                 self._initial_depletions = m['dr'] + m['de'] + m['drew']
             else:
                 m['first_day'] = False
@@ -170,16 +158,9 @@ class Processes(object):
                     self._master_tracker = initialize_master_tracker(self._master)
 
             if not point_dict:
-                self._raster.update_save_raster(m, self._raster_tracker, self._tabulated_dict, self._outputs, day,
-                                                results_path, self._raster_geo_attributes, self._results_directory,
-                                                shapefiles=polygons, save_specific_dates=None,
-                                                save_outputs=self._outputs)
+                self._raster.update_save_raster(m, day)
 
                 self._update_master_tracker(day)
-                # print 'window into fluxes:\n{}'.format(self._master_tracker)
-
-                if self._raster_point:
-                    self._update_point_tracker(day, self._raster_point)
 
             else:
                 self._update_point_tracker(day)
@@ -190,8 +171,6 @@ class Processes(object):
 
             elif day == end_date:
                 print 'last day: saving tabulated data'
-                print self._tabulated_dict
-                save_tab_csv(self._tabulated_dict, self._results_directory, polygons)
                 return self._master_tracker
 
     def _do_dual_crop_coefficient(self):
@@ -394,10 +373,10 @@ class Processes(object):
         """
         m = self._master
         s = self._static
-        
+
         water = m['rain'] + m['mlt']
         water_tracker = water
-        
+
         # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
@@ -577,7 +556,8 @@ class Processes(object):
                                                                                                 mm_af(m['ppt']),
                                                                                                 mm_af(m['ro']),
                                                                                                 mm_af(m['swe']),
-                                                                                                mm_af(m['soil_storage']))
+                                                                                                mm_af(
+                                                                                                    m['soil_storage']))
 
             print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
                                                                                         mm_af(m['tot_ref_et']),
@@ -607,7 +587,7 @@ class Processes(object):
         m = self._master
         m['mass'] = m['rain'] + m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
-                                            (m['pdrew'] - m['drew'])))
+                                             (m['pdrew'] - m['drew'])))
         print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:

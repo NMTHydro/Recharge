@@ -37,16 +37,15 @@ save_dates = []
 save_outputs = []
 
 
-def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, select_dates=None,
-                             select_outputs=None, clip_polygons=None, save_csv=None):
+def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, statics, initials,
+                             clip_polygons):
 
-    etrm = Processes(static_inputs_path, initial_conditions_path)
+    etrm = Processes(date_range, raster_out_data, clip_polygons, statics, initials)
 
-    tracker = etrm.run(date_range, results_path=raster_out_data, ndvi_path=ndvi, prism_path=prism,
-                       penman_path=penman, polygons=clip_polygons)
+    tracker = etrm.run(ndvi, prism, penman)
 
     # print 'tracker after etrm run: \n {}'.format(tracker)
-    csv_path_filename = os.path.join(save_csv, 'etrm_master_tracker.csv')
+    csv_path_filename = os.path.join(raster_out_data, 'etrm_master_tracker.csv')
     print 'this should be your csv: {}'.format(csv_path_filename)
     tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     output_path = os.path.join('F:\\', 'ETRM_Results')
     simulation_period = datetime(2000, 1, 1), datetime(2000, 01, 03)
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
-                             clip_polygons=output_polygons, save_csv=output_path)
+                             static_inputs_path, initial_conditions_path, output_polygons)
 
 # ============= EOF =============================================
 

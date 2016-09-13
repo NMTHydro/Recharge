@@ -29,7 +29,7 @@ from datetime import datetime
 from pandas import DataFrame, date_range
 
 
-from recharge.raster_manager import Rasters
+from recharge.raster_tools import convert_raster_to_array
 from recharge.point_extract_utility import get_static_inputs_at_point
 
 
@@ -82,7 +82,6 @@ def initialize_static_dict(inputs_path, point_dict=None):
     print 'static inputs path: {}'.format(inputs_path)
     static_keys = ['bed_ksat', 'plant_height', 'quat_deposits', 'root_z', 'soil_ksat', 'taw', 'tew']
 
-    ras = Rasters()
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
     static_dict = {}
     statics = sorted(statics, key=lambda s: s.lower())
@@ -96,7 +95,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 static_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
 
     else:
-        static_arrays = [ras.convert_raster_to_array(inputs_path, filename) for filename in statics]
+        static_arrays = [convert_raster_to_array(inputs_path, filename) for filename in statics]
         for key, data in zip(static_keys, static_arrays):
             static_dict.update({key: data})
 
@@ -145,7 +144,6 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
 
     initial_cond_keys = ['de', 'dr', 'drew']
 
-    ras = Rasters()
     initial_cond = [filename for filename in os.listdir(initial_inputs_path) if filename.endswith('.tif')]
     initial_cond.sort()
     initial_cond_dict = {}
@@ -158,7 +156,7 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
                 initial_cond_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
 
     else:
-        initial_cond_arrays = [ras.convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
+        initial_cond_arrays = [convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
         for key, data in zip(initial_cond_keys, initial_cond_arrays):
             data = where(isnan(data), zeros(data.shape), data)
             initial_cond_dict.update({key: data})
@@ -212,7 +210,7 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
                             sub_region = element.strip('.shp')
                             tab_dict[region_type].update({sub_region: tabular_output})
 
-            # print 'your tabular results dict:\n{}'.format(tab_dict)
+            print 'your tabular results dict:\n{}'.format(tab_dict)
 
             return tab_dict
 

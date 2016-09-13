@@ -23,11 +23,8 @@ dgketchum 24 JUL 2016
 """
 
 from numpy import where, isnan
-from datetime import timedelta
-from recharge.raster_manager import Rasters
+from recharge.raster_tools import convert_raster_to_array
 import os
-
-rta = Rasters()
 
 
 def get_ndvi(in_path, previous_kcb, date_object):
@@ -35,7 +32,7 @@ def get_ndvi(in_path, previous_kcb, date_object):
     doy = date_object.timetuple().tm_yday
     if date_object.year == 2000:
         raster = '{}_{}.tif'.format(date_object.year, doy)
-        ndvi = rta.convert_raster_to_array(in_path, raster, band=1)
+        ndvi = convert_raster_to_array(in_path, raster, band=1)
         kcb = ndvi * 1.25
 
     elif date_object.year == 2001:
@@ -52,7 +49,7 @@ def get_ndvi(in_path, previous_kcb, date_object):
                 else:
                     nd = num + 15
                 raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
-                ndvi = rta.convert_raster_to_array(in_path, raster, band=band)
+                ndvi = convert_raster_to_array(in_path, raster, band=band)
                 kcb = ndvi * 1.25
 
     else:
@@ -68,7 +65,7 @@ def get_ndvi(in_path, previous_kcb, date_object):
                 else:
                     nd = num + 15
                 raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
-                ndvi = rta.convert_raster_to_array(in_path, raster, band=band)
+                ndvi = convert_raster_to_array(in_path, raster, band=band)
                 kcb = ndvi * 1.25
 
     kcb = where(isnan(kcb) == True, previous_kcb, kcb)
@@ -85,7 +82,7 @@ def get_prism(in_path, date_object, variable='precip'):
                                                      str(date_object.month).rjust(2, '0'),
                                                      str(date_object.day).rjust(2, '0'))
         # print 'ppt raster: {}'.format(raster)
-        ppt = rta.convert_raster_to_array(path, raster)
+        ppt = convert_raster_to_array(path, raster)
 
         return ppt
 
@@ -96,14 +93,14 @@ def get_prism(in_path, date_object, variable='precip'):
                                                             str(date_object.month).rjust(2, '0'),
                                                             str(date_object.day).rjust(2, '0'))
 
-            min_temp = rta.convert_raster_to_array(path, raster)
+            min_temp = convert_raster_to_array(path, raster)
 
         else:
             path = os.path.join(in_path, 'Temp', 'Minimum_standard')
             raster = 'TempMin_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
                                                            str(date_object.month).rjust(2, '0'),
                                                            str(date_object.day).rjust(2, '0'))
-            min_temp = rta.convert_raster_to_array(path, raster)
+            min_temp = convert_raster_to_array(path, raster)
         return min_temp
 
     if variable == 'max_temp':
@@ -111,7 +108,7 @@ def get_prism(in_path, date_object, variable='precip'):
         raster = 'TempMax_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
                                                        str(date_object.month).rjust(2, '0'),
                                                        str(date_object.day).rjust(2, '0'))
-        max_temp = rta.convert_raster_to_array(path, raster)
+        max_temp = convert_raster_to_array(path, raster)
         return max_temp
 
 
@@ -120,17 +117,17 @@ def get_penman(in_path, date_object, variable='etrs'):
 
     if variable == 'etrs':
         raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        etrs = rta.convert_raster_to_array(in_path, raster)
+        etrs = convert_raster_to_array(in_path, raster)
 
         return etrs
     elif variable == 'rlin':
         raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        rlin = rta.convert_raster_to_array(in_path, raster)
+        rlin = convert_raster_to_array(in_path, raster)
 
         return rlin
     elif variable == 'rg':
         raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        rg = rta.convert_raster_to_array(in_path, raster)
+        rg = convert_raster_to_array(in_path, raster)
 
         return rg
 
