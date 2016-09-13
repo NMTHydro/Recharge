@@ -31,8 +31,6 @@ from recharge.etrm_processes import Processes
 
 set_printoptions(linewidth=700, precision=2)
 
-simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
-
 extent = []  # we should eventually have a program to run etrm on a given extent
 
 save_dates = []
@@ -67,6 +65,7 @@ if __name__ == '__main__':
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
     output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
     output_path = os.path.join('F:\\', 'ETRM_Results')
+    simulation_period = datetime(2000, 1, 1), datetime(2000, 01, 03)
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
                              clip_polygons=output_polygons, save_csv=output_path)
 

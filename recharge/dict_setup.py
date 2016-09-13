@@ -22,6 +22,7 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
+
 from numpy import zeros, isnan, count_nonzero, where, ones
 import os
 from datetime import datetime
@@ -227,5 +228,8 @@ def initialize_master_tracker(master):
     tracker = DataFrame(columns=tracker_keys)
 
     return tracker
+
+if __name__ == '__main__':
+    pass
 
 # ============= EOF =============================================

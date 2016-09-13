@@ -16,15 +16,16 @@
 
 
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp, count_nonzero
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil import rrule
-import os
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict,\
      initialize_point_tracker, set_constants, initialize_raster_tracker, initialize_tabular_dict,\
      initialize_master_tracker
 from recharge.raster_manager import Rasters
 from recharge.raster_finder import get_penman, get_prism, get_ndvi
+from tools import millimeter_to_acreft as mm_af
+from tools import save_tabulated_results_to_csv as save_tab_csv
 
 
 class Processes(object):
@@ -46,13 +47,13 @@ class Processes(object):
 
     def __init__(self, static_inputs=None, initial_inputs=None, point_dict=None, raster_point=None):
 
-        self._raster = Rasters()
-
         self._raster_point = raster_point
 
         self._point_dict = point_dict
         self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
                          'tot_rain', 'tot_melt', 'soil_storage']
+
+        self._raster = Rasters(self._outputs, static_inputs)
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -189,7 +190,8 @@ class Processes(object):
 
             elif day == end_date:
                 print 'last day: saving tabulated data'
-                self._save_tabulated_results_to_csv(self._tabulated_dict, self._results_directory, polygons)
+                print self._tabulated_dict
+                save_tab_csv(self._tabulated_dict, self._results_directory, polygons)
                 return self._master_tracker
 
     def _do_dual_crop_coefficient(self):
@@ -275,7 +277,7 @@ class Processes(object):
 
         m['ke'] = minimum(m['ke'], self._ones)
 
-        # print 'etrs: {}'.format(self._mm_af(m['etrs']))
+        # print 'etrs: {}'.format(mm_af(m['etrs']))
 
         # m['evap'] = m['ke'] * m['etrs']
         m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
@@ -392,10 +394,10 @@ class Processes(object):
         """
         m = self._master
         s = self._static
-
+        
         water = m['rain'] + m['mlt']
         water_tracker = water
-
+        
         # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
@@ -502,8 +504,8 @@ class Processes(object):
             m['pde'] = m['de']
             m['pdrew'] = m['drew']
 
-            print 'rain: {}, melt: {}, water: {}'.format(self._mm_af(m['rain']),
-                                                         self._mm_af(m['mlt']), self._mm_af(water))
+            print 'rain: {}, melt: {}, water: {}'.format(mm_af(m['rain']),
+                                                         mm_af(m['mlt']), mm_af(water))
 
             m['soil_ksat'] = where(m['mlt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
@@ -518,13 +520,13 @@ class Processes(object):
             m['evap'] = m['evap_1'] + m['evap_2']
             m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
 
-            print 'evap 1: {}, evap_2: {}, transpiration: {}'.format(self._mm_af(m['evap_1']), self._mm_af(m['evap_2']),
-                                                                     self._mm_af(m['transp']))
+            print 'evap 1: {}, evap_2: {}, transpiration: {}'.format(mm_af(m['evap_1']), mm_af(m['evap_2']),
+                                                                     mm_af(m['transp']))
 
             # water balance through skin layer #
             m['drew'] = where(water >= m['pdrew'] + m['evap_1'], self._zeros, m['pdrew'] + m['evap_1'] - water)
             water = where(water < m['pdrew'] + m['evap_1'], self._zeros, water - m['pdrew'] - m['evap_1'])
-            # print 'water through skin layer: {}'.format(self._mm_af(water))
+            # print 'water through skin layer: {}'.format(mm_af(water))
             m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], self._zeros)
             water = where(water > m['soil_ksat'], m['soil_ksat'], water)
 
@@ -532,19 +534,19 @@ class Processes(object):
             m['de'] = where(water >= m['pde'] + m['evap_2'], self._zeros, m['pde'] + m['evap_2'] - water)
 
             water = where(water < m['pde'] + m['evap_2'], self._zeros, water - (m['pde'] + m['evap_2']))
-            # print 'water through  de  layer: {}'.format(self._mm_af(water))
+            # print 'water through  de  layer: {}'.format(mm_af(water))
 
             # water balance through the root zone layer #
             m['dp_r'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
-            # print 'deep percolation total: {}'.format(self._mm_af(m['dp_r']))
+            # print 'deep percolation total: {}'.format(mm_af(m['dp_r']))
             # print 'deep percolation: {}'.format(self._cells(m['dp_r']))
             m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
 
             m['soil_storage'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
 
-            print 'water: {}, out: {}, storage: {}'.format(self._mm_af(water_tracker),
-                                                           self._mm_af(m['ro'] + m['eta'] + m['dp_r']),
-                                                           self._mm_af(m['soil_storage']))
+            print 'water: {}, out: {}, storage: {}'.format(mm_af(water_tracker),
+                                                           mm_af(m['ro'] + m['eta'] + m['dp_r']),
+                                                           mm_af(m['soil_storage']))
 
         return None
 
@@ -569,20 +571,20 @@ class Processes(object):
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
         if not self._point_dict:
-            print 'today dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}, stor {}'.format(self._mm_af(m['dp_r']),
-                                                                                                self._mm_af(m['etrs']),
-                                                                                                self._mm_af(m['eta']),
-                                                                                                self._mm_af(m['ppt']),
-                                                                                                self._mm_af(m['ro']),
-                                                                                                self._mm_af(m['swe']),
-                                                                                                self._mm_af(m['soil_storage']))
+            print 'today dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}, stor {}'.format(mm_af(m['dp_r']),
+                                                                                                mm_af(m['etrs']),
+                                                                                                mm_af(m['eta']),
+                                                                                                mm_af(m['ppt']),
+                                                                                                mm_af(m['ro']),
+                                                                                                mm_af(m['swe']),
+                                                                                                mm_af(m['soil_storage']))
 
-            print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(self._mm_af(m['tot_infil']),
-                                                                                        self._mm_af(m['tot_ref_et']),
-                                                                                        self._mm_af(m['tot_eta']),
-                                                                                        self._mm_af(m['tot_precip']),
-                                                                                        self._mm_af(m['tot_ro']),
-                                                                                        self._mm_af(m['tot_swe']))
+            print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
+                                                                                        mm_af(m['tot_ref_et']),
+                                                                                        mm_af(m['tot_eta']),
+                                                                                        mm_af(m['tot_precip']),
+                                                                                        mm_af(m['tot_ro']),
+                                                                                        mm_af(m['tot_swe']))
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -606,10 +608,10 @@ class Processes(object):
         m['mass'] = m['rain'] + m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                             (m['pdrew'] - m['drew'])))
-        print 'mass from _do_mass_balance: {}'.format(self._mm_af(m['mass']))
+        print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
-            print 'total mass balance error: {}'.format(self._mm_af(m['tot_mass']))
+            print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
 
     def _update_point_tracker(self, date, raster_point=None):
 
@@ -675,38 +677,6 @@ class Processes(object):
         m['etrs'] = ts['etrs_pm'][date]
         m['rg'] = ts['rg'][date]
 
-    def _save_tabulated_results_to_csv(self, tabulated_results, results_directories, polygons):
-
-        print 'results directories: {}'.format(results_directories)
-
-        folders = os.listdir(polygons)
-        for in_fold in folders:
-            print 'saving tab data for input folder: {}'.format(in_fold)
-            region_type = os.path.basename(in_fold).replace('_Polygons', '')
-            files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
-            print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
-            for element in files:
-                if element.endswith('.shp'):
-                    sub_region = element.strip('.shp')
-
-                    df_month = tabulated_results[region_type][sub_region]
-
-                    df_annual = df_month.resample('A').sum()
-
-                    save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
-                                                 '{}.csv'.format(sub_region))
-
-                    save_loc_month = os.path.join(results_directories['root'],
-                                                  results_directories['monthly_tabulated'][region_type],
-                                                  '{}.csv'.format(sub_region))
-
-                    dfs = [df_month, df_annual]
-                    locations = [save_loc_month, save_loc_annu]
-                    for df, location in zip(dfs, locations):
-                        print 'this should be your csv: {}'.format(location)
-                        df.to_csv(location, na_rep='nan', index_label='Date')
-        return None
-
     def _update_master_tracker(self, date):
 
         m = self._master
@@ -717,7 +687,7 @@ class Processes(object):
         tracker_from_master = []
         for key in master_keys_sorted:
             try:
-                tracker_from_master.append(self._mm_af(m[key]))
+                tracker_from_master.append(mm_af(m[key]))
             except AttributeError:
                 tracker_from_master.append(m[key])
 
@@ -763,8 +733,5 @@ class Processes(object):
         print 'raster is {}'.format(category)
         print 'example values from data: {}'.format(self._cells(variable))
         print ''
-
-    def _mm_af(self, param):
-        return '{:.2e}'.format((param.sum() / 1000) * (250**2) / 1233.48)
 
 # ============= EOF =============================================

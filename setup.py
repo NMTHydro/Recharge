@@ -22,6 +22,6 @@ setup(name='Recharge',
       version='0.1',
       py_modules=[],
       packages=['recharge'],
-      test_suite='recharge.test_suite.suite')
+      test_suite='recharge.test_suite.suite', requires=['numpy'])
 
 # ============= EOF =============================================
