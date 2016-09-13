@@ -52,7 +52,7 @@ class Processes(object):
 
         self._point_dict = point_dict
         self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
-                         'tot_rain', 'tot_mlt', 'soil_storage']
+                         'tot_rain', 'tot_melt', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -84,14 +84,15 @@ class Processes(object):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
-        :param date_range:
-        :param results_path:
-        :param ndvi_path:
-        :param prism_path:
-        :param penman_path:
-        :param point_dict:
-        :param point_dict_key:
-        :return:
+        :param date_range: The beginning and end of the simulation.
+        :param results_path: Send saved raster to this path. File structure is created automatically.
+        :param ndvi_path: NDVI input data path.
+        :param prism_path: PRISM input data path.
+        :param penman_path: Reference ET and shortwave radiation data.
+        :param point_dict: Dict of point metadata for the point model.
+        :param point_dict_key: Passed from point model main, will be iterated through each point.
+        :param polygons: Shapes to clip and tabulate results.
+        :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
         """
 
         self._point_dict_key = point_dict_key
@@ -539,11 +540,11 @@ class Processes(object):
             # print 'deep percolation: {}'.format(self._cells(m['dp_r']))
             m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
 
-            m['storage_daily'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
+            m['soil_storage'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
 
             print 'water: {}, out: {}, storage: {}'.format(self._mm_af(water_tracker),
                                                            self._mm_af(m['ro'] + m['eta'] + m['dp_r']),
-                                                           self._mm_af(m['storage_daily']))
+                                                           self._mm_af(m['soil_storage']))
 
         return None
 
@@ -574,7 +575,7 @@ class Processes(object):
                                                                                                 self._mm_af(m['ppt']),
                                                                                                 self._mm_af(m['ro']),
                                                                                                 self._mm_af(m['swe']),
-                                                                                                self._mm_af(m['storage_daily']))
+                                                                                                self._mm_af(m['soil_storage']))
 
             print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(self._mm_af(m['tot_infil']),
                                                                                         self._mm_af(m['tot_ref_et']),

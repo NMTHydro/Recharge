@@ -95,12 +95,13 @@ class Rasters(object):
 
     def update_save_raster(self, master, output_tracker, tab_dict, outputs, date_object, raster_output_path,
                            geo_attributes, results_dir, shapefiles=None, save_specific_dates=None, save_outputs=None):
-        
+
         # raster_track_dict = {'output_an': {'output': raster}, 'output_mo': {{'output': raster}},
         #                      'last_mo': {{'output': raster}}, 'last_yr': {{'output': raster}}}
-        
-        # outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe', 'tot_mass']
-        
+
+        # outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
+        #                  'tot_rain', 'tot_melt', 'soil_storage']
+
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save data for a certain day
@@ -123,8 +124,8 @@ class Rasters(object):
         #
         #         self._sum_raster_by_shape(written_raster, tab_dict, shapefiles, geo_attributes, element,
         #                                   date_object, raster_output_path)
-                # print 'saving {} raster, tracker total: {} AF'.format(element,
-                #                                                       self._mm_af(output_tracker['current_month'][element]))
+        #         print 'saving {} raster, tracker total: {} AF'.format(element,
+        #                                                               self._mm_af(output_tracker['current_month'][element]))
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
@@ -182,6 +183,7 @@ class Rasters(object):
     def _write_raster(self, output_raster_dict, key, date, out_path, raster_geometry, results_directory, period=None,
                       master=None):
 
+        print ''
         print "Saving {}_{}_{}".format(key, date.month, date.year)
 
         if period == 'annual':

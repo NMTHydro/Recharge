@@ -31,7 +31,7 @@ from recharge.etrm_processes import Processes
 
 set_printoptions(linewidth=700, precision=2)
 
-simulation_period = datetime(2000, 1, 1), datetime(2000, 1, 10)
+simulation_period = datetime(2000, 1, 1), datetime(2000, 12, 31)
 
 extent = []  # we should eventually have a program to run etrm on a given extent
 
