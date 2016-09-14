@@ -234,6 +234,8 @@ def initialize_tabular_dict2(root, outputs, date_range_):
 
         tab_dict[region_type] = d
 
+    return tab_dict
+
 
 def initialize_master_tracker(master):
 
