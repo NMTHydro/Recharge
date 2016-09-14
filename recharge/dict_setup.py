@@ -197,19 +197,21 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
             folders = os.listdir(shapes)
             arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
             cols = MultiIndex.from_arrays(arrays)
-            # print 'dataframe index: from {} to {}'.format(date_range_[0], date_range_[1])
             ind = date_range(date_range_[0], date_range_[1], freq='D')
+
             tabular_output = DataFrame(index=ind, columns=cols).fillna(0.0)
+
             tab_dict = {}
             for in_fold in folders:
                 region_type, toss = in_fold.split('_Poly')
                 tab_dict.update({region_type: {}})
                 os.chdir(os.path.join(shapes, in_fold))
-                for root, dirs, files in os.walk(".", topdown=False):
-                    for element in files:
-                        if element.endswith('.shp'):
-                            sub_region = element.strip('.shp')
-                            tab_dict[region_type].update({sub_region: tabular_output})
+                files = os.listdir(os.path.join(shapes, in_fold))
+                shapes = [element.strip('.shp') for element in files if element.endswith('.shp')]
+                for element in files:
+                    if element.endswith('.shp'):
+                        sub_region = element.strip('.shp')
+                        tab_dict[region_type].update({sub_region: tabular_output})
 
             print 'your tabular results dict:\n{}'.format(tab_dict)
 

@@ -183,10 +183,15 @@ class Rasters(object):
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (250 ** 2)
-                df =
-                df.loc[date, 'CBM'] = param_cubic_meters
+                df = self._tabular_dict[region_type][sub_region]['CBM', parameter]
+
+                df.loc[date] = param_cubic_meters
+                print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
+
                 param_acre_feet = param_cubic_meters / 1233.48
-                df.loc[date, 'AF'] = param_acre_feet
+                df = self._tabular_dict[region_type][sub_region]['AF', parameter]
+                df.loc[date] = param_acre_feet
+                print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
                 print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
                 print ''
 
