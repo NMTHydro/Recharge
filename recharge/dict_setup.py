@@ -194,26 +194,45 @@ def initialize_raster_tracker(tracked_outputs, shape):
 
 def initialize_tabular_dict(shapes, outputs, date_range_):
 
-            folders = os.listdir(shapes)
-            arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
-            cols = MultiIndex.from_arrays(arrays)
-            # print 'dataframe index: from {} to {}'.format(date_range_[0], date_range_[1])
-            ind = date_range(date_range_[0], date_range_[1], freq='D')
-            tabular_output = DataFrame(index=ind, columns=cols).fillna(0.0)
-            tab_dict = {}
-            for in_fold in folders:
-                region_type, toss = in_fold.split('_Poly')
-                tab_dict.update({region_type: {}})
-                os.chdir(os.path.join(shapes, in_fold))
-                for root, dirs, files in os.walk(".", topdown=False):
-                    for element in files:
-                        if element.endswith('.shp'):
-                            sub_region = element.strip('.shp')
-                            tab_dict[region_type].update({sub_region: tabular_output})
+        folders = os.listdir(shapes)
+        arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
+        cols = MultiIndex.from_arrays(arrays)
+        # print 'dataframe index: from {} to {}'.format(date_range_[0], date_range_[1])
+        ind = date_range(date_range_[0], date_range_[1], freq='D')
+        tabular_output = DataFrame(index=ind, columns=cols).fillna(0.0)
+        tab_dict = {}
+        for in_fold in folders:
+            region_type, toss = in_fold.split('_Poly')
+            tab_dict.update({region_type: {}})
+            os.chdir(os.path.join(shapes, in_fold))
+            for root, dirs, files in os.walk(".", topdown=False):
+                for element in files:
+                    if element.endswith('.shp'):
+                        sub_region = element.strip('.shp')
+                        tab_dict[region_type].update({sub_region: tabular_output})
 
-            print 'your tabular results dict:\n{}'.format(tab_dict)
+        print 'your tabular results dict:\n{}'.format(tab_dict)
 
-            return tab_dict
+        return tab_dict
+
+
+def initialize_tabular_dict2(root, outputs, date_range_):
+    arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
+    cols = MultiIndex.from_arrays(arrays)
+    ind = date_range(date_range_[0], date_range_[1], freq='D')
+    tab_dict = {}
+
+    for f in os.listdir(root):
+        region_type, toss = f.split('_Poly')
+        d = {}
+        for r, dirs, files in os.walk(os.path.join(root, f)):
+            for element in files:
+                sub_region, ext = os.path.splitext(element)
+                if ext == '.shp':
+                    df = DataFrame(index=ind, columns=cols).fillna(0.0)
+                    d[sub_region] = df
+
+        tab_dict[region_type] = d
 
 
 def initialize_master_tracker(master):
