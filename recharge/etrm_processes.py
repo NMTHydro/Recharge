@@ -48,8 +48,8 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_ref_et']  #, 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
-                         # 'tot_rain', 'tot_melt', 'soil_storage'] 'tot_infil',
+        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
+                         'tot_rain', 'tot_melt', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered

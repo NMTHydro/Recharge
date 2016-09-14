@@ -23,7 +23,7 @@ dgketchum 24 JUL 2016
 """
 
 from osgeo import gdal, ogr
-from numpy import array, where, zeros, count_nonzero, random
+from numpy import array, where, zeros
 from calendar import monthrange
 import os
 
@@ -61,7 +61,6 @@ class Rasters(object):
             for element in self._outputs:
                 data_array = master[element]
                 self._sum_raster_by_shape(element, date_object, data_array)
-                print 'tab dict: \n{}'.format(self._tabular_dict)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
@@ -80,7 +79,7 @@ class Rasters(object):
                 self._write_raster(element, date_object, period='annual')
 
         if date_object == self._simulation_period[1]:
-
+            print 'tab dict: \n{}'.format(self._tabular_dict)
             print 'saving the simulation master tracker'
             self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
         return None
@@ -142,15 +141,15 @@ class Rasters(object):
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
 
         region_folders = os.listdir(self._polygons)
-        print 'processing parameter: {}'.format(parameter)
+        # print 'processing parameter: {}'.format(parameter)
 
         for region_folder in region_folders:
-            print 'input geo shapes region: {}'.format(region_folder)
+            # print 'input geo shapes region: {}'.format(region_folder)
             region_type = os.path.basename(region_folder).replace('_Polygons', '')
             all_geo_files = os.listdir(os.path.join(self._polygons, region_folder))
             shape_files = [shapefile for shapefile in all_geo_files if shapefile.endswith('.shp')]
-            print 'files in region {}:\n{}'.format(region_type, all_geo_files)
-            print ''
+            # print 'files in region {}:\n{}'.format(region_type, all_geo_files)
+            # print ''
             for geometry in shape_files:
                 sub_region = geometry.strip('.shp')
                 shp_name = os.path.join(self._polygons, region_folder, geometry)
@@ -177,21 +176,21 @@ class Rasters(object):
 
                 if data_arr is None:
                     masked_arr = where(mask_array > 0, self._output_tracker['current_month'][parameter],
-                                       zeros(data_arr.shape))
+                                       zeros(self._output_tracker['current_month'][parameter].shape))
                 else:
                     masked_arr = where(mask_array > 0, data_arr, zeros(data_arr.shape))
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (250 ** 2)
-                df = self._tabular_dict[region_type][sub_region]['CBM', parameter]
+                df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']
 
                 df.loc[date] = param_cubic_meters
-                print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
+                # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
 
                 param_acre_feet = param_cubic_meters / 1233.48
-                df = self._tabular_dict[region_type][sub_region]['AF', parameter]
+                df = self._tabular_dict[region_type][sub_region][parameter, 'AF']
                 df.loc[date] = param_acre_feet
-                print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
+                # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
                 print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
                 print ''
 

@@ -27,6 +27,7 @@ from numpy import zeros, isnan, count_nonzero, where, ones
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
+from copy import deepcopy
 
 
 from recharge.raster_tools import convert_raster_to_array
@@ -196,48 +197,31 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
 
         folders = os.listdir(shapes)
         units = ['AF', 'CBM']
-        outputs_shallow = [[output, output] for output in outputs]
-        outputs_arr = [val for sublist in outputs_shallow for val in sublist]
+        outputs_arr = [[output, output] for output in outputs]
+        outputs_arr = [val for sublist in outputs_arr for val in sublist]
         units_arr = units * len(outputs)
         arrays = [outputs_arr, units_arr]
         cols = MultiIndex.from_arrays(arrays)
         ind = date_range(date_range_[0], date_range_[1], freq='D')
-        tabular_output = DataFrame(index=ind, columns=cols).fillna(0.0)
+
         tab_dict = {}
-        for in_fold in folders:
-            region_type, toss = in_fold.split('_Poly')
-            tab_dict.update({region_type: {}})
-            os.chdir(os.path.join(shapes, in_fold))
-            for root, dirs, files in os.walk(".", topdown=False):
-                for element in files:
-                    if element.endswith('.shp'):
-                        sub_region = element.strip('.shp')
-                        tab_dict[region_type].update({sub_region: tabular_output})
+        for f in folders:
+            region_type, toss = f.split('_Poly')
+            d = {}
+            files = os.listdir(os.path.join(shapes, f))
+            shapes = [element.strip('.shp') for element in files if element.endswith('.shp')]
+            for element in files:
+                if element.endswith('.shp'):
+                    sub_region, ext = element.split('.')
+                    if ext == '.shp':
+                        df = DataFrame(index=ind, columns=cols).fillna(0.0)
+                        d[sub_region] = df
+
+            tab_dict[region_type] = d
 
         print 'your tabular results dict:\n{}'.format(tab_dict)
 
         return tab_dict
-
-
-def initialize_tabular_dict2(root, outputs, date_range_):
-    arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
-    cols = MultiIndex.from_arrays(arrays)
-    ind = date_range(date_range_[0], date_range_[1], freq='D')
-    tab_dict = {}
-
-    for f in os.listdir(root):
-        region_type, toss = f.split('_Poly')
-        d = {}
-        for r, dirs, files in os.walk(os.path.join(root, f)):
-            for element in files:
-                sub_region, ext = os.path.splitext(element)
-                if ext == '.shp':
-                    df = DataFrame(index=ind, columns=cols).fillna(0.0)
-                    d[sub_region] = df
-
-        tab_dict[region_type] = d
-
-    return tab_dict
 
 
 def initialize_master_tracker(master):
