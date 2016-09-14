@@ -16,7 +16,7 @@ for path, path2 in zip(paths, path2s):
         print input_folder
         if not os.path.exists('{a}\\{b}_std'.format(a=path2, b=yr)):
             os.makedirs('{a}\\{b}_std'.format(a=path2, b=yr))
-            print 'Making new folder'
+            print 'Making new region'
         output_folder = '{a}\\{b}_std'.format(a=path2, b=yr)
         extent = 'E:\\Reference_shape\\NM_poly500mbuf\\NM_poly500mbuf.shp'
 

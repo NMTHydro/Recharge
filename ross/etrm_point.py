@@ -612,9 +612,9 @@ class ETRMPoint(BaseModel):
 #     print code
 #     amf_name = amfdict['{a}'.format(a=code)]['Name']
 #     print amf_name
-#     folder = "C:\\Users\\David\Documents\\Recharge\\aET\\AMF_Data\\" + '{a}'.format(a=amf_name)
-#     os.chdir(folder)
-#     csvList = os.listdir(folder)
+#     region = "C:\\Users\\David\Documents\\Recharge\\aET\\AMF_Data\\" + '{a}'.format(a=amf_name)
+#     os.chdir(region)
+#     csvList = os.listdir(region)
 #     for item in csvList:
 #
 #         if item == csvList[0]:

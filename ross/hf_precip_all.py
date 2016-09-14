@@ -83,7 +83,7 @@ def precip(watershed, path, output, daily, field='USGS_Code'):
             q = []
 
             for day in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
-                # folder = 'C:\\Recharge_GIS\\Precip\\800m\\Daily\\'
+                # region = 'C:\\Recharge_GIS\\Precip\\800m\\Daily\\'
                 yr = day.year
                 d = day.strftime('%y%m%d')
 

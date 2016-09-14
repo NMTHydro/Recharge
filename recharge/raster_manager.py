@@ -23,11 +23,10 @@ dgketchum 24 JUL 2016
 """
 
 from osgeo import gdal, ogr
-from numpy import array, where, zeros, isnan, count_nonzero
+from numpy import array, where, zeros, count_nonzero, random
 from calendar import monthrange
 import os
 
-from tools import save_tabulated_results_to_csv as save_csv
 from recharge.raster_tools import make_results_dir
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
 import recharge.dict_setup
@@ -55,36 +54,35 @@ class Rasters(object):
         if save_specific_dates:
             if date_object in save_specific_dates:
                 for element in self._outputs:
-                    self._write_raster(element, date_object, period='day', master=master)
+                    self._write_raster(element, date_object, period='single_day', master=master)
 
         # save daily data (this will take a long time)
         if self._write_freq == 'daily':
             for element in self._outputs:
                 data_array = master[element]
-                self._sum_raster_by_shape(data_array, element, date_object)
+                self._sum_raster_by_shape(element, date_object, data_array)
+                print 'tab dict: \n{}'.format(self._tabular_dict)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
         if date_object.day == mo_date[1]:
             print ''
-            print 'saveing monthly data for {}'.format(date_object)
+            print 'saving monthly data for {}'.format(date_object)
             for element in self._outputs:
-                data_array = master[element]
                 self._update_raster_tracker(master, element)
                 self._write_raster(element, date_object, period='monthly')
-                self._sum_raster_by_shape(data_array, element, date_object)
+                self._sum_raster_by_shape(element, date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in self._outputs:
-                data_array = master[element]
                 self._update_raster_tracker(master, element, annual=True)
                 self._write_raster(element, date_object, period='annual')
-                self._sum_raster_by_shape(data_array, element, date_object)
 
         if date_object == self._simulation_period[1]:
+
             print 'saving the simulation master tracker'
-            save_csv(self._tabular_dict, self._results_dir, self._polygons)
+            self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
         return None
 
     def _update_raster_tracker(self, master_dict, var, annual=False):
@@ -123,6 +121,11 @@ class Rasters(object):
             filename = os.path.join(self._results_dir['root'], self._results_dir['monthly_rasters'], file_)
             array_to_save = self._output_tracker['current_month'][key]
 
+        elif period == 'single_day':
+            file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
+            filename = os.path.join(self._results_dir['root'], self._results_dir['daily_rasters'], file_)
+            array_to_save = master[key]
+
         else:
             array_to_save = None
             filename = None
@@ -136,60 +139,65 @@ class Rasters(object):
         output_band.WriteArray(array_to_save, 0, 0)
         return None
 
-    def _sum_raster_by_shape(self, param_obj, parameter, date):
+    def _sum_raster_by_shape(self, parameter, date, data_arr=None):
 
-        folders = os.listdir(self._polygons)
+        region_folders = os.listdir(self._polygons)
         print 'processing parameter: {}'.format(parameter)
-        for in_fold in folders:
-            print 'input geo shapes folder: {}'.format(in_fold)
-            region_type = os.path.basename(in_fold).replace('_Polygons', '')
-            shape_files = os.listdir(os.path.join(self._polygons, in_fold))
-            print 'files in region {}:\n{}'.format(region_type, shape_files)
-            for geometry in shape_files:
-                if geometry.endswith('.shp'):
-                    sub_region = geometry.strip('.shp')
-                    shp_name = os.path.join(self._polygons, in_fold, geometry)
-                    polygon = ogr.Open(shp_name)
-                    layer = polygon.GetLayer()
-                    driver = gdal.GetDriverByName('GTiff')
-                    temp_raster = os.path.join(self._results_dir['root'], 'temp.tif')
-                    mask_raster = driver.Create(temp_raster, self._geo['cols'], self._geo['rows'], 1,
-                                                self._geo['data_type'])
-                    mask_raster.SetProjection(layer.GetSpatialRef().ExportToWkt())
-                    mask_raster.SetGeoTransform(self._geo['geotransform'])
-                    raster_band = mask_raster.GetRasterBand(1)
-                    raster_band.SetNoDataValue(0.0)
-                    raster_band.Fill(0.0)
-                    gdal.RasterizeLayer(mask_raster, [1], layer, options=["ALL_TOUCHED=TRUE",
-                                                                          "OGRLayerShadow=FALSE"])
-                    mask_raster.FlushCache()
-                    mask_array = mask_raster.GetRasterBand(1).ReadAsArray()
-                    del mask_raster
-                    mask_array = array(mask_array)
-                    print 'mask array is {} cells, of {}, or {}%'.format(count_nonzero(mask_array),
-                                                                         mask_array.size,
-                                                                         (float(count_nonzero(mask_array)) /
-                                                                          mask_array.size) * 100)
 
-                    param_obj = where(isnan(param_obj), zeros(param_obj.shape), param_obj)
-                    param_obj = where(param_obj < 0, zeros(param_obj.shape), param_obj)
-                    param_obj = where(mask_array > 0, param_obj, zeros(param_obj.shape))
-                    param_sum = param_obj.sum()
-                    param_cubic_meters = (param_sum / 1000) * (250 ** 2)
-                    param_acre_feet = param_cubic_meters / 1233.48
-                    df = self._tabular_dict[region_type][sub_region]
-                    print '{} {} {:.2e} AF'.format(os.path.basename(shp_name).replace('.shp', ''),
-                                                   parameter, param_acre_feet)
-                    df['{}_[cbm]'.format(parameter)].loc[date] = param_cubic_meters
-                    df['{}_[AF]'.format(parameter)].loc[date] = param_acre_feet
+        for region_folder in region_folders:
+            print 'input geo shapes region: {}'.format(region_folder)
+            region_type = os.path.basename(region_folder).replace('_Polygons', '')
+            all_geo_files = os.listdir(os.path.join(self._polygons, region_folder))
+            shape_files = [shapefile for shapefile in all_geo_files if shapefile.endswith('.shp')]
+            print 'files in region {}:\n{}'.format(region_type, all_geo_files)
+            print ''
+            for geometry in shape_files:
+                sub_region = geometry.strip('.shp')
+                shp_name = os.path.join(self._polygons, region_folder, geometry)
+                polygon = ogr.Open(shp_name)
+                layer = polygon.GetLayer()
+                driver = gdal.GetDriverByName('GTiff')
+                temp_raster = os.path.join(self._results_dir['root'], 'temp.tif')
+                mask_raster = driver.Create(temp_raster, self._geo['cols'], self._geo['rows'], 1,
+                                            self._geo['data_type'])
+                mask_raster.SetProjection(layer.GetSpatialRef().ExportToWkt())
+                mask_raster.SetGeoTransform(self._geo['geotransform'])
+                raster_band = mask_raster.GetRasterBand(1)
+                raster_band.SetNoDataValue(0.0)
+                raster_band.Fill(0.0)
+                gdal.RasterizeLayer(mask_raster, [1], layer, options=["ALL_TOUCHED=TRUE",
+                                                                      "OGRLayerShadow=FALSE"])
+                mask_raster.FlushCache()
+                mask_array = mask_raster.GetRasterBand(1).ReadAsArray()
+                del mask_raster
+                mask_array = array(mask_array)
+                # print '{} mask array is {} cells, or {}%'.format(sub_region, count_nonzero(mask_array),
+                #                                                  (float(count_nonzero(mask_array)) /
+                #                                                   mask_array.size) * 100)
+
+                if data_arr is None:
+                    masked_arr = where(mask_array > 0, self._output_tracker['current_month'][parameter],
+                                       zeros(data_arr.shape))
+                else:
+                    masked_arr = where(mask_array > 0, data_arr, zeros(data_arr.shape))
+
+                arr_sum = masked_arr.sum()
+                param_cubic_meters = (arr_sum / 1000) * (250 ** 2)
+                df =
+                df.loc[date, 'CBM'] = param_cubic_meters
+                param_acre_feet = param_cubic_meters / 1233.48
+                df.loc[date, 'AF'] = param_acre_feet
+                print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
+                print ''
+
         return None
 
-    def save_tabulated_results_to_csv(self, results_directories, polygons):
-        print 'results directories: {}'.format(results_directories)
+    def _save_tabulated_results_to_csv(self, results_directories, polygons):
 
+        print 'results directories: {}'.format(results_directories)
         folders = os.listdir(polygons)
         for in_fold in folders:
-            print 'saving tab data for input folder: {}'.format(in_fold)
+            print 'saving tab data for input region: {}'.format(in_fold)
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
             files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
             print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
@@ -201,10 +209,11 @@ class Rasters(object):
 
                     if self._write_freq == 'daily':
                         df_month = df.resample('M').sum()
+                        save_loc_day = os.path.join(results_directories['daily_tabulated'][region_type],
+                                                    '{}.csv'.format(sub_region))
                     else:
                         df_month = self._tabular_dict[region_type][sub_region]
-                    # print 'df for {} {}'.format(region_type, sub_region)
-                    # print df_month.describe()
+                        save_loc_day = None
 
                     df_annual = df_month.resample('A').sum()
 
@@ -216,8 +225,8 @@ class Rasters(object):
                                                   '{}.csv'.format(sub_region))
 
                     if self._write_freq == 'daily':
-                        dfs = [df_month, df_annual]
-                        locations = [save_loc_month, save_loc_annu]
+                        dfs = [df, df_month, df_annual]
+                        locations = [save_loc_day, save_loc_month, save_loc_annu]
                     else:
                         dfs = [df_month, df_annual]
                         locations = [save_loc_month, save_loc_annu]

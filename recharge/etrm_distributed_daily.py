@@ -43,7 +43,7 @@ save_outputs = []
 def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, statics, initials,
                              clip_polygons, tabulation_frequency='daily'):
 
-    etrm = Processes(date_range, raster_out_data, clip_polygons, statics, initials)
+    etrm = Processes(date_range, raster_out_data, clip_polygons, statics, initials, write_freq=tabulation_frequency)
 
     etrm.run(ndvi, prism, penman)
 
@@ -62,9 +62,9 @@ if __name__ == '__main__':
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
     output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
     output_path = os.path.join('F:\\', 'ETRM_Results')
-    simulation_period = datetime(2000, 1, 1), datetime(2000, 01, 31)
+    simulation_period = datetime(2000, 1, 1), datetime(2000, 01, 03)
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
-                             static_inputs_path, initial_conditions_path, output_polygons)
+                             static_inputs_path, initial_conditions_path, output_polygons, 'daily')
 
 # ============= EOF =============================================
 
