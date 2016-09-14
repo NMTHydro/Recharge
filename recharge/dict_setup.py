@@ -195,7 +195,14 @@ def initialize_raster_tracker(tracked_outputs, shape):
 def initialize_tabular_dict(shapes, outputs, date_range_):
 
         folders = os.listdir(shapes)
-        arrays = [['AF', 'CBM'] * len(outputs), outputs * 2]
+        units = ['AF', 'CBM']
+        outputs_shallow = [[output, output] for output in outputs]
+        outputs_arr = [val for sublist in outputs_shallow for val in sublist]
+        units_arr = units * len(outputs)
+        arrays = [outputs_arr, units_arr]
+        print 'outputs array: {}\n len {}'.format(outputs_arr, len(outputs_arr))
+        print 'units array: {}\n len {}'.format(units_arr, len(units_arr))
+        print 'arrays for multindex: {}'.format(arrays)
         cols = MultiIndex.from_arrays(arrays)
         # print 'dataframe index: from {} to {}'.format(date_range_[0], date_range_[1])
         ind = date_range(date_range_[0], date_range_[1], freq='D')
