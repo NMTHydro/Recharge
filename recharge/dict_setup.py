@@ -27,7 +27,6 @@ from numpy import zeros, isnan, count_nonzero, where, ones
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
-from copy import deepcopy
 
 
 from recharge.raster_tools import convert_raster_to_array
@@ -39,7 +38,7 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.1, min_snow_albedo=0.45, max_snow_albedo=0.90):
 
-    monsoon_dates = datetime(1900, 6, 1), datetime(1900, 10, 1)
+    monsoon_dates = datetime(1900, 7, 1), datetime(1900, 9, 1)
     start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
 
     dictionary = dict(s_mon=start_monsoon, e_mon=end_monsoon, ze=soil_evap_depth, p=et_depletion_factor,
@@ -52,24 +51,27 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
     return dictionary
 
 
-def initialize_master_dict(zeros_):
-    """create an empty dict that will carry ETRM-derived values day to day"""
+def initialize_master_dict(shape):
+    """create an empty dict that will carry ETRM-derived values day to day
+    :param shape: shape of the model domain, (1, 1) or raster.shape
+    """
 
     master = dict()
-    master['pkcb'] = zeros_
-    master['infil'] = zeros_
-    master['kcb'] = zeros_
-    master['dp_r'] = zeros_
-    master['tot_snow'] = zeros_
-    master['tot_rain'] = zeros_
-    master['tot_melt'] = zeros_
-    master['tot_mass'] = zeros_
-    master['tot_infil'] = zeros_
-    master['tot_ref_et'] = zeros_
-    master['tot_eta'] = zeros_
-    master['tot_precip'] = zeros_
-    master['tot_ro'] = zeros_
-    master['tot_swe'] = zeros_
+
+    master['pkcb'] = zeros(shape)
+    master['infil'] = zeros(shape)
+    master['kcb'] = zeros(shape)
+    master['dp_r'] = zeros(shape)
+    master['tot_snow'] = zeros(shape)
+    master['tot_rain'] = zeros(shape)
+    master['tot_melt'] = zeros(shape)
+    master['tot_mass'] = zeros(shape)
+    master['tot_infil'] = zeros(shape)
+    master['tot_ref_et'] = zeros(shape)
+    master['tot_eta'] = zeros(shape)
+    master['tot_precip'] = zeros(shape)
+    master['tot_ro'] = zeros(shape)
+    master['tot_swe'] = zeros(shape)
 
     return master
 
@@ -90,22 +92,18 @@ def initialize_static_dict(inputs_path, point_dict=None):
     if point_dict:
         for key, val in point_dict.iteritems():
             coords = val['Coords']
-            static_dict.update({key: {}})
+            sub = {}
             for filename, value in zip(statics, static_keys):
                 full_path = os.path.join(inputs_path, filename)
-                static_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
+                sub[value] = get_static_inputs_at_point(coords, full_path)
+            static_dict[key] = sub
 
     else:
         static_arrays = [convert_raster_to_array(inputs_path, filename) for filename in statics]
         for key, data in zip(static_keys, static_arrays):
-            static_dict.update({key: data})
+            static_dict[key] = data
 
         for key, data in zip(static_keys, static_arrays):
-            # print ''
-            # print '{} has {} values of zero'.format(key, count_nonzero(where(data == 0.0, ones(data.shape),
-            #                                                                  zeros(data.shape))))
-            # print '{} has {} values < zero'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
-            #                                                                 zeros(data.shape))))
             if key == 'tew':
                 min_val = 15
                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
@@ -135,7 +133,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
                 static_dict['taw'] = where(data > 0.0, ones(data.shape) * min_val, static_dict['taw'])
 
-            static_dict.update({key: data})
+            static_dict[key] = data
 
     return static_dict
 
@@ -151,16 +149,19 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
     if point_dict:
         for key, val in point_dict.iteritems():
             coords = val['Coords']
-            initial_cond_dict.update({key: {}})
+            sub = {}
             for filename, value in zip(initial_cond, initial_cond_keys):
                 full_path = os.path.join(initial_inputs_path, filename)
-                initial_cond_dict[key].update({value: get_static_inputs_at_point(coords, full_path)})
+                sub[value] = get_static_inputs_at_point(coords, full_path)
+
+            initial_cond_dict[key] = sub
 
     else:
         initial_cond_arrays = [convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
         for key, data in zip(initial_cond_keys, initial_cond_arrays):
             data = where(isnan(data), zeros(data.shape), data)
-            initial_cond_dict.update({key: data})
+            initial_cond_dict[key] = data
+
             print '{} has {} nan values'.format(key, count_nonzero(isnan(data)))
             print '{} has {} negative values'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
                                                                               zeros(data.shape))))
@@ -186,10 +187,12 @@ def initialize_raster_tracker(tracked_outputs, shape):
         _zeros = zeros(shape)
         raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
                              'last_day': {}}
+        # emulated initialize_tab_dict here
         for super_key, super_val in raster_track_dict.iteritems():
+            sub = {}
             for key in tracked_outputs:
-                raster_track_dict[super_key].update({key: _zeros})
-
+                sub[key] = _zeros
+            raster_track_dict[super_key] = sub
         return raster_track_dict
 
 
@@ -209,17 +212,16 @@ def initialize_tabular_dict(shapes, outputs, date_range_):
             region_type, toss = f.split('_Poly')
             d = {}
             files = os.listdir(os.path.join(shapes, f))
-            shapes = [element.strip('.shp') for element in files if element.endswith('.shp')]
-            for element in files:
-                if element.endswith('.shp'):
-                    sub_region, ext = element.split('.')
-                    if ext == '.shp':
-                        df = DataFrame(index=ind, columns=cols).fillna(0.0)
-                        d[sub_region] = df
+            shapes = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
+            print 'shapes: {}'.format(shapes)
+            for element in shapes:
+                df = DataFrame(index=ind, columns=cols).fillna(0.0)
+                print 'sub region : {}'.format(element)
+                d[element] = df
 
             tab_dict[region_type] = d
 
-        print 'your tabular results dict:\n{}'.format(tab_dict)
+        # print 'your tabular results dict:\n{}'.format(tab_dict)
 
         return tab_dict
 
