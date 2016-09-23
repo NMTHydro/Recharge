@@ -63,19 +63,19 @@ class Rasters(object):
                 self._sum_raster_by_shape(element, date_object, data_array)
 
         # save monthly data
-        # etrm_processes.run._save_tabulated_results_to_csv will resample to annual
+        # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
         if date_object.day == mo_date[1]:
             print ''
             print 'saving monthly data for {}'.format(date_object)
             for element in self._outputs:
-                self._update_raster_tracker(master, element)
+                self._update_raster_tracker(master, element, period='monthly')
                 self._write_raster(element, date_object, period='monthly')
                 self._sum_raster_by_shape(element, date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in self._outputs:
-                self._update_raster_tracker(master, element, annual=True)
+                self._update_raster_tracker(master, element, period='annual')
                 self._write_raster(element, date_object, period='annual')
 
         if date_object == self._simulation_period[1]:
@@ -84,7 +84,7 @@ class Rasters(object):
             self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
         return None
 
-    def _update_raster_tracker(self, master_dict, var, annual=False):
+    def _update_raster_tracker(self, master_dict, var, period):
         """ Updates the cummulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
@@ -97,12 +97,14 @@ class Rasters(object):
         :return: None
         """
 
-        if annual:
+        if period == 'annual':
             self._output_tracker['current_year'][var] = master_dict[var] - self._output_tracker['last_yr'][var]
             self._output_tracker['last_yr'][var] = self._output_tracker['current_year'][var]
 
-        self._output_tracker['current_month'][var] = master_dict[var] - self._output_tracker['last_mo'][var]
-        self._output_tracker['last_mo'][var] = self._output_tracker['current_month'][var]
+        if period == 'monthly':
+            self._output_tracker['current_month'][var] = master_dict[var] - self._output_tracker['last_mo'][var]
+            self._output_tracker['last_mo'][var] = self._output_tracker['current_month'][var]
+
         return None
 
     def _write_raster(self, key, date, period=None, master=None):
@@ -191,8 +193,8 @@ class Rasters(object):
                 df = self._tabular_dict[region_type][sub_region][parameter, 'AF']
                 df.loc[date] = param_acre_feet
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
-                print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
-                print ''
+                # print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
+                # print ''
 
         return None
 

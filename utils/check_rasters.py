@@ -22,12 +22,12 @@ dgketchum 9 Sept 2016
 """
 
 import os
-from recharge.raster_finder import get_penman, get_prism, get_ndvi
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_ndvi
 from dateutil import rrule
 from datetime import datetime
 from numpy import where, zeros
 
-simulation_period = datetime(2000, 1, 1), datetime(2013, 12, 31)
+simulation_period = datetime(2002, 2, 18), datetime(2002, 2, 25)
 
 
 def check_rasters(ndvi, prism, penman, period):
@@ -40,16 +40,22 @@ def check_rasters(ndvi, prism, penman, period):
         # ndvi = get_ndvi(roots[0], 0.0, day)
         # print 'type = {}'.format(type(ndvi))
         # print 'ndvi: min = {} max = {}, mean = {}'.format(ndvi.min(), ndvi.max(), ndvi.mean())
-        # pm = get_penman(roots[2], day)
+        pm = get_penman(roots[2], day)
         # print 'pm: min = {} max = {}, mean = {}'.format(pm.min(), pm.max(), pm.mean())
-        ppt = get_prism(roots[1], day, variable='precip')
-        ppt = where(ppt < 0.0, zeros(ppt.shape), ppt)
-        sum = (ppt.sum() / 1000) * (250 ** 2) / 1233.48
-        total += sum
-        # print 'sum precip = {:.2e}'.format(sum)
-        if sum > 1.0e+7:
+        sum = (pm.sum() / 1000) * (250 ** 2) / 1233.48
+        print 'sum precip = {:.2e}'.format(sum)
+        if abs(sum) > 1.0e+7:
+            print 'high pm on {}: {:.2e} AF'.format(day.strftime('%Y-%m-%d'), sum)
             print ''
-            print 'high precip on {}: {:.2e} AF'.format(day.strftime('%Y-%m-%d'), sum)
+
+        # ppt = get_prism(roots[1], day, variable='precip')
+        # ppt = where(ppt < 0.0, zeros(ppt.shape), ppt)
+        # sum = (ppt.sum() / 1000) * (250 ** 2) / 1233.48
+        # total += sum
+        # # print 'sum precip = {:.2e}'.format(sum)
+        # if sum > 1.0e+7:
+        #     print ''
+        #     print 'high precip on {}: {:.2e} AF'.format(day.strftime('%Y-%m-%d'), sum)
         # print 'ppt: min = {} max = {}, mean = {}'.format(ppt.min(), ppt.max(), ppt.mean())
         # min_temp = get_prism(roots[1], day, variable='min_temp')
         # print 'min_temp: min = {} max = {}, mean = {}'.format(min_temp.min(), min_temp.max(), min_temp.mean())
@@ -57,7 +63,7 @@ def check_rasters(ndvi, prism, penman, period):
         # print 'max_temp: min = {} max = {}, mean = {}'.format(max_temp.min(), max_temp.max(), max_temp.mean())
         # dct = {'ndvi': ndvi, 'pm': pm, 'ppt': ppt, 'min_temp': min_temp, 'max_temp': max_temp}
         # for key, item in dct.iteritems():
-    print 'total precip: {}'.format(total)
+    # print 'total precip: {}'.format(total)
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')

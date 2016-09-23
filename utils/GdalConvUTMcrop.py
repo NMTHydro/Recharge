@@ -3,11 +3,12 @@ import gdal
 from subprocess import call
 
 
-INPUT_FOLDER = 'C:\\Recharge_GIS\\NM_geology'
-OUTPUT_FOLDER = 'C:\\Recharge_GIS\\NM_geology\\std_ras'
+INPUT_FOLDER = 'E:\\rew_by_clay_sand'
+OUTPUT_FOLDER = 'C:\Recharge_GIS\OSG_Data'
 extent = 'F:\\Reference_shape\\NM_poly500mbuf\\NM_poly500mbuf.shp'
 
 os.chdir(INPUT_FOLDER)
+
 
 def findRasters (path, filter):
     for root, dirs, files in os.walk(path):

@@ -38,7 +38,7 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
     get_etrm_time_series(amf_dict, inputs_path=etrm_extract)
     # print 'amf dict w/ etrm input time series: \n{}'.format(amf_dict)  # fix this so it appends to all sites
 
-    etrm = Processes(static_inputs=static_inputs, point_dict=amf_dict,
+    etrm = Processes(simulation_period, save_csv, static_inputs=static_inputs, point_dict=amf_dict,
                      initial_inputs=initial_path)
     # print 'amf dict, pre-etrm run {}'.format(amf_dict)
 

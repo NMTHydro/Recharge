@@ -23,7 +23,7 @@ dgketchum 24 JUL 2016
 """
 
 
-from numpy import zeros, isnan, count_nonzero, where, ones
+from numpy import zeros, isnan, count_nonzero, where, ones, median
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
@@ -51,27 +51,43 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
     return dictionary
 
 
-def initialize_master_dict(shape):
+def initialize_master_dict(shape=None):
     """create an empty dict that will carry ETRM-derived values day to day
     :param shape: shape of the model domain, (1, 1) or raster.shape
     """
 
     master = dict()
+    if shape:  # distributed
+        master['pkcb'] = zeros(shape)
+        master['infil'] = zeros(shape)
+        master['kcb'] = zeros(shape)
+        master['dp_r'] = zeros(shape)
+        master['tot_snow'] = zeros(shape)
+        master['tot_rain'] = zeros(shape)
+        master['tot_melt'] = zeros(shape)
+        master['tot_mass'] = zeros(shape)
+        master['tot_infil'] = zeros(shape)
+        master['tot_ref_et'] = zeros(shape)
+        master['tot_eta'] = zeros(shape)
+        master['tot_precip'] = zeros(shape)
+        master['tot_ro'] = zeros(shape)
+        master['tot_swe'] = zeros(shape)
 
-    master['pkcb'] = zeros(shape)
-    master['infil'] = zeros(shape)
-    master['kcb'] = zeros(shape)
-    master['dp_r'] = zeros(shape)
-    master['tot_snow'] = zeros(shape)
-    master['tot_rain'] = zeros(shape)
-    master['tot_melt'] = zeros(shape)
-    master['tot_mass'] = zeros(shape)
-    master['tot_infil'] = zeros(shape)
-    master['tot_ref_et'] = zeros(shape)
-    master['tot_eta'] = zeros(shape)
-    master['tot_precip'] = zeros(shape)
-    master['tot_ro'] = zeros(shape)
-    master['tot_swe'] = zeros(shape)
+    else:
+        master['pkcb'] = 0.0
+        master['infil'] = 0.0
+        master['kcb'] = 0.0
+        master['dp_r'] = 0.0
+        master['tot_snow'] = 0.0
+        master['tot_rain'] = 0.0
+        master['tot_melt'] = 0.0
+        master['tot_mass'] = 0.0
+        master['tot_infil'] = 0.0
+        master['tot_ref_et'] = 0.0
+        master['tot_eta'] = 0.0
+        master['tot_precip'] = 0.0
+        master['tot_ro'] = 0.0
+        master['tot_swe'] = 0.0
 
     return master
 
@@ -83,9 +99,11 @@ def initialize_static_dict(inputs_path, point_dict=None):
     # give variable names to each raster"""
 
     print 'static inputs path: {}'.format(inputs_path)
-    static_keys = ['bed_ksat', 'plant_height', 'quat_deposits', 'root_z', 'soil_ksat', 'taw', 'tew']
-
+    static_keys = ['bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw',
+                   'tew']
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
+    # print 'len static keys: {} len statics:{}'.format(len(static_keys), len(statics))
+
     static_dict = {}
     statics = sorted(statics, key=lambda s: s.lower())
 
@@ -105,7 +123,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
         for key, data in zip(static_keys, static_arrays):
             if key == 'tew':
-                min_val = 15
+                min_val = 10
                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
                 #                                                                    ones(data.shape),
                 #                                                                    zeros(data.shape))), min_val)
@@ -126,6 +144,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 data = where(data < min_val, ones(data.shape) * min_val, data)
 
             if key == 'quat_deposits':
+
                 min_val = 250
                 # print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
                 #                                                         ones(data.shape),
@@ -133,8 +152,15 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
                 static_dict['taw'] = where(data > 0.0, ones(data.shape) * min_val, static_dict['taw'])
 
-            static_dict[key] = data
+            if key == 'taw':
+                min_val = 50.0
+                static_dict['taw'] = where(data < min_val, ones(data.shape) * min_val, static_dict['taw'])
+                static_dict['taw'] = static_dict['taw'] - static_dict['tew'] - static_dict['rew']
 
+            else:
+                static_dict[key] = data
+
+    # print 'static dict keys: \n {}'.format(static_dict.keys())
     return static_dict
 
 

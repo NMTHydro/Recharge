@@ -15,14 +15,14 @@
 # ===============================================================================
 
 
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, count_nonzero
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 from datetime import datetime
 from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker
 from recharge.raster_manager import Rasters
-from recharge.raster_finder import get_penman, get_prism, get_ndvi
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_ndvi
 from tools import millimeter_to_acreft as mm_af
 from tools import save_master_tracker
 
@@ -48,8 +48,7 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'tot_mass',
-                         'tot_rain', 'tot_melt', 'soil_storage']
+        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -62,6 +61,7 @@ class Processes(object):
             self._static = initialize_static_dict(static_inputs, point_dict)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
             self._zeros, self._ones = 0.0, 1.0
+            self._master = initialize_master_dict()
 
         else:
             self._polygons = polygons
@@ -70,8 +70,7 @@ class Processes(object):
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
             self._raster = Rasters(static_inputs, polygons, self._outputs, date_range, output_root, write_freq)
-
-        self._master = initialize_master_dict(self._zeros)
+            self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None):
@@ -97,6 +96,7 @@ class Processes(object):
         c = self._constants
 
         start_date, end_date = self._date_range
+        print 'simulation period: {}'.format((start_date, end_date))
         start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
         start_time = datetime.now()
         print 'start time :{}'.format(start_time)
@@ -114,7 +114,8 @@ class Processes(object):
                 m['first_day'] = True
                 m['albedo'] = self._ones * 0.45
                 m['swe'] = self._zeros  # this should be initialized correctly using simulation results
-                s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])
+                # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
+                # by method of Ritchie et al (1989), rew derived from percent sand/clay
 
                 if self._point_dict:
                     m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
@@ -125,6 +126,12 @@ class Processes(object):
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+                    print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(), s['rew'].max(),
+                                                                           s['rew'].min())
+                    print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(), s['tew'].max(),
+                                                                           s['tew'].min())
+                    print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(), s['taw'].max(),
+                                                                           s['taw'].min())
 
                 self._initial_depletions = m['dr'] + m['de'] + m['drew']
             else:
@@ -216,7 +223,7 @@ class Processes(object):
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
         if self._point_dict:
-            if m['kr'] < 0.0:
+            if m['kr'] < 0.01:
                 m['kr'] = 0.01
         else:
             m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
@@ -369,7 +376,6 @@ class Processes(object):
         s = self._static
 
         water = m['rain'] + m['mlt']
-        water_tracker = water
 
         # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
@@ -662,6 +668,7 @@ class Processes(object):
             try:
                 tracker_from_master.append(mm_af(m[key]))
             except AttributeError:
+                # this is to handle the non-float (e.g. boolean) parameters which can't be converted to AF
                 tracker_from_master.append(m[key])
 
         # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
