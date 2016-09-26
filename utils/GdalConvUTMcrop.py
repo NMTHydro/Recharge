@@ -2,8 +2,7 @@ import os, fnmatch
 import gdal
 from subprocess import call
 
-
-INPUT_FOLDER = 'E:\\rew_by_clay_sand'
+INPUT_FOLDER = 'C:\Recharge_GIS\land_use_land_cover'
 OUTPUT_FOLDER = 'C:\Recharge_GIS\OSG_Data'
 extent = 'F:\\Reference_shape\\NM_poly500mbuf\\NM_poly500mbuf.shp'
 
@@ -26,7 +25,8 @@ for raster in findRasters(INPUT_FOLDER, '*.tif'):
     warp = 'gdalwarp -overwrite -s_srs EPSG:26913 -t_srs EPSG:26913 -te 114757 3471163 682757 4102413 -ts 2272 2525 -r "near" -cutline %s -crop_to_cutline -multi -srcnodata "-3.40282346639e+038" -dstnodata -999 %s %s' % (extent, inRaster, temp)
     call(warp)
 
-    warp2 = 'gdalwarp -overwrite  -s_srs EPSG:26913 -t_srs EPSG:26913 -te 114757 3471163 682757 4102413 -tr 250 250 -r "bilinear" -multi -srcnodata -999 -dstnodata -999 %s %s' % (temp, outRaster)
+    warp2 = 'gdalwarp -overwrite  -s_srs EPSG:26913 -t_srs EPSG:26913 -te 114757 3471163 682757 4102413 -tr 250 250 -r "mode" -multi -srcnodata -999 -dstnodata -999 %s %s' % (
+    temp, outRaster)
     call(warp2)
     print "Done processing {a}".format(a=outRaster)
 

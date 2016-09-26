@@ -38,13 +38,24 @@ class Rasters(object):
 
         self._write_freq = write_frequency
         self._polygons = polygons
+
+        # _outputs are flux totals, monthly and annual are found with _update_raster_tracker()
+        # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
+        # and thus we assign a list of daily outputs
         self._outputs = outputs
+        if write_frequency == 'daily':
+            # daily outputs should just be normal fluxes, while _outputs are of simulation totals
+
+            self._daily_outputs = [out.replace('tot_', '') for out in outputs]
+            print 'your daily outputs will be from: {}'.format(self._daily_outputs)
+
         self._geo = get_geo(path_to_representative_raster)
         self._output_tracker = recharge.dict_setup.initialize_raster_tracker(outputs,
                                                                              (self._geo['rows'], self._geo['cols']))
         self._results_dir = make_results_dir(output_root, polygons)
         self._simulation_period = simulation_period
-        self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period)
+        self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period,
+                                                                         write_frequency)
 
     def update_raster_obj(self, master, date_object, save_specific_dates=None):
 
@@ -57,8 +68,10 @@ class Rasters(object):
                     self._write_raster(element, date_object, period='single_day', master=master)
 
         # save daily data (this will take a long time)
+        # don't use 'tot_parameter' or you will sum totals
+        # just use the normal daily fluxes from master, aka _daily_outputs
         if self._write_freq == 'daily':
-            for element in self._outputs:
+            for element in self._daily_outputs:
                 data_array = master[element]
                 self._sum_raster_by_shape(element, date_object, data_array)
 
@@ -70,7 +83,8 @@ class Rasters(object):
             for element in self._outputs:
                 self._update_raster_tracker(master, element, period='monthly')
                 self._write_raster(element, date_object, period='monthly')
-                self._sum_raster_by_shape(element, date_object)
+                if not self._write_freq:
+                    self._sum_raster_by_shape(element, date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
@@ -82,6 +96,7 @@ class Rasters(object):
             print 'tab dict: \n{}'.format(self._tabular_dict)
             print 'saving the simulation master tracker'
             self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
+
         return None
 
     def _update_raster_tracker(self, master_dict, var, period):
@@ -176,14 +191,18 @@ class Rasters(object):
                 #                                                  (float(count_nonzero(mask_array)) /
                 #                                                   mask_array.size) * 100)
 
+                # if summing monthly or annual data, use the current month/year values
                 if data_arr is None:
                     masked_arr = where(mask_array > 0, self._output_tracker['current_month'][parameter],
                                        zeros(self._output_tracker['current_month'][parameter].shape))
+
+                # if summing daily data, just use data array, which is from the master dict[data_array]
                 else:
                     masked_arr = where(mask_array > 0, data_arr, zeros(data_arr.shape))
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (250 ** 2)
+                print 'tabular dict: {}'.format(self._tabular_dict)
                 df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']
 
                 df.loc[date] = param_cubic_meters

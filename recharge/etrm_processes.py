@@ -48,7 +48,7 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_infil', 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'soil_storage']
+        self._outputs = ['tot_infil']  # , 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -128,11 +128,14 @@ class Processes(object):
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
                     m['pde'], m['de'] = self._initial['de'], self._initial['de']
                     m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
-                    print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(), s['rew'].max(),
+                    print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
+                                                                           s['rew'].max(),
                                                                            s['rew'].min())
-                    print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(), s['tew'].max(),
+                    print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
+                                                                           s['tew'].max(),
                                                                            s['tew'].min())
-                    print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(), s['taw'].max(),
+                    print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
+                                                                           s['taw'].max(),
                                                                            s['taw'].min())
 
                 self._initial_depletions = m['dr'] + m['de'] + m['drew']
@@ -325,12 +328,12 @@ class Processes(object):
         palb = m['albedo']
 
         if self._point_dict:
-            if temp < 0.0 < m['ppt']:
+            if temp < 0.0 < m['precip']:
                 # print 'producing snow fall'
-                m['snow_fall'] = m['ppt']
+                m['snow_fall'] = m['precip']
                 m['rain'] = 0.0
             else:
-                m['rain'] = m['ppt']
+                m['rain'] = m['precip']
                 m['snow_fall'] = 0.0
 
             if m['snow_fall'] > 3.0:
@@ -345,8 +348,8 @@ class Processes(object):
             if m['albedo'] < c['a_min']:
                 m['albedo'] = c['a_min']
         else:
-            m['snow_fall'] = where(temp < 0.0, m['ppt'], self._zeros)
-            m['rain'] = where(temp >= 0.0, m['ppt'], self._zeros)
+            m['snow_fall'] = where(temp < 0.0, m['precip'], self._zeros)
+            m['rain'] = where(temp >= 0.0, m['precip'], self._zeros)
             alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
             alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
             alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
@@ -355,10 +358,11 @@ class Processes(object):
 
         m['swe'] += m['snow_fall']
 
-        mlt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'], self._zeros)
-        m['mlt'] = minimum(m['swe'], mlt_init)
+        melt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'],
+                            self._zeros)
+        m['melt'] = minimum(m['swe'], melt_init)
 
-        m['swe'] -= m['mlt']
+        m['swe'] -= m['melt']
 
     def _do_soil_water_balance(self):
         """ Calculate all soil water balance at each time step.
@@ -381,11 +385,11 @@ class Processes(object):
         m = self._master
         s = self._static
 
-        water = m['rain'] + m['mlt']
+        water = m['rain'] + m['melt']
 
         m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
 
-        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
+        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
         if self._point_dict:  # point
@@ -393,7 +397,7 @@ class Processes(object):
             s = s[self._point_dict_key]
 
             # give days with melt a ksat value for entire day
-            if m['mlt'] > 0.0:
+            if m['melt'] > 0.0:
                 m['soil_ksat'] = s['soil_ksat']
 
             # update variables
@@ -471,7 +475,7 @@ class Processes(object):
             # water balance through the root zone #
             m['dr_water'] = water
             if water < m['pdr'] + m['transp']:
-                m['dp_r'] = 0.0
+                m['infil'] = 0.0
                 m['dr'] = m['pdr'] + m['transp'] - water
                 if m['dr'] > s['taw']:
                     print 'why is dr greater than taw?'
@@ -481,7 +485,7 @@ class Processes(object):
                 water -= m['pdr'] + m['transp']
                 if water > m['soil_ksat']:
                     print 'warning: taw layer has water in excess of its ksat'
-                m['dp_r'] = water
+                m['infil'] = water
             else:
                 print 'error calculating deep percolation from root zone'
 
@@ -492,9 +496,9 @@ class Processes(object):
             m['pdrew'] = m['drew']
 
             # print 'rain: {}, melt: {}, water: {}'.format(mm_af(m['rain']),
-            #                                              mm_af(m['mlt']), mm_af(water))
+            #                                              mm_af(m['melt']), mm_af(water))
 
-            m['soil_ksat'] = where(m['mlt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
+            m['soil_ksat'] = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
             # impose limits on vaporization according to present depletions #
             # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
@@ -524,14 +528,14 @@ class Processes(object):
             # print 'water through  de  layer: {}'.format(mm_af(water))
 
             # water balance through the root zone layer #
-            m['dp_r'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
-            # print 'deep percolation total: {}'.format(mm_af(m['dp_r']))
+            m['infil'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
+            # print 'deep percolation total: {}'.format(mm_af(m['infil']))
             m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
 
             m['soil_storage'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
 
             # print 'water: {}, out: {}, storage: {}'.format(mm_af(water_tracker),
-            #                                                mm_af(m['ro'] + m['eta'] + m['dp_r']),
+            #                                                mm_af(m['ro'] + m['eta'] + m['infil']),
             #                                                mm_af(m['soil_storage']))
 
         return None
@@ -544,34 +548,35 @@ class Processes(object):
         m = self._master
 
         # strangely, these keys wouldn't update with augmented assignment
-        # i.e. m['tot_infil] += m['dp_r'] wasn't working
-        m['tot_infil'] = m['dp_r'] + m['tot_infil']
-        m['tot_ref_et'] = m['etrs'] + m['tot_ref_et']
+        # i.e. m['tot_infil] += m['infil'] wasn't working
+        m['tot_infil'] = m['infil'] + m['tot_infil']
+        m['tot_etrs'] = m['etrs'] + m['tot_etrs']
         m['tot_eta'] = m['eta'] + m['tot_eta']
-        m['tot_precip'] = m['ppt'] + m['tot_precip']
+        m['tot_precip'] = m['precip'] + m['tot_precip']
         m['tot_rain'] = m['rain'] + m['tot_rain']
-        m['tot_melt'] = m['mlt'] + m['tot_melt']
+        m['tot_melt'] = m['melt'] + m['tot_melt']
         m['tot_ro'] = m['ro'] + m['tot_ro']
         m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
         if not self._point_dict:
-            print 'today dp_r: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}, stor {}'.format(mm_af(m['dp_r']),
-                                                                                                mm_af(m['etrs']),
-                                                                                                mm_af(m['eta']),
-                                                                                                mm_af(m['ppt']),
-                                                                                                mm_af(m['ro']),
-                                                                                                mm_af(m['swe']),
-                                                                                                mm_af(
-                                                                                                    m['soil_storage']))
+            print 'today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(mm_af(m['infil']),
+                                                                                                    mm_af(m['etrs']),
+                                                                                                    mm_af(m['eta']),
+                                                                                                    mm_af(m['precip']),
+                                                                                                    mm_af(m['ro']),
+                                                                                                    mm_af(m['swe']),
+                                                                                                    mm_af(
+                                                                                                        m[
+                                                                                                            'soil_storage']))
 
-            print 'total infil: {}, etrs: {}, eta: {}, ppt: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
-                                                                                        mm_af(m['tot_ref_et']),
-                                                                                        mm_af(m['tot_eta']),
-                                                                                        mm_af(m['tot_precip']),
-                                                                                        mm_af(m['tot_ro']),
-                                                                                        mm_af(m['tot_swe']))
+            print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
+                                                                                           mm_af(m['tot_etrs']),
+                                                                                           mm_af(m['tot_eta']),
+                                                                                           mm_af(m['tot_precip']),
+                                                                                           mm_af(m['tot_ro']),
+                                                                                           mm_af(m['tot_swe']))
 
     def _do_mass_balance(self):
         """ Checks mass balance.
@@ -592,9 +597,9 @@ class Processes(object):
         """
 
         m = self._master
-        m['mass'] = m['rain'] + m['mlt'] - (m['ro'] + m['transp'] + m['evap'] + m['dp_r'] +
-                                            ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
-                                             (m['pdrew'] - m['drew'])))
+        m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
+                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
+                                              (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
@@ -635,11 +640,11 @@ class Processes(object):
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
         # print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
 
-        m['ppt'] = get_prism(prism, date, variable='precip')
-        m['ppt'] = where(m['ppt'] < self._zeros, self._zeros, m['ppt'])
-        # print 'raw ppt nan values = {}'.format(count_nonzero(isnan(m['ppt'])))
-        # print 'ppt min {} ppt max on day {} is {}'.format(m['ppt'].min(), date, m['ppt'].max())
-        # print 'total ppt et on {}: {:.2e} AF'.format(date, (m['ppt'].sum() / 1000) * (250 ** 2) / 1233.48)
+        m['precip'] = get_prism(prism, date, variable='precip')
+        m['precip'] = where(m['precip'] < self._zeros, self._zeros, m['precip'])
+        # print 'raw precip nan values = {}'.format(count_nonzero(isnan(m['precip'])))
+        # print 'precip min {} precip max on day {} is {}'.format(m['precip'].min(), date, m['precip'].max())
+        # print 'total precip et on {}: {:.2e} AF'.format(date, (m['precip'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         m['etrs'] = get_penman(penman, date, variable='etrs')
         # print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
@@ -659,8 +664,8 @@ class Processes(object):
         m['min_temp'] = ts['min temp'][date]
         m['max_temp'] = ts['max temp'][date]
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
-        m['ppt'] = ts['precip'][date]
-        m['ppt'] = max(m['ppt'], 0.0)
+        m['precip'] = ts['precip'][date]
+        m['precip'] = max(m['precip'], 0.0)
         m['etrs'] = ts['etrs_pm'][date]
         m['rg'] = ts['rg'][date]
 
@@ -699,20 +704,19 @@ class Processes(object):
         ending_water = sum([x - tracker[y][-1] for x, y in zip(capacities, depletions)])
         delta_soil_water = ending_water - starting_water
         print 'soil water change = {}'.format(delta_soil_water)
-        print 'input precip = {}, rain = {}, melt = {}'.format(tracker['ppt'].sum(), tracker['rain'].sum(),
-                                                               tracker['mlt'].sum())
+        print 'input precip = {}, rain = {}, melt = {}'.format(tracker['precip'].sum(), tracker['rain'].sum(),
+                                                               tracker['melt'].sum())
         print 'remaining snow on ground (swe) = {}'.format(tracker['swe'][-1])
-        input_sum = sum([tracker['swe'][-1], tracker['mlt'].sum(), tracker['rain'].sum()])
-        print 'swe + melt + rain ({}) should equal ppt ({})'.format(input_sum, tracker['ppt'].sum())
+        input_sum = sum([tracker['swe'][-1], tracker['melt'].sum(), tracker['rain'].sum()])
+        print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, tracker['precip'].sum())
         print 'total inputs (swe, rain, melt): {}'.format(input_sum)
-        print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['dp_r'].sum())
-        output_sum = sum([tracker['transp'].sum(), tracker['evap'].sum(), tracker['ro'].sum(), tracker['dp_r'].sum(),
+        print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['infil'].sum())
+        output_sum = sum([tracker['transp'].sum(), tracker['evap'].sum(), tracker['ro'].sum(), tracker['infil'].sum(),
                           delta_soil_water])
         print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
         mass_balance = input_sum - output_sum
         mass_percent = (mass_balance / input_sum) * 100
         print 'overall water balance for {} mm: {}, or {} percent'.format(name, mass_balance, mass_percent)
         print ''
-
 
 # ============= EOF =============================================

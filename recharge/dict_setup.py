@@ -58,13 +58,12 @@ def initialize_master_dict(shape=None):
         master['pkcb'] = zeros(shape)
         master['infil'] = zeros(shape)
         master['kcb'] = zeros(shape)
-        master['dp_r'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
         master['tot_rain'] = zeros(shape)
         master['tot_melt'] = zeros(shape)
         master['tot_mass'] = zeros(shape)
         master['tot_infil'] = zeros(shape)
-        master['tot_ref_et'] = zeros(shape)
+        master['tot_etrs'] = zeros(shape)
         master['tot_eta'] = zeros(shape)
         master['tot_precip'] = zeros(shape)
         master['tot_ro'] = zeros(shape)
@@ -74,13 +73,13 @@ def initialize_master_dict(shape=None):
         master['pkcb'] = 0.0
         master['infil'] = 0.0
         master['kcb'] = 0.0
-        master['dp_r'] = 0.0
+        master['infil'] = 0.0
         master['tot_snow'] = 0.0
         master['tot_rain'] = 0.0
         master['tot_melt'] = 0.0
         master['tot_mass'] = 0.0
         master['tot_infil'] = 0.0
-        master['tot_ref_et'] = 0.0
+        master['tot_etrs'] = 0.0
         master['tot_eta'] = 0.0
         master['tot_precip'] = 0.0
         master['tot_ro'] = 0.0
@@ -244,11 +243,15 @@ def initialize_raster_tracker(tracked_outputs, shape):
     return raster_track_dict
 
 
-def initialize_tabular_dict(shapes, outputs, date_range_):
+def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
+
     folders = os.listdir(shapes)
     units = ['AF', 'CBM']
     outputs_arr = [[output, output] for output in outputs]
     outputs_arr = [val for sublist in outputs_arr for val in sublist]
+    # if the write frequency of flux sums over shapes is daily, use normal master keys rather than 'tot_param'
+    if write_freq == 'daily':
+        outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
     units_arr = units * len(outputs)
     arrays = [outputs_arr, units_arr]
     cols = MultiIndex.from_arrays(arrays)
