@@ -22,12 +22,10 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-
 from numpy import zeros, isnan, count_nonzero, where, ones, median
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
-
 
 from recharge.raster_tools import convert_raster_to_array
 from recharge.point_extract_utility import get_static_inputs_at_point
@@ -37,7 +35,6 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.15,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.1, min_snow_albedo=0.45, max_snow_albedo=0.90):
-
     monsoon_dates = datetime(1900, 7, 1), datetime(1900, 9, 1)
     start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
 
@@ -93,18 +90,26 @@ def initialize_master_dict(shape=None):
 
 
 def initialize_static_dict(inputs_path, point_dict=None):
-
     """# build list of static rasters from current use file
     # convert rasters to arrays
     # give variable names to each raster"""
 
     print 'static inputs path: {}'.format(inputs_path)
+
+    # define NLCD land cover land use with a dict of classifications
+    # the following is for reference:
+    # land_classes = {'unclssified': 1, 'open_water': 11, 'developed_open': 21, 'developed_low': 22,
+    #                 'developed_med': 23, 'developed_high': 24, 'barren': 31, 'deciduous': 41,
+    #                 'evergreen': 42, 'mixed_forest': 43, 'shrub_scrub': 52, 'grassland': 71,
+    #                 'pasture_hay': 81, 'cultivated': 82, 'woody_wetlands': 90}
+
+    # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
     static_keys = ['bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw',
                    'tew']
     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
     # print 'len static keys: {} len statics:{}'.format(len(static_keys), len(statics))
 
-    static_dict = {}
+    stat_dct = {}
     statics = sorted(statics, key=lambda s: s.lower())
 
     if point_dict:
@@ -114,12 +119,22 @@ def initialize_static_dict(inputs_path, point_dict=None):
             for filename, value in zip(statics, static_keys):
                 full_path = os.path.join(inputs_path, filename)
                 sub[value] = get_static_inputs_at_point(coords, full_path)
-            static_dict[key] = sub
+            stat_dct[key] = sub
+        print 'static dict {}'.format(stat_dct)
+
+        for key, val in stat_dct.iteritems():
+            print key, val
+            if val['land_cover'] in [41, 42, 43]:
+                print 'previous tew: {}'.format(val['tew'])
+                val['tew'] *= 0.25
+                print 'adjusted tew: {}'.format(val['tew'])
+            elif val['land_cover'] == 52:
+                val['tew'] *= 0.75
 
     else:
         static_arrays = [convert_raster_to_array(inputs_path, filename) for filename in statics]
         for key, data in zip(static_keys, static_arrays):
-            static_dict[key] = data
+            stat_dct[key] = data
 
         for key, data in zip(static_keys, static_arrays):
             if key == 'tew':
@@ -127,6 +142,8 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
                 #                                                                    ones(data.shape),
                 #                                                                    zeros(data.shape))), min_val)
+
+                # apply a minimum tew
                 data = where(data <= min_val, ones(data.shape) * min_val, data)
 
             if key == 'soil_ksat':
@@ -143,25 +160,32 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 #                                                                    zeros(data.shape))), min_val)
                 data = where(data < min_val, ones(data.shape) * min_val, data)
 
+            # apply high TAW to unconsolidated Quaternary deposits
             if key == 'quat_deposits':
-
                 min_val = 250
                 # print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
                 #                                                         ones(data.shape),
                 #                                                         zeros(data.shape))), min_val)
 
-                static_dict['taw'] = where(data > 0.0, ones(data.shape) * min_val, static_dict['taw'])
+                stat_dct['taw'] = where(data > 0.0, ones(data.shape) * min_val, stat_dct['taw'])
 
             if key == 'taw':
                 min_val = 50.0
-                static_dict['taw'] = where(data < min_val, ones(data.shape) * min_val, static_dict['taw'])
-                static_dict['taw'] = static_dict['taw'] - static_dict['tew'] - static_dict['rew']
+                stat_dct['taw'] = where(data < min_val, ones(data.shape) * min_val, stat_dct['taw'])
+                stat_dct['taw'] = stat_dct['taw'] - stat_dct['tew'] - stat_dct['rew']
 
             else:
-                static_dict[key] = data
+                stat_dct[key] = data
+
+        # apply tew adjustment
+        _ones = ones(stat_dct['tew'].shape)
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones, stat_dct['tew'])
 
     # print 'static dict keys: \n {}'.format(static_dict.keys())
-    return static_dict
+    return stat_dct
 
 
 def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
@@ -196,7 +220,6 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
 
 
 def initialize_point_tracker(master):
-
     """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
 
@@ -209,51 +232,48 @@ def initialize_point_tracker(master):
 
 
 def initialize_raster_tracker(tracked_outputs, shape):
-
-        _zeros = zeros(shape)
-        raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
-                             'last_day': {}}
-        # emulated initialize_tab_dict here
-        for super_key, super_val in raster_track_dict.iteritems():
-            sub = {}
-            for key in tracked_outputs:
-                sub[key] = _zeros
-            raster_track_dict[super_key] = sub
-        return raster_track_dict
+    _zeros = zeros(shape)
+    raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
+                         'last_day': {}}
+    # emulated initialize_tab_dict here
+    for super_key, super_val in raster_track_dict.iteritems():
+        sub = {}
+        for key in tracked_outputs:
+            sub[key] = _zeros
+        raster_track_dict[super_key] = sub
+    return raster_track_dict
 
 
 def initialize_tabular_dict(shapes, outputs, date_range_):
+    folders = os.listdir(shapes)
+    units = ['AF', 'CBM']
+    outputs_arr = [[output, output] for output in outputs]
+    outputs_arr = [val for sublist in outputs_arr for val in sublist]
+    units_arr = units * len(outputs)
+    arrays = [outputs_arr, units_arr]
+    cols = MultiIndex.from_arrays(arrays)
+    ind = date_range(date_range_[0], date_range_[1], freq='D')
 
-        folders = os.listdir(shapes)
-        units = ['AF', 'CBM']
-        outputs_arr = [[output, output] for output in outputs]
-        outputs_arr = [val for sublist in outputs_arr for val in sublist]
-        units_arr = units * len(outputs)
-        arrays = [outputs_arr, units_arr]
-        cols = MultiIndex.from_arrays(arrays)
-        ind = date_range(date_range_[0], date_range_[1], freq='D')
+    tab_dict = {}
+    for f in folders:
+        region_type, toss = f.split('_Poly')
+        d = {}
+        files = os.listdir(os.path.join(shapes, f))
+        shapes = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
+        print 'shapes: {}'.format(shapes)
+        for element in shapes:
+            df = DataFrame(index=ind, columns=cols).fillna(0.0)
+            print 'sub region : {}'.format(element)
+            d[element] = df
 
-        tab_dict = {}
-        for f in folders:
-            region_type, toss = f.split('_Poly')
-            d = {}
-            files = os.listdir(os.path.join(shapes, f))
-            shapes = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
-            print 'shapes: {}'.format(shapes)
-            for element in shapes:
-                df = DataFrame(index=ind, columns=cols).fillna(0.0)
-                print 'sub region : {}'.format(element)
-                d[element] = df
+        tab_dict[region_type] = d
 
-            tab_dict[region_type] = d
+    # print 'your tabular results dict:\n{}'.format(tab_dict)
 
-        # print 'your tabular results dict:\n{}'.format(tab_dict)
-
-        return tab_dict
+    return tab_dict
 
 
 def initialize_master_tracker(master):
-
     """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
 
@@ -263,6 +283,7 @@ def initialize_master_tracker(master):
     tracker = DataFrame(columns=tracker_keys)
 
     return tracker
+
 
 if __name__ == '__main__':
     pass
