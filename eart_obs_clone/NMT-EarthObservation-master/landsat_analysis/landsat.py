@@ -20,7 +20,7 @@ this module provides (1) function -- check_rasters.
 
 dgketchum 9 Sept 2016
 """
-
+#
 #import os
 #from dateutil import rrule
 #from datetime import datetime # this is a robust formatting function
