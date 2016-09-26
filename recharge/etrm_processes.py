@@ -116,11 +116,13 @@ class Processes(object):
                 m['swe'] = self._zeros  # this should be initialized correctly using simulation results
                 # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
                 # by method of Ritchie et al (1989), rew derived from percent sand/clay
+                m['dry_days'] = self._ones
 
                 if self._point_dict:
                     m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
                     m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
                     m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
+                    print 'rew: {}, tew: {}, taw: {}'.format(s['rew'], s['tew'], s['taw'])
 
                 else:
                     m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
@@ -222,6 +224,10 @@ class Processes(object):
         #                                                                                         self._ones, self._zeros)))
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
+
+        # EXPERIMENTAL: stage two evap has been way too high, force slowdown with decay
+        m['kr'] *= (1 / m['dry_days'] ** 2)
+
         if self._point_dict:
             if m['kr'] < 0.01:
                 m['kr'] = 0.01
@@ -376,6 +382,8 @@ class Processes(object):
         s = self._static
 
         water = m['rain'] + m['mlt']
+
+        m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
 
         # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['mlt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
