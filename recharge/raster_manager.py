@@ -64,7 +64,7 @@ class Rasters(object):
         # save data for a certain day
         if save_specific_dates:
             if date_object in save_specific_dates:
-                for element in self._outputs:
+                for element in self._daily_outputs:
                     self._write_raster(element, date_object, period='single_day', master=master)
 
         # save daily data (this will take a long time)
@@ -92,9 +92,15 @@ class Rasters(object):
                 self._update_raster_tracker(master, element, period='annual')
                 self._write_raster(element, date_object, period='annual')
 
+        # save tabulated results at end of simulation
         if date_object == self._simulation_period[1]:
             print 'tab dict: \n{}'.format(self._tabular_dict)
             print 'saving the simulation master tracker'
+            for element in self._outputs:
+                self._write_raster(element, date_object, period='simulation')
+            self._write_raster(master['dr'], date_object, period='simulation')
+            self._write_raster(master['de'], date_object, period='simulation')
+            self._write_raster(master['drew'], date_object, period='simulation')
             self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
 
         return None
@@ -114,11 +120,17 @@ class Rasters(object):
 
         if period == 'annual':
             self._output_tracker['current_year'][var] = master_dict[var] - self._output_tracker['last_yr'][var]
-            self._output_tracker['last_yr'][var] = self._output_tracker['current_year'][var]
+            self._output_tracker['last_yr'][var] = master_dict[var]
 
         if period == 'monthly':
+
             self._output_tracker['current_month'][var] = master_dict[var] - self._output_tracker['last_mo'][var]
-            self._output_tracker['last_mo'][var] = self._output_tracker['current_month'][var]
+
+            print 'mean value master {} today: {}'.format(var, master_dict[var].mean())
+            print 'mean value output tracker today: {}'.format(self._output_tracker['current_month'][var].mean())
+            print 'mean value output tracker yesterday: {}'.format(self._output_tracker['last_mo'][var].mean())
+
+            self._output_tracker['last_mo'][var] = master_dict[var]
 
         return None
 
@@ -136,10 +148,16 @@ class Rasters(object):
             file_ = '{}_{}_{}.tif'.format(key, date.month, date.year)
             filename = os.path.join(self._results_dir['root'], self._results_dir['monthly_rasters'], file_)
             array_to_save = self._output_tracker['current_month'][key]
+            print 'saving {}, mean: {}'.format(key, self._output_tracker['current_month'][key].mean())
 
         elif period == 'single_day':
             file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
             filename = os.path.join(self._results_dir['root'], self._results_dir['daily_rasters'], file_)
+            array_to_save = master[key]
+
+        elif period == 'simulation':
+            file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
+            filename = os.path.join(self._results_dir['root'], self._results_dir['ETRM_14_yr_rasters'], file_)
             array_to_save = master[key]
 
         else:
@@ -153,6 +171,8 @@ class Rasters(object):
         out_data_set.SetProjection(self._geo['projection'])
         output_band = out_data_set.GetRasterBand(1)
         output_band.WriteArray(array_to_save, 0, 0)
+        print 'written array {} mean value: {}'.format(key, array_to_save.mean())
+        del out_data_set, output_band
         return None
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
@@ -192,6 +212,7 @@ class Rasters(object):
                 #                                                   mask_array.size) * 100)
 
                 # if summing monthly or annual data, use the current month/year values
+                # use daily for testing
                 if data_arr is None:
                     masked_arr = where(mask_array > 0, self._output_tracker['current_month'][parameter],
                                        zeros(self._output_tracker['current_month'][parameter].shape))
@@ -202,7 +223,7 @@ class Rasters(object):
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (250 ** 2)
-                print 'tabular dict: {}'.format(self._tabular_dict)
+                # print 'tabular dict: {}'.format(self._tabular_dict)
                 df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']
 
                 df.loc[date] = param_cubic_meters
@@ -212,8 +233,8 @@ class Rasters(object):
                 df = self._tabular_dict[region_type][sub_region][parameter, 'AF']
                 df.loc[date] = param_acre_feet
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
-                # print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
-                # print ''
+                if param_acre_feet > 0.0:
+                    print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
 
         return None
 
