@@ -170,7 +170,9 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
             if key == 'taw':
                 min_val = 50.0
+                max_val = 320.0
                 stat_dct['taw'] = where(data < min_val, ones(data.shape) * min_val, stat_dct['taw'])
+                stat_dct['taw'] = where(data > max_val, ones(data.shape) * max_val, stat_dct['taw'])
                 stat_dct['taw'] = stat_dct['taw'] - stat_dct['tew'] - stat_dct['rew']
 
             else:
