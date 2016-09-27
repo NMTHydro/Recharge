@@ -137,6 +137,10 @@ class Processes(object):
                     print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
                                                                            s['taw'].max(),
                                                                            s['taw'].min())
+                    print 'soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
+                                                                                 s['soil_ksat'].mean(),
+                                                                                 s['soil_ksat'].max(),
+                                                                                 s['soil_ksat'].min())
 
                 self._initial_depletions = m['dr'] + m['de'] + m['drew']
             else:
@@ -158,6 +162,8 @@ class Processes(object):
             self._do_dual_crop_coefficient()
 
             self._do_snow()
+
+            self._do_soil_ksat_adjustment()
 
             self._do_soil_water_balance()
 
@@ -363,6 +369,28 @@ class Processes(object):
         m['melt'] = minimum(m['swe'], melt_init)
 
         m['swe'] -= m['melt']
+
+    def _do_soil_ksat_adjustment(self):
+
+        m = self._master
+        s = self._static
+
+        water = m['rain'] + m['melt']
+
+        if not self._point_dict:
+            m['soil_ksat'] = where(s['land_cover'] in [41, 42, 43] and water < 6.0 * ones(m['taw'].shape),
+                                   m['soil_ksat'] * 3.3 * ones(m['taw'].shape), m['soil_ksat'])
+
+            m['soil_ksat'] = where(s['land_cover'] in [41, 42, 43] and 6.0 <= water < 25.0 * ones(m['taw'].shape),
+                                   m['soil_ksat'] * 2.0 * ones(m['taw'].shape), m['soil_ksat'])
+
+        else:
+            if water < 6.0:
+                m['soil_ksat'] *= 3.3
+            elif 6.0 <= water < 25.0:
+                m['soil_ksat'] *= 2.0
+
+        return None
 
     def _do_soil_water_balance(self):
         """ Calculate all soil water balance at each time step.
