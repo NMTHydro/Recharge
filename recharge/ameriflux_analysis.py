@@ -53,6 +53,9 @@ def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_ex
         print 'this should be your csv: {}'.format(csv_path_filename)
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
+        # remember to delete previous tracker to tot_parameter is zeroed out
+        del tracker
+
     return None
 
 if __name__ == '__main__':
