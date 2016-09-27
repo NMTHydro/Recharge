@@ -233,7 +233,7 @@ def initialize_point_tracker(master):
 def initialize_raster_tracker(tracked_outputs, shape):
     _zeros = zeros(shape)
     raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
-                         'last_day': {}}
+                         'yesterday': {}}
     # emulated initialize_tab_dict here
     for super_key, super_val in raster_track_dict.iteritems():
         sub = {}
