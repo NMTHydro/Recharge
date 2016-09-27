@@ -28,35 +28,34 @@ base_amf_dict = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_conifer'},
                  '5': {'Coords': '386288 3811461', 'Name': 'Heritage_pinyon_juniper'},
                  '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_juniper_savanna'}}
 
+
 # Gabe's test edit edit
 
 
 def get_ameriflux_data(ameriflux_dict, amf_file_path, simulation_period, etrm_extract=None,
                        static_inputs=None, initial_path=None, save_csv=None):
-
     amf_dict = amf_obs_time_series(ameriflux_dict, amf_file_path, save_cleaned_data_path=False)
     # print 'amf dict w/ AMF time series: \n{}'.format(amf_dict)
 
     get_etrm_time_series(amf_dict, inputs_path=etrm_extract)
     # print 'amf dict w/ etrm input time series: \n{}'.format(amf_dict)  # fix this so it appends to all sites
 
-    etrm = Processes(simulation_period, save_csv, static_inputs=static_inputs, point_dict=amf_dict,
-                     initial_inputs=initial_path)
-    # print 'amf dict, pre-etrm run {}'.format(amf_dict)
-
     for key, val in amf_dict.iteritems():
+        # instantiate for each item to get a clean master dict
+        etrm = Processes(simulation_period, save_csv, static_inputs=static_inputs, point_dict=amf_dict,
+                         initial_inputs=initial_path)
+        # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print 'key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         tracker = etrm.run(simulation_period, point_dict=amf_dict[key], point_dict_key=key)
         # print 'tracker after etrm run: \n {}'.format(tracker)
-        csv_path_filename = '{}\\{}.csv'.format(save_csv, key)
+        csv_path_filename = '{}\\{}.csv'.format(save_csv, val['Name'])
         print 'this should be your csv: {}'.format(csv_path_filename)
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
-
-        # remember to delete previous tracker to tot_parameter is zeroed out
-        del tracker
+        print 'tracker for {}: {}'.format(key, tracker)
 
     return None
+
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')

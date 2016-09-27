@@ -34,7 +34,7 @@ def get_raster_geo_attributes(statics_path):
     band = dataset.GetRasterBand(1)
     raster_geo_dict = {'cols': dataset.RasterXSize, 'rows': dataset.RasterYSize, 'bands': dataset.RasterCount,
                        'data_type': band.DataType, 'projection': dataset.GetProjection(),
-                       'geotransform': dataset.GetGeoTransform()}
+                       'geotransform': dataset.GetGeoTransform(), 'resolution': dataset.GetGeoTransform()[1]}
     return raster_geo_dict
 
 

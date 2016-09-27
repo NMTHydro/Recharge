@@ -48,7 +48,7 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_infil']  # , 'tot_ref_et', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_snow', 'soil_storage']
+        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -159,7 +159,7 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            self._do_dual_crop_coefficient()
+            self._do_dual_crop_coefficient(day)
 
             self._do_snow()
 
@@ -193,7 +193,7 @@ class Processes(object):
                 print 'last day: saving tabulated data'
                 save_master_tracker(self._master_tracker, self._output_root)
 
-    def _do_dual_crop_coefficient(self):
+    def _do_dual_crop_coefficient(self, date):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
         """
 
@@ -217,6 +217,13 @@ class Processes(object):
         m['ks'] = minimum(m['ks'], self._ones + 0.001)
         m['ks'] = maximum(self._zeros, m['ks'])
         m['transp'] = m['ks'] * m['kcb'] * m['etrs']
+        # enforce winter dormancy of vegetation
+        if 92 > date.timetuple().tm_yday or date.timetuple().tm_yday > 306:
+            m['transp'] = maximum(self._zeros, self._ones * 0.03)
+            m['transp_adj'] = 'True'
+        else:
+            m['transp_adj'] = 'False'
+
         m['transp'] = maximum(self._zeros, m['transp'])
 
         ####
@@ -365,7 +372,8 @@ class Processes(object):
         m['swe'] += m['snow_fall']
 
         melt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'],
-                            self._zeros)
+                            zeros(m['rg'].shape))
+
         m['melt'] = minimum(m['swe'], melt_init)
 
         m['swe'] -= m['melt']
@@ -378,17 +386,26 @@ class Processes(object):
         water = m['rain'] + m['melt']
 
         if not self._point_dict:
-            m['soil_ksat'] = where(s['land_cover'] in [41, 42, 43] and water < 6.0 * ones(m['taw'].shape),
-                                   m['soil_ksat'] * 3.3 * ones(m['taw'].shape), m['soil_ksat'])
-
-            m['soil_ksat'] = where(s['land_cover'] in [41, 42, 43] and 6.0 <= water < 25.0 * ones(m['taw'].shape),
-                                   m['soil_ksat'] * 2.0 * ones(m['taw'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 6.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 6.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 6.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
 
         else:
             if water < 6.0:
-                m['soil_ksat'] *= 3.3
+                if s['land_cover'] in [41, 42, 43]:
+                    m['soil_ksat'] *= 3.3
             elif 6.0 <= water < 25.0:
-                m['soil_ksat'] *= 2.0
+                if s['land_cover'] in [41, 42, 43]:
+                    m['soil_ksat'] *= 2.0
 
         return None
 
@@ -628,7 +645,7 @@ class Processes(object):
         m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
                                              ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                               (m['pdrew'] - m['drew'])))
-        # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
+        print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
@@ -718,7 +735,7 @@ class Processes(object):
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
-        print 'summary stats for {}:\n{}'.format(name, tracker.describe())
+        # print 'summary stats for {}:\n{}'.format(name, tracker.describe())
         print 'a look at vaporization:'
         print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
                                                                                         tracker['evap_2'].sum(),
