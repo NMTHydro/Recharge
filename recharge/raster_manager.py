@@ -52,7 +52,7 @@ class Rasters(object):
         self._geo = get_geo(path_to_representative_raster)
         self._output_tracker = recharge.dict_setup.initialize_raster_tracker(outputs,
                                                                              (self._geo['rows'], self._geo['cols']))
-        self._results_dir = make_results_dir(output_root, polygons)
+        self._results_dir = make_results_dir(output_root, polygons, simulation_period)
         self._simulation_period = simulation_period
         self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period,
                                                                          write_frequency)
