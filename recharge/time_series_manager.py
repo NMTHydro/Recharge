@@ -44,8 +44,7 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
 
         arr = array(csv[:, 1:], dtype=float)
 
-        cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_pm', 'plant height', 'min temp',
-                'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
+        cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 
         df = DataFrame(arr, index=new_ind, columns=cols)
         dict_[name]['etrm'] = df

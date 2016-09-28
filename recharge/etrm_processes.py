@@ -167,7 +167,7 @@ class Processes(object):
 
             self._do_soil_water_balance()
 
-            self._do_mass_balance()
+            self._do_mass_balance(day)
 
             self._do_accumulations()
 
@@ -625,7 +625,7 @@ class Processes(object):
                                                                                            mm_af(m['tot_ro']),
                                                                                            mm_af(m['tot_swe']))
 
-    def _do_mass_balance(self):
+    def _do_mass_balance(self, date):
         """ Checks mass balance.
 
         This function is important because mass balance errors indicate a problem in the soil water balance or
@@ -648,6 +648,9 @@ class Processes(object):
                                              ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                               (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
+        if date == self._date_range[0]:
+            print 'zero mass balance first day'
+            m['mass'] = zeros(m['mass'].shape)
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))

@@ -35,7 +35,7 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
     if date_object.year == 2000:
         raster = '{}_{}.tif'.format(date_object.year, doy)
         if coords:
-            ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             kcb = ndvi * 1.25
             return kcb
         ndvi = convert_raster_to_array(in_path, raster, band=1)
@@ -56,7 +56,7 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
                     nd = num + 15
                 raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
                 if coords:
-                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
                     kcb = ndvi * 1.25
                     return kcb
                 ndvi = convert_raster_to_array(in_path, raster, band=band)
@@ -76,7 +76,7 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
                     nd = num + 15
                 raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
                 if coords:
-                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
                     kcb = ndvi * 1.25
                     return kcb
                 ndvi = convert_raster_to_array(in_path, raster, band=band)
@@ -100,7 +100,7 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
                                                      str(date_object.month).rjust(2, '0'),
                                                      str(date_object.day).rjust(2, '0'))
         if coords:
-            ppt = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            ppt = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
             return ppt
         # print 'ppt raster: {}'.format(raster)
         ppt = convert_raster_to_array(path, raster)
@@ -114,7 +114,7 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
                                                             str(date_object.month).rjust(2, '0'),
                                                             str(date_object.day).rjust(2, '0'))
             if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
                 return min_temp
 
             min_temp = convert_raster_to_array(path, raster)
@@ -125,7 +125,7 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
                                                            str(date_object.month).rjust(2, '0'),
                                                            str(date_object.day).rjust(2, '0'))
             if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
                 return min_temp
             min_temp = convert_raster_to_array(path, raster)
 
@@ -137,7 +137,7 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
                                                        str(date_object.month).rjust(2, '0'),
                                                        str(date_object.day).rjust(2, '0'))
         if coords:
-            max_temp = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            max_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
             return max_temp
         max_temp = convert_raster_to_array(path, raster)
         return max_temp
@@ -149,7 +149,7 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     if variable == 'etrs':
         raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
-            etrs = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            etrs = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return etrs
         etrs = convert_raster_to_array(in_path, raster)
 
@@ -157,7 +157,7 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     elif variable == 'rlin':
         raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
-            rlin = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            rlin = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return rlin
         rlin = convert_raster_to_array(in_path, raster)
 
@@ -165,7 +165,7 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     elif variable == 'rg':
         raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
-            rg = recharge.point_extract_utility.get_inputs_at_point(coords, raster)
+            rg = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return rg
         rg = convert_raster_to_array(in_path, raster)
 

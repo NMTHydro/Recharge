@@ -19,17 +19,19 @@ import os
 from osgeo import gdal, ogr
 from dateutil import rrule
 from pandas import DataFrame, date_range
+from numpy import nan
 
 import recharge.dynamic_raster_finder
 
 
 def get_inputs_at_point(coords, full_path):
+
     if type(coords) == str:
         mx, my = coords.split(' ')
         mx, my = int(mx), int(my)
     else:
         mx, my = coords
-
+    # print 'coords: {}, {}'.format(mx, my)
     dataset = gdal.Open(full_path)
     gt = dataset.GetGeoTransform()
     band = dataset.GetRasterBand(1)
@@ -41,11 +43,11 @@ def get_inputs_at_point(coords, full_path):
 
 
 def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location):
+
     dynamic_keys = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 
     ind = date_range(simulation_period[0], simulation_period[1], name='Date')
-    df = DataFrame(columns=dynamic_keys, index=ind).fillna
-
+    df = DataFrame(columns=dynamic_keys, index=ind).fillna(nan)
     ds = ogr.Open(shapefile)
     lyr = ds.GetLayer()
     for feat in lyr:
@@ -56,25 +58,30 @@ def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_per
         print name
         geom = feat.GetGeometryRef()
         mx, my = geom.GetX(), geom.GetY()
+        if name == 'Valles_Coniferous':
+            print 'already did Valles Coniferous, skipping....'
+        else:
+            for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
+                if day.timetuple().tm_yday == 01:
+                    print 'year {}'.format(day.year)
+                dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
+                            recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
+                            recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
+                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
+                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
+                            (
+                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
+                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
+                                                                     coords=(mx, my))) / 2.,
+                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
 
-        for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
-            dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
-                        (recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
-                         recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
-                                                                  coords=(mx, my))) / 2.,
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
+                df.loc[day] = dynamics
 
-            df.loc[day] = dynamics
+            print 'df for {}: \n{}'.format(name, df)
+            csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
+            df.to_csv(csv_path_filename, na_rep='nan', index_label='Date', header=True)
 
-        print 'df for {}: \n{}'.format(name, df)
-        csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
-        df.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
-
-        return None
+    return None
 
 
 if __name__ == '__main__':

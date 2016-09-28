@@ -23,6 +23,7 @@ from recharge.point_extract_utility import get_dynamic_inputs_from_shape
 
 
 def extract_etrm_point_inputs(shapefile, ndvi, prism, penman, simulation_period, out_location):
+
     get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location)
 
 
@@ -35,9 +36,9 @@ if __name__ == '__main__':
     prism_path = os.path.join(inputs, 'PRISM')
     penman_path = os.path.join(inputs, 'PM_RAD')
     statics = os.path.join(inputs, 'statics')
-    amf_path = os.path.join(inputs, 'ameriflux_sites')
-    save_path = os.path.join(amf_path, 'AMF_ETRM_output')
-    shape = os.path.join(amf_path, 'shapefiles', 'amf_sites.shp')
+    cmb_path = os.path.join(inputs, 'chloride_mass_balance')
+    save_path = os.path.join(cmb_path, 'CMB_extracts')
+    shape = os.path.join(cmb_path, 'shapefiles', 'Samples_UTM_9FEB16.shp')
     period = datetime(2000, 1, 1), datetime(2013, 12, 31)
     extract_etrm_point_inputs(shape, ndvi_path, prism_path, penman_path, period, save_path)
 
