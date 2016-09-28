@@ -26,9 +26,10 @@ from numpy import zeros, isnan, count_nonzero, where, ones, median
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
+from osgeo import ogr
 
 from recharge.raster_tools import convert_raster_to_array
-from recharge.point_extract_utility import get_static_inputs_at_point
+from recharge.point_extract_utility import get_inputs_at_point
 
 
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
@@ -112,12 +113,13 @@ def initialize_static_dict(inputs_path, point_dict=None):
     statics = sorted(statics, key=lambda s: s.lower())
 
     if point_dict:
+        print 'point dict: {}'.format(point_dict)
         for key, val in point_dict.iteritems():
             coords = val['Coords']
             sub = {}
             for filename, value in zip(statics, static_keys):
                 full_path = os.path.join(inputs_path, filename)
-                sub[value] = get_static_inputs_at_point(coords, full_path)
+                sub[value] = get_inputs_at_point(coords, full_path)
             stat_dct[key] = sub
         print 'static dict {}'.format(stat_dct)
 
@@ -203,7 +205,7 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
             sub = {}
             for filename, value in zip(initial_cond, initial_cond_keys):
                 full_path = os.path.join(initial_inputs_path, filename)
-                sub[value] = get_static_inputs_at_point(coords, full_path)
+                sub[value] = get_inputs_at_point(coords, full_path)
 
             initial_cond_dict[key] = sub
 
@@ -289,6 +291,23 @@ def initialize_master_tracker(master):
 
     return tracker
 
+
+def cmb_sample_site_data(shape):
+    ds = ogr.Open(shape)
+    lyr = ds.GetLayer()
+    cmb_dict = {}
+    for feat in lyr:
+        geom = feat.GetGeometryRef()
+        mx, my = geom.GetX(), geom.GetY()
+        sample = feat.GetField('Sample')
+        print 'location of {}: {}, {}'.format(sample, mx, my)
+        loc = feat.GetField('Location_D')
+        elev = feat.GetField('Elevation_')
+        infil_ind = feat.GetField('Rech_pct') / 100.
+        cmb_dict[sample] = {'Name': loc, 'Elevation': elev, 'Infil_index': infil_ind,
+                            'Coords': '{} {}'.format(int(mx), int(my))}
+
+    return cmb_dict
 
 if __name__ == '__main__':
     pass

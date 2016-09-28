@@ -52,7 +52,7 @@ class Rasters(object):
         self._geo = get_geo(path_to_representative_raster)
         self._output_tracker = recharge.dict_setup.initialize_raster_tracker(outputs,
                                                                              (self._geo['rows'], self._geo['cols']))
-        self._results_dir = make_results_dir(output_root, polygons, simulation_period)
+        self._results_dir = make_results_dir(output_root, polygons)
         self._simulation_period = simulation_period
         self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period,
                                                                          write_frequency)
@@ -93,15 +93,14 @@ class Rasters(object):
                 self._write_raster(element, date_object, period='annual')
 
         # save tabulated results at end of simulation
-        if date_object == self._simulation_period[1]:
-            print 'tab dict: \n{}'.format(self._tabular_dict)
-            print 'saving the simulation master tracker'
-            for element in self._outputs:
-                self._write_raster(element, date_object, period='simulation')
-            self._write_raster(master['dr'], date_object, period='simulation')
-            self._write_raster(master['de'], date_object, period='simulation')
-            self._write_raster(master['drew'], date_object, period='simulation')
-            self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
+        # if date_object == self._simulation_period[1]:
+        #     print 'tab dict: \n{}'.format(self._tabular_dict)
+        #     print 'saving the simulation master tracker'
+        #     for element in self._outputs:
+        #         self._write_raster(element, date_object, period='simulation', master=master)
+        #     for element in ['dr', 'de', 'drew']:
+        #         self._write_raster(master[element], date_object, period='simulation', master=master)
+        #     self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
 
         return None
 
@@ -156,8 +155,8 @@ class Rasters(object):
             array_to_save = master[key]
 
         elif period == 'simulation':
-            file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
-            filename = os.path.join(self._results_dir['root'], self._results_dir['ETRM_14_yr_rasters'], file_)
+            file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
+            filename = os.path.join(self._results_dir['root'], self._results_dir['simulation_tot_rasters'], file_)
             array_to_save = master[key]
 
         else:

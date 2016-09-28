@@ -29,6 +29,7 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
     os.chdir(folder)
     csv_list = os.listdir(folder)
     csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
+
     print 'etrm extract csv list: \n{}'.format(csv_list)
     for file_ in csv_list:
         csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
@@ -36,12 +37,19 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
         try:
             new_ind = [datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S') for row in csv]
         except ValueError:
-            new_ind = [datetime.strptime(row[0], '%Y/%m%d') for row in csv]
+            try:
+                new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv]
+            except ValueError:
+                new_ind = [datetime.strptime(row[0], '%m/%d/%Y') for row in csv]
+
         arr = array(csv[:, 1:], dtype=float)
+
         cols = ['bed_ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_pm', 'plant height', 'min temp',
                 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
+
         df = DataFrame(arr, index=new_ind, columns=cols)
-        dict_[name].update({'etrm': df})
+        dict_[name]['etrm'] = df
+
     return None
 
 

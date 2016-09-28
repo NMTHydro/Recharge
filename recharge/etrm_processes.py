@@ -22,7 +22,7 @@ from dateutil import rrule
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker
 from recharge.raster_manager import Rasters
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_ndvi
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_kcb
 from tools import millimeter_to_acreft as mm_af
 from tools import save_master_tracker
 
@@ -400,6 +400,8 @@ class Processes(object):
                                    m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
 
         else:
+
+            s = s[self._point_dict_key]
             if water < 6.0:
                 if s['land_cover'] in [41, 42, 43]:
                     m['soil_ksat'] *= 3.3
@@ -645,7 +647,7 @@ class Processes(object):
         m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
                                              ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                               (m['pdrew'] - m['drew'])))
-        print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
+        # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
@@ -676,7 +678,7 @@ class Processes(object):
         m = self._master
 
         m['pkcb'] = m['kcb']
-        m['kcb'] = get_ndvi(ndvi, m['pkcb'], date)
+        m['kcb'] = get_kcb(ndvi, date, m['pkcb'])
         # print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
 
         m['min_temp'] = get_prism(prism, date, variable='min_temp')

@@ -13,42 +13,71 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-#
-try:
-    from osgeo import gdal, ogr
-except ImportError:
-    pass
 
 
-def get_static_inputs_at_point(coords, full_path):
+import os
+from osgeo import gdal, ogr
+from dateutil import rrule
+from pandas import DataFrame, date_range
 
-    mx, my = coords.split(' ')
-    mx, my = int(mx), int(my)
-    aws_open = gdal.Open(full_path)
-    gt = aws_open.GetGeoTransform()
-    rb = aws_open.GetRasterBand(1)
+import recharge.dynamic_raster_finder
+
+
+def get_inputs_at_point(coords, full_path):
+    if type(coords) == str:
+        mx, my = coords.split(' ')
+        mx, my = int(mx), int(my)
+    else:
+        mx, my = coords
+
+    dataset = gdal.Open(full_path)
+    gt = dataset.GetGeoTransform()
+    band = dataset.GetRasterBand(1)
     px = abs(int((mx - gt[0]) / gt[1]))
     py = int((my - gt[3]) / gt[5])
-    obj = rb.ReadAsArray(px, py, 1, 1)
+    obj = band.ReadAsArray(px, py, 1, 1)
+
     return obj[0][0]
 
 
-def save_point_static_inputs_to_csv(coords, static_inputs_path, save_path):
+def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location):
+    dynamic_keys = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
+
+    ind = date_range(simulation_period[0], simulation_period[1], name='Date')
+    df = DataFrame(columns=dynamic_keys, index=ind).fillna
+
+    ds = ogr.Open(shapefile)
+    lyr = ds.GetLayer()
+    for feat in lyr:
+        try:
+            name = feat.GetField('Name')
+        except AttributeError:
+            name = feat.GetField('Sample')
+        print name
+        geom = feat.GetGeometryRef()
+        mx, my = geom.GetX(), geom.GetY()
+
+        for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
+            dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
+                        (recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
+                         recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
+                                                                  coords=(mx, my))) / 2.,
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
+
+            df.loc[day] = dynamics
+
+        print 'df for {}: \n{}'.format(name, df)
+        csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
+        df.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+
+        return None
+
+
+if __name__ == '__main__':
     pass
 
-
-def save_point_daily_inputs_to_csv(coords, save_path):
-    pass
-
-
-def get_static_inputs_by_shapefile(shp_path, static_inputs_path):
-    shapefile = ogr.Open(shp_path)
-    layer = shapefile.GetLayer()
-    for feature in layer:
-        name = feature.GetField('Name')
-        # print name
-        geometry = feature.GetGeometryRef()
-        xx, yy = geometry.GetX(), geometry.GetY()
-        obj = get_static_inputs_at_point('{} {}'.format(xx, yy), static_inputs_path)
-        return obj
 # ============= EOF =============================================

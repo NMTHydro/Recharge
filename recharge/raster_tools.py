@@ -38,10 +38,8 @@ def get_raster_geo_attributes(statics_path):
     return raster_geo_dict
 
 
-def make_results_dir(out_path, shapes, period):
-    simulation_string = 'ETRM_{}_to_{}_rasters'.format(period[0].year, period[1].year)
-
-    empties = ['annual_rasters', 'monthly_rasters', simulation_string, 'annual_tabulated',
+def make_results_dir(out_path, shapes):
+    empties = ['annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
                'monthly_tabulated', 'daily_tabulated', 'daily_rasters']
     now = datetime.now()
     tag = now.strftime('%Y_%m_%d')

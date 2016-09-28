@@ -16,11 +16,13 @@
 import os
 from datetime import datetime
 
-from recharge.time_series_manager import get_etrm_time_series, cmb_sample_site_data
+from recharge.time_series_manager import get_etrm_time_series
+from recharge.dict_setup import cmb_sample_site_data
 from recharge.etrm_processes import Processes
 
 
 def get_cmb_data(cmb_shapefile, extract_path, simulation_period, save_csv, static_inputs, initial_path):
+
     cmb_dict = cmb_sample_site_data(cmb_shapefile)
 
     get_etrm_time_series(cmb_dict, extract_path)
@@ -49,12 +51,13 @@ def get_cmb_data(cmb_shapefile, extract_path, simulation_period, save_csv, stati
 if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
-    cmb_path = os.path.join('F:\\', 'ETRM_Inputs', 'chloride_mass_balance')
+    inputs = os.path.join('F:\\', 'ETRM_Inputs')
+    cmb_path = os.path.join(inputs, 'chloride_mass_balance')
     cmb_shp = os.path.join(cmb_path, 'shapefiles', 'CMB_sites_27SEP16.shp')
     extracts = os.path.join(cmb_path, 'CMB_extracts')
-    trackers = os.path.join(cmb_path, 'CMB_trackers')
-    static_inputs_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'OSG_Data', 'current_use')
-    initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'Array_Results', 'initialize')
+    trackers = os.path.join(cmb_path, 'CMB_ETRM_output', 'CMB_trackers')
+    static_inputs_path = os.path.join(inputs, 'statics')
+    initial_conditions_path = os.path.join(inputs, 'initialize')
     simulation_dates = datetime(2008, 1, 1), datetime(2013, 12, 31)
     get_cmb_data(cmb_shp, extracts, simulation_dates, trackers, static_inputs_path, initial_conditions_path)
 

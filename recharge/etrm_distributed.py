@@ -56,7 +56,7 @@ if __name__ == '__main__':
     root = os.path.join(home)
     initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'Array_Results', 'initialize')
     dynamic_inputs_path = os.path.join('F:\\', 'ETRM_Inputs')
-    static_inputs_path = os.path.join(dynamic_inputs_path, 'current_use')
+    static_inputs_path = os.path.join(dynamic_inputs_path, 'statics')
     ndvi_path = os.path.join(dynamic_inputs_path, 'NDVI', 'NDVI_std_all')
     prism_path = os.path.join(dynamic_inputs_path, 'PRISM')
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
