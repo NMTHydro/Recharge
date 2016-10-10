@@ -20,7 +20,7 @@ from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
 
-def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
+def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False, kind=None):
     """# csv should be in the following format:
 # ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
 # 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']"""
@@ -32,22 +32,24 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False):
 
     print 'etrm extract csv list: \n{}'.format(csv_list)
     for file_ in csv_list:
-        csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
-        name = file_.strip('AMF').strip('_extract.csv')
-        try:
-            new_ind = [datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S') for row in csv]
-        except ValueError:
-            try:
-                new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv]
-            except ValueError:
-                new_ind = [datetime.strptime(row[0], '%m/%d/%Y') for row in csv]
 
-        arr = array(csv[:, 1:], dtype=float)
+        csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
+        name = file_.replace('.csv', '')
+        print 'reading in csv for {}'.format(name)
+
+        new_ind = [datetime.strptime(row[0], '%Y-%m-%d') for row in csv[1:]]  # extracts should have headers
+
+        arr = array(csv[1:, 1:], dtype=float)
 
         cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 
         df = DataFrame(arr, index=new_ind, columns=cols)
-        dict_[name]['etrm'] = df
+
+        for key, val in dict_.iteritems():
+            if val['Name'] == name:
+                print 'updating {} number {} with etrm inputs df'.format(name, key)
+                # print 'your df: \n{}'.format(df)
+                dict_[key]['etrm'] = df
 
     return None
 
@@ -120,7 +122,7 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
 
         # Find all complete days (48) records with no NULL values,
         if complete_days_only:
-            df = df.groupby(lambda xx: xx.date()).aggregate(lambda xx: sum(xx) if len(xx) > 10 else nan)
+            df = df.groupby(lambda xx: xx.date()).aggregate(lambda xx: sum(xx) if len(xx) > 23 else nan)
         df.dropna(axis=0, how='any', inplace=True)
 
         # and convert energy to MJ
@@ -140,9 +142,11 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
             row['amf_ET'] = (row['LE'] / 2.45)  # convert from MJ/(step * m**2) to mm water
 
         df_low_err = df[df['en_bal_err'] <= 0.20]
+
         print 'You have {} DAYS of CLEAN RN/LE/H/RAD data from {}'.format(df.shape[0], amf_name)
         print 'The mean energy balance closure error is: {}'.format(df['en_bal_err'].mean())
         print 'You have {} DAYS  of [0.0 < CLOSURE ERROR < 0.10] data from {}'.format(len(df_low_err), amf_name)
+
         if save_cleaned_data_path:
             df.to_csv('{}\\{}_cleaned_all.csv'.format(save_cleaned_data_path, amf_name))
             df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))

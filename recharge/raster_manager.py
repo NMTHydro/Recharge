@@ -232,8 +232,8 @@ class Rasters(object):
                 df = self._tabular_dict[region_type][sub_region][parameter, 'AF']
                 df.loc[date] = param_acre_feet
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
-                # if param_acre_feet > 0.0:
-                #     print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
+                if param_acre_feet > 0.0:
+                    print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
 
         return None
 

@@ -709,14 +709,15 @@ class Processes(object):
 
     def _do_daily_point_load(self, point_dict, date):
         m = self._master
-        ts = point_dict['etrm']
+        # print 'point dict: {}'.format(point_dict)
+        ts = point_dict[self._point_dict_key]['etrm']
         m['kcb'] = ts['kcb'][date]
-        m['min_temp'] = ts['min temp'][date]
-        m['max_temp'] = ts['max temp'][date]
+        m['min_temp'] = ts['min_temp'][date]
+        m['max_temp'] = ts['max_temp'][date]
         m['temp'] = (m['min_temp'] + m['max_temp']) / 2
         m['precip'] = ts['precip'][date]
         m['precip'] = max(m['precip'], 0.0)
-        m['etrs'] = ts['etrs_pm'][date]
+        m['etrs'] = ts['etrs'][date]
         m['rg'] = ts['rg'][date]
 
     def _update_master_tracker(self, date):

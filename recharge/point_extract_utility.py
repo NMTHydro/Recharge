@@ -53,7 +53,7 @@ def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_per
     for feat in lyr:
         try:
             name = feat.GetField('Name')
-        except AttributeError:
+        except ValueError:
             name = feat.GetField('Sample')
         print name
         geom = feat.GetGeometryRef()
