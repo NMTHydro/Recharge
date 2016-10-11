@@ -54,8 +54,8 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False, kind=Non
     return None
 
 
-def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False):
-
+def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False,
+                        close_threshold=0.20, return_low_err=False):
     """read in data from an extract file
         #  (year, dtime, H, LE, FG, RN, RG, RGin, RGout)
     # H  = sensible heat flux
@@ -87,9 +87,8 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
 
     for key, val in dict_.iteritems():
         amf_name = val['Name']
-        print '\nname: {}'.format(amf_name)
+        print '\n name: {}'.format(amf_name)
         folder = os.path.join(path, amf_name)
-        os.chdir(folder)
         csv_list = os.listdir(folder)
         print 'csv list: \n{}'.format(csv_list)
         arr_cols = [0, 2, 12, 14, 28, 30, 33, 34, 35]
@@ -122,7 +121,10 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
 
         # Find all complete days (48) records with no NULL values,
         if complete_days_only:
-            df = df.groupby(lambda xx: xx.date()).aggregate(lambda xx: sum(xx) if len(xx) > 23 else nan)
+            df = df.groupby(lambda xx: xx.date())
+            print 'df grouped: {}'.format(df)
+            df = df.aggregate(lambda xx: sum(xx) if len(xx) > 23 else nan)
+
         df.dropna(axis=0, how='any', inplace=True)
 
         # and convert energy to MJ
@@ -131,27 +133,33 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
                 series *= 0.0864 / 48
 
         # calculate energy balance error
-        calculated_cols = ['rad_err', 'en_bal_err', 'rad_minus_heat', 'amf_ET']
+        calculated_cols = ['rad_err', 'en_bal_err', 'rad_minus_sens_heat', 'amf_ET']
         empty = zeros((df.shape[0], len(calculated_cols)), dtype=float)
         new_df = DataFrame(empty, index=df.index, columns=calculated_cols)
         df = concat([df, new_df], axis=1, join='outer')
+
         for ind, row in df.iterrows():
             row['rad_err'] = (abs((row['RN']) - (row['RG'] - row['RGout'] + row['RGL'] - row['RGLout'])) / row['RN'])
             row['en_bal_err'] = ((row['RN'] - (row['LE'] + row['H'])) / row['RN'])
-            row['rad_minus_heat'] = (row['RN'] - (row['LE'] + row['H'])) * 0.0864 / 48
+            row['rad_minus_sens_heat'] = (row['RN'] - (row['LE'] + row['H'])) * 0.0864 / 48
             row['amf_ET'] = (row['LE'] / 2.45)  # convert from MJ/(step * m**2) to mm water
 
-        df_low_err = df[df['en_bal_err'] <= 0.20]
+        df_low_err = df[df['en_bal_err'] <= close_threshold]
 
         print 'You have {} DAYS of CLEAN RN/LE/H/RAD data from {}'.format(df.shape[0], amf_name)
         print 'The mean energy balance closure error is: {}'.format(df['en_bal_err'].mean())
-        print 'You have {} DAYS  of [0.0 < CLOSURE ERROR < 0.10] data from {}'.format(len(df_low_err), amf_name)
+        print 'You have {} DAYS  of [0.0 < CLOSURE ERROR < {}] data from {}'.format(len(df_low_err), close_threshold,
+                                                                                    amf_name)
 
         if save_cleaned_data_path:
             df.to_csv('{}\\{}_cleaned_all.csv'.format(save_cleaned_data_path, amf_name))
             df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))
 
-        val.update({'AMF_Data': df})
+        if return_low_err:
+            val['AMF_Data'] = df_low_err
+        else:
+            val['AMF_Data'] = df_low_err
+
     return dict_
 
 
