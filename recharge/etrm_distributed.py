@@ -62,7 +62,7 @@ if __name__ == '__main__':
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
     output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
     output_path = os.path.join('F:\\', 'ETRM_Results')
-    simulation_period = datetime(2000, 1, 1), datetime(2000, 01, 31)
+    simulation_period = datetime(2000, 1, 1), datetime(2013, 12, 31)
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
                              static_inputs_path, initial_conditions_path, output_polygons)
 

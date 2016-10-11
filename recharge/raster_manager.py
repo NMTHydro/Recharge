@@ -62,10 +62,10 @@ class Rasters(object):
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save data for a certain day
-        # if save_specific_dates:
-        #     if date_object in save_specific_dates:
-        #         for element in self._daily_outputs:
-        #             self._write_raster(element, date_object, period='single_day', master=master)
+        if save_specific_dates:
+            if date_object in save_specific_dates:
+                for element in self._daily_outputs:
+                    self._write_raster(element, date_object, period='single_day', master=master)
 
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals
@@ -77,20 +77,20 @@ class Rasters(object):
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
-        # if date_object.day == mo_date[1]:
-        #     print ''
-        #     print 'saving monthly data for {}'.format(date_object)
-        #     for element in self._outputs:
-        #         self._update_raster_tracker(master, element, period='monthly')
-        #         self._write_raster(element, date_object, period='monthly')
-        #         if not self._write_freq:
-        #             self._sum_raster_by_shape(element, date_object)
+        if date_object.day == mo_date[1]:
+            print ''
+            print 'saving monthly data for {}'.format(date_object)
+            for element in self._outputs:
+                self._update_raster_tracker(master, element, period='monthly')
+                self._write_raster(element, date_object, period='monthly')
+                if not self._write_freq:
+                    self._sum_raster_by_shape(element, date_object)
 
         # save annual data
-        # if date_object.day == 31 and date_object.month == 12:
-        #     for element in self._outputs:
-        #         self._update_raster_tracker(master, element, period='annual')
-        #         self._write_raster(element, date_object, period='annual')
+        if date_object.day == 31 and date_object.month == 12:
+            for element in self._outputs:
+                self._update_raster_tracker(master, element, period='annual')
+                self._write_raster(element, date_object, period='annual')
 
         # save tabulated results at end of simulation
         if date_object == self._simulation_period[1]:
@@ -154,10 +154,10 @@ class Rasters(object):
             filename = os.path.join(self._results_dir['root'], self._results_dir['daily_rasters'], file_)
             array_to_save = master[key]
 
-        elif period == 'simulation':
-            file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
-            filename = os.path.join(self._results_dir['root'], self._results_dir['simulation_tot_rasters'], file_)
-            array_to_save = master[key]
+        # elif period == 'simulation':
+        #     file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
+        #     filename = os.path.join(self._results_dir['root'], self._results_dir['simulation_tot_rasters'], file_)
+        #     array_to_save = master[key]
 
         else:
             array_to_save = None
@@ -257,7 +257,7 @@ class Rasters(object):
                         save_loc_day = os.path.join(results_directories['daily_tabulated'][region_type],
                                                     '{}.csv'.format(sub_region))
                     else:
-                        df_month = self._tabular_dict[region_type][sub_region]
+                        df_month = df.resample('M').sum()
                         save_loc_day = None
 
                     df_annual = df_month.resample('A').sum()

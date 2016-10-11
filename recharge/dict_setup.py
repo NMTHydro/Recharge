@@ -170,13 +170,23 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
                 stat_dct['taw'] = where(data > 0.0, ones(data.shape) * min_val, stat_dct['taw'])
 
+            # apply bounds to TAW
             if key == 'taw':
+
                 min_val = 50.0
                 max_val = 320.0
                 stat_dct['taw'] = where(data < min_val, ones(data.shape) * min_val, stat_dct['taw'])
                 stat_dct['taw'] = where(data > max_val, ones(data.shape) * max_val, stat_dct['taw'])
-                stat_dct['taw'] = stat_dct['taw'] - stat_dct['tew'] - stat_dct['rew']
+                # stat_dct['taw'] = where(stat_dct['taw'] > stat_dct['tew'] + stat_dct['rew'],
+                #                         stat_dct['taw'] - stat_dct['tew'] - stat_dct['rew'],
+                #                         stat_dct['tew'] + stat_dct['rew'])
 
+                print '{} has {} cells below the minimum'.format(key, count_nonzero(where(data < min_val,
+                                                                                          ones(data.shape),
+                                                                                          zeros(data.shape))), min_val)
+                print 'taw median: {}, mean {}, max {}, min {}'.format(median(stat_dct['taw']), stat_dct['taw'].mean(),
+                                                                       stat_dct['taw'].max(),
+                                                                       stat_dct['taw'].min())
             else:
                 stat_dct[key] = data
 
@@ -248,7 +258,6 @@ def initialize_raster_tracker(tracked_outputs, shape):
 
 
 def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
-
     folders = os.listdir(shapes)
     units = ['AF', 'CBM']
     outputs_arr = [[output, output] for output in outputs]
@@ -262,13 +271,17 @@ def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
     ind = date_range(date_range_[0], date_range_[1], freq='D')
 
     tab_dict = {}
+    print 'folders: {}'.format(folders)
     for f in folders:
-        region_type, toss = f.split('_Poly')
+        print 'folder: {}'.format(f)
+        region_type = f.replace('_Polygons', '')
+        print 'region type: {}'.format(region_type)
+        print 'polygon folder: {}'.format(shapes)
         d = {}
         files = os.listdir(os.path.join(shapes, f))
-        shapes = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
-        print 'shapes: {}'.format(shapes)
-        for element in shapes:
+        polygons = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
+        print 'polygons: {}'.format(polygons)
+        for element in polygons:
             df = DataFrame(index=ind, columns=cols).fillna(0.0)
             print 'sub region : {}'.format(element)
             d[element] = df
@@ -308,6 +321,7 @@ def cmb_sample_site_data(shape):
                             'Coords': '{} {}'.format(int(mx), int(my))}
 
     return cmb_dict
+
 
 if __name__ == '__main__':
     pass
