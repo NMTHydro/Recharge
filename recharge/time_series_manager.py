@@ -20,10 +20,11 @@ from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
 
-def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False, kind=None):
+def get_etrm_time_series(inputs_path, dict_=None):
     """# csv should be in the following format:
-# ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
-# 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']"""
+    # ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
+    # 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
+    """
 
     folder = os.path.join(inputs_path)
     os.chdir(folder)
@@ -44,12 +45,12 @@ def get_etrm_time_series(dict_, inputs_path=None, get_from_point=False, kind=Non
         cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 
         df = DataFrame(arr, index=new_ind, columns=cols)
-
-        for key, val in dict_.iteritems():
-            if val['Name'] == name:
-                print 'updating {} number {} with etrm inputs df'.format(name, key)
-                # print 'your df: \n{}'.format(df)
-                dict_[key]['etrm'] = df
+        if dict_:
+            for key, val in dict_.iteritems():
+                if val['Name'] == name:
+                    print 'updating {} number {} with etrm inputs df'.format(name, key)
+                    # print 'your df: \n{}'.format(df)
+                    dict_[key]['etrm'] = df
 
     return None
 

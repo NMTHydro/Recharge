@@ -25,13 +25,15 @@ from recharge.raster_tools import convert_raster_to_array
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
 
 input_path = 'C:\Users\David\Documents\Recharge\Thesis\Figures\maps'
-sand_tif = 'infil_index_clipped.tif'
+sand_tif = 'et_index_clipped.tif'
 
 geo = get_geo(input_path)
-infil = convert_raster_to_array(input_path, sand_tif)
+et = convert_raster_to_array(input_path, sand_tif)
 
-pct_ct = where(0.1 < infil, ones(infil.shape), zeros(infil.shape))
+ct_above = where(0.8 < et, ones(et.shape), zeros(et.shape))
+ct_below = where(0.8 >= et, ones(et.shape), zeros(et.shape))
 
-print 'shape = {}'.format(infil.shape)
-print 'count infil = {}'.format(count_nonzero(pct_ct))
+print 'shape = {}'.format(et.shape)
+print 'count et over = {}'.format(count_nonzero(ct_above))
+print 'count et over = {}'.format(count_nonzero(ct_below))
 # ==========================  EOF  ==============================================

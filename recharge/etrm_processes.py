@@ -42,7 +42,7 @@ class Processes(object):
     _master_tracker = None
     _initial_depletions = None
 
-    def __init__(self, date_range, output_root, polygons=None, static_inputs=None, initial_inputs=None,
+    def __init__(self, date_range, output_root=None, polygons=None, static_inputs=None, initial_inputs=None,
                  point_dict=None, write_freq=None):
 
         self._output_root = output_root
@@ -73,10 +73,11 @@ class Processes(object):
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None):
+            point_dict=None, point_dict_key=None, sensitivity_param_mag=None):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
+        :param sensitivity_param_mag:
         :param date_range: The beginning and end of the simulation.
         :param results_path: Send saved raster to this path. File structure is created automatically.
         :param ndvi_path: NDVI input data path.
@@ -150,6 +151,9 @@ class Processes(object):
                 self._do_daily_point_load(point_dict, day)
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
+
+            if sensitivity_param_mag:
+                self._do_parameter_adjustment(sensitivity_param_mag)
 
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
@@ -231,13 +235,6 @@ class Processes(object):
         # print '{} of tew, {} of pde, and {} of rew are nan'.format(count_nonzero(isnan(s['tew'])),
         #                                                            count_nonzero(isnan(m['pde'])),
         #                                                            count_nonzero(isnan(s['rew'])))
-        #
-        # print '{} of tew, {} of pde, and {} of rew are zero or less'.format(count_nonzero(where(s['tew'] <= self._zeros,
-        #                                                                                         self._ones, self._zeros)),
-        #                                                                     count_nonzero(where(m['pde'] <= self._zeros,
-        #                                                                                         self._ones, self._zeros)),
-        #                                                                     count_nonzero(where(s['rew'] <= self._zeros,
-        #                                                                                         self._ones, self._zeros)))
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
 
@@ -719,6 +716,9 @@ class Processes(object):
         m['precip'] = max(m['precip'], 0.0)
         m['etrs'] = ts['etrs'][date]
         m['rg'] = ts['rg'][date]
+
+    def _do_parameter_adjustment(self, adjustment_tuple):
+        pass
 
     def _update_master_tracker(self, date):
 
