@@ -73,11 +73,11 @@ class Processes(object):
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, sensitivity_param_mag=None):
+            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
-        :param sensitivity_param_mag:
+        :param sensitivity_matrix_column:
         :param date_range: The beginning and end of the simulation.
         :param results_path: Send saved raster to this path. File structure is created automatically.
         :param ndvi_path: NDVI input data path.
@@ -152,8 +152,8 @@ class Processes(object):
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
-            if sensitivity_param_mag:
-                self._do_parameter_adjustment(sensitivity_param_mag)
+            if sensitivity_matrix_column:
+                self._do_parameter_adjustment(sensitivity_matrix_column)
 
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
@@ -717,8 +717,24 @@ class Processes(object):
         m['etrs'] = ts['etrs'][date]
         m['rg'] = ts['rg'][date]
 
-    def _do_parameter_adjustment(self, adjustment_tuple):
-        pass
+    def _do_parameter_adjustment(self, adjustment_array):
+
+        m = self._master
+        s = self._static
+
+        alpha = adjustment_array[0]
+        beta = adjustment_array[1]
+        gamma = adjustment_array[2]
+        delta = adjustment_array[3]
+        zeta = adjustment_array[4]
+        theta = adjustment_array[5]
+
+        m['temp'] *= alpha
+        m['precip'] *= beta
+        m['etrs'] *= gamma
+        s['taw'] *= delta
+        m['kcb'] *= zeta
+        m['ksat'] *= theta
 
     def _update_master_tracker(self, date):
 

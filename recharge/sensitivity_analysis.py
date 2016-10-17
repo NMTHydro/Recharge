@@ -17,22 +17,25 @@
 
 # =================================IMPORTS=======================================
 import os
-from numpy import linspace, array, ones, insert, sum, divide
+from numpy import linspace, array, insert, sum, divide
 from pandas import DataFrame
 from ogr import Open
 from datetime import datetime
 
 from recharge.time_series_manager import get_etrm_time_series
 from recharge.etrm_processes import Processes
+from utils.spiderPlot_SA import make_spider_plot
+from utils.tornadoPlot_SA import make_tornado_plot
 
 # Set start datetime object
 SIMULATION_PERIOD = datetime(2000, 1, 1), datetime(2013, 12, 31)
 
 FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Water Storage (TAW)',
-           'Vegetation Density (NDVI)', 'Soil Evaporation Depth']
+           'Vegetation Density (NDVI)', 'Soil Ksat']
 
 
-def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=False):
+def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None):
+
     def round_to_value(number, roundto):
         return round(number / roundto) * roundto
 
@@ -101,7 +104,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=Fals
             rslts = []
             for col in var_arr.T:
                 etrm = Processes(SIMULATION_PERIOD, static_inputs=statics, initial_inputs=initials)
-                tracker = etrm.run()
+                tracker = etrm.run(sensitivity_matrix_column=col)
                 print 'tracker: {}'.format(tracker)
                 rech = sum(tracker[:, 9])
                 rslts.append(rech)
@@ -110,9 +113,40 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=Fals
             # tot_data : precip, et, tot_transp, tot_evap, infil, runoff, snow_fall, cum_mass, end_mass
 
             # "SI = [Q(Po + delP] -Q(Po - delP] / (2 * delP)"
-            # where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter, delP = change in value input
+            # where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter,
+            # delP = change in value input
             # find sensitivity index
 
+    xx = 0
+    for param in df.iteritems():
+        data_cube = param[1]
+        var_arr = var_arrs[xx]
+        yy = 0
+        for site in data_cube:
+            site_name = site_list[yy]
+            normal = normalize_list[xx]
+            site_obj = [x for x in site]
+            sens_list = []
+            zz = 0
+            for var in var_arr[xx]:
+                if var != var_arr[xx][5]:
+                    base = var_arr[xx][5]
+                    deltap = var - base
+                    obj = site_obj[zz]
+                    sen = ((obj * (base + deltap) - obj * (base - deltap)) / (2 * deltap)) * normal
+                    sens_list.append(sen)
+                    zz += 1
+            sens_list = array(sens_list)
+            df_norm.iloc[site_list.index(site_name), FACTORS.index(param[0])] = sens_list
+            if yy == 20:
+                print 'done'
+                break
+            yy += 1
+        xx += 1
+
+        make_spider_plot(df_norm, ndvi_range=ndvi_range, all_pct=all_pct, temps=temps, fig_path=None,
+                         show=True)
+        make_tornado_plot(df_norm, FACTORS, show=True, fig_path=None)
 
 if __name__ == '__main__':
     root = os.path.join('F:\\', 'ETRM_Inputs')
@@ -121,8 +155,9 @@ if __name__ == '__main__':
     sa_locations = os.path.join(sensitivity, 'sensitivity_points', 'SA_pnts29APR16_UTM.shp')
     initial_conditions_path = os.path.join(root, 'initialize')
     static_inputs_path = os.path.join(root, 'statics')
+    figures_path = os.path.join(sensitivity, 'figures')
     get_sensitivity_analysis(extract_files, sa_locations,
                              statics=static_inputs_path,
-                             initials=initial_conditions_path, save_plot=True)
+                             initials=initial_conditions_path, save_plot=figures_path)
 
 # ==========================  EOF  ==============================================
