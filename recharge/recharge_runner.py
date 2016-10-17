@@ -114,7 +114,7 @@ def ameriflux(config):
         return None
 
     get_etrm_time_series(d, inputs_path=config['etrm_extract'], kind='amf')
-    run_model(d, config.ameriflux_hook)
+    run_model(d, config, ameriflux_hook)
 
 
 def ameriflux_hook(config, tracker, val):
