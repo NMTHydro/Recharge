@@ -40,7 +40,6 @@ class Processes(object):
     tracker = None
     _point_dict_key = None
     _initial_depletions = None
-    kind = None
 
     def __init__(self, date_range, output_root=None, polygons=None, static_inputs=None, initial_inputs=None,
                  point_dict=None, write_freq=None):
@@ -58,7 +57,6 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
         if point_dict:
-            self.kind = 'point'
             self._static = initialize_static_dict(static_inputs, point_dict)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
             self._zeros, self._ones = 0.0, 1.0
@@ -182,21 +180,19 @@ class Processes(object):
                 else:
                     self.tracker = initialize_master_tracker(self._master)
 
-            if not point_dict:
+            if point_dict:
+                self._update_point_tracker(day)
+            else:
                 self._raster.update_raster_obj(m, day)
-
                 self._update_master_tracker(day)
 
-            else:
-                self._update_point_tracker(day)
-
-            # if point_dict and day == end_date:
-            #     self._get_tracker_summary(self.tracker, point_dict_key)
-            #     return self.tracker
-            #
-            # elif day == end_date:
-            #     print 'last day: saving tabulated data'
-            #     save_master_tracker(self._master_tracker, self._output_root)
+                # if point_dict and day == end_date:
+                #     self._get_tracker_summary(self.tracker, point_dict_key)
+                #     return self.tracker
+                #
+                # elif day == end_date:
+                #     print 'last day: saving tabulated data'
+                #     save_master_tracker(self._master_tracker, self._output_root)
 
         if point_dict:
             self._get_tracker_summary(self.tracker, point_dict_key)
@@ -207,9 +203,6 @@ class Processes(object):
 
         print 'this should be your csv: {}'.format(csv_path_filename)
         self.tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
-
-    def get_point_tracker(self):
-        return self.tracker
 
     # private
     def _do_dual_crop_coefficient(self, date):
@@ -608,14 +601,18 @@ class Processes(object):
 
         # strangely, these keys wouldn't update with augmented assignment
         # i.e. m['tot_infil] += m['infil'] wasn't working
-        m['tot_infil'] = m['infil'] + m['tot_infil']
-        m['tot_etrs'] = m['etrs'] + m['tot_etrs']
-        m['tot_eta'] = m['eta'] + m['tot_eta']
-        m['tot_precip'] = m['precip'] + m['tot_precip']
-        m['tot_rain'] = m['rain'] + m['tot_rain']
-        m['tot_melt'] = m['melt'] + m['tot_melt']
-        m['tot_ro'] = m['ro'] + m['tot_ro']
-        m['tot_snow'] = m['snow_fall'] + m['tot_snow']
+        # m['tot_infil'] = m['infil'] + m['tot_infil']
+        # m['tot_etrs'] = m['etrs'] + m['tot_etrs']
+        # m['tot_eta'] = m['eta'] + m['tot_eta']
+        # m['tot_precip'] = m['precip'] + m['tot_precip']
+        # m['tot_rain'] = m['rain'] + m['tot_rain']
+        # m['tot_melt'] = m['melt'] + m['tot_melt']
+        # m['tot_ro'] = m['ro'] + m['tot_ro']
+        # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
+
+        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'snow'):
+            kk = 'tot_{}'.format(k)
+            m[kk] = m[k] + m[kk]
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
@@ -666,27 +663,6 @@ class Processes(object):
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
-
-    def _update_point_tracker(self, date, raster_point=None):
-
-        m = self._master
-
-        master_keys_sorted = m.keys()
-        master_keys_sorted.sort()
-        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
-        tracker_from_master = [m[key] for key in master_keys_sorted]
-        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
-
-        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
-        if raster_point:
-            list_ = []
-            for item in tracker_from_master:
-                list_.append(item[raster_point])
-            self.tracker.loc[date] = list_
-
-        else:
-            # print 'master: {}'.format(m)
-            self.tracker.loc[date] = tracker_from_master
 
     def _do_daily_raster_load(self, ndvi, prism, penman, date):
 
@@ -752,14 +728,13 @@ class Processes(object):
         m['ksat'] *= theta
 
     def _update_master_tracker(self, date):
+        # master_keys_sorted = m.keys()
+        # master_keys_sorted.sort()
+        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
 
         m = self._master
-
-        master_keys_sorted = m.keys()
-        master_keys_sorted.sort()
-        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
         tracker_from_master = []
-        for key in master_keys_sorted:
+        for key in sorted(m):
             try:
                 tracker_from_master.append(mm_af(m[key]))
             except AttributeError:
@@ -770,9 +745,33 @@ class Processes(object):
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
 
+    def _update_point_tracker(self, date, raster_point=None):
+
+        m = self._master
+
+        # master_keys_sorted = m.keys()
+        # master_keys_sorted.sort()
+        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
+        tracker_from_master = [m[key] for key in sorted(m)]
+        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
+
+        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
+        if raster_point:
+            # list_ = []
+            # for item in tracker_from_master:
+            #     list_.append(item[raster_point])
+            # self.tracker.loc[date] = list_
+            l = [item[raster_point] for item in tracker_from_master]
+        else:
+            # print 'master: {}'.format(m)
+            l = tracker_from_master
+
+        self.tracker.loc[date] = l
+
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
         # print 'summary stats for {}:\n{}'.format(name, tracker.describe())
+        print '---------------------------------Tracker Summary--------------------------------'
         print 'a look at vaporization:'
         print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
                                                                                         tracker['evap_2'].sum(),
@@ -782,23 +781,30 @@ class Processes(object):
         print 'total transpiration = {}'.format(tracker['transp'].sum())
         depletions = ['drew', 'de', 'dr']
         capacities = [s['rew'], s['tew'], s['taw']]
-        starting_water = sum([x - tracker[y][0] for x, y in zip(capacities, depletions)])
-        ending_water = sum([x - tracker[y][-1] for x, y in zip(capacities, depletions)])
+        starting_water = sum((x - tracker[y][0] for x, y in zip(capacities, depletions)))
+        ending_water = sum((x - tracker[y][-1] for x, y in zip(capacities, depletions)))
         delta_soil_water = ending_water - starting_water
         print 'soil water change = {}'.format(delta_soil_water)
         print 'input precip = {}, rain = {}, melt = {}'.format(tracker['precip'].sum(), tracker['rain'].sum(),
                                                                tracker['melt'].sum())
         print 'remaining snow on ground (swe) = {}'.format(tracker['swe'][-1])
-        input_sum = sum([tracker['swe'][-1], tracker['melt'].sum(), tracker['rain'].sum()])
+
+        input_sum = tracker['swe'][-1] + tracker['melt'].sum() + tracker['rain'].sum()
+
         print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, tracker['precip'].sum())
         print 'total inputs (swe, rain, melt): {}'.format(input_sum)
         print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['infil'].sum())
-        output_sum = sum([tracker['transp'].sum(), tracker['evap'].sum(), tracker['ro'].sum(), tracker['infil'].sum(),
-                          delta_soil_water])
+
+        output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
+        output_sum += delta_soil_water
+
+        # output_sum = tracker['transp'].sum() + tracker['evap'].sum() + tracker['ro'].sum() + tracker[
+        #     'infil'].sum() + delta_soil_water
+
         print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
         mass_balance = input_sum - output_sum
         mass_percent = (mass_balance / input_sum) * 100
         print 'overall water balance for {} mm: {}, or {} percent'.format(name, mass_balance, mass_percent)
-        print ''
+        print '--------------------------------------------------------------------------------'
 
 # ============= EOF =============================================
