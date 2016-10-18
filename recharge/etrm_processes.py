@@ -14,8 +14,8 @@
 # limitations under the License.
 # ===============================================================================
 
-
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median, os
+import os
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 from datetime import datetime
 from dateutil import rrule
 

@@ -23,6 +23,8 @@ from recharge.configuration.configurer import BaseConfigurer
 
 
 class YAMLConfigurer(BaseConfigurer):
+    user_interaction = False
+
     def __init__(self, p):
         if os.path.isfile(p):
             with open(p, 'r') as rfile:
@@ -33,8 +35,11 @@ class YAMLConfigurer(BaseConfigurer):
     def _get_kind(self):
         return self._yd['kind']
 
-    def _get_simulation_period(self):
-        return self._yd['start_date'], self._yd['end_date']
+    def _get_start_date(self):
+        return self._yd['start_date']
+
+    def _get_end_date(self):
+        return self._yd['end_date']
 
     def _get_configuration(self, cfg):
         return cfg

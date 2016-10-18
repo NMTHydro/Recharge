@@ -20,6 +20,7 @@ from pandas import DataFrame
 from pandas import concat
 # ============= local library imports  ==========================
 from recharge.configuration.cli_configurer import CLIConfigurer
+from recharge.configuration.yaml_configurer import YAMLConfigurer
 from recharge.dict_setup import cmb_sample_site_data
 from recharge.etrm_processes import Processes
 from recharge.time_series_manager import get_etrm_time_series, amf_obs_time_series
@@ -69,7 +70,7 @@ def run_model(d, config, hook=None):
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         etrm.run(simulation_period, point_dict=d[key], point_dict_key=key)
 
-        csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name'])) if p else None
+        csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name'])) if d else None
         etrm.save_tracker(csv_path_filename)
 
         if hook:
@@ -94,17 +95,21 @@ Date: 10-16-2016
 '''
 
 
-def main():
+def main(use_yaml_config=False):
     welcome()
-    configurer = CLIConfigurer()
-    kind, config = configurer.get_configuration()
+    if use_yaml_config:
+        p = 'etrm_config.yaml'
+        configurer = YAMLConfigurer(p)
+    else:
+        configurer = CLIConfigurer()
 
+    kind, config = configurer.get_configuration()
     if kind == 'cmb':
         cmb_analysis(config)
     elif kind == 'ameriflux':
         ameriflux(config)
 
 if __name__ == '__main__':
-    main()
+    main(True)
 
 # ============= EOF =============================================
