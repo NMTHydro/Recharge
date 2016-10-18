@@ -52,7 +52,7 @@ def ameriflux_hook(config, tracker, val):
 
 
 def run_model(d, config, hook=None):
-    simulation_period = config['simulation_period']
+    simulation_period = config.simulation_period
 
     save_csv = config.save_csv
     initial_path = config.initial_path
