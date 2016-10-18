@@ -66,22 +66,14 @@ def run_model(d, config, hook=None):
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print 'key : {}'.format(key)
 
-        # the use of tracker could be handled much better
-        # probably add a etrm.save_tracker method
-        # is it necessary to have both etrm._master_tracker and etrm._point_tracker?  using etrm._tracker is better
-
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=d[key], point_dict_key=key)
-        # print 'tracker after etrm run: \n {}'.format(tracker)
-        csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
+        etrm.run(simulation_period, point_dict=d[key], point_dict_key=key)
 
-        print 'this should be your csv: {}'.format(csv_path_filename)
-
-        tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
-        print 'tracker for {}: {}'.format(key, tracker)
+        csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name'])) if p else None
+        etrm.save_tracker(csv_path_filename)
 
         if hook:
-            hook(config, tracker, val)
+            hook(config, etrm.tracker, val)
 
 
 def welcome():

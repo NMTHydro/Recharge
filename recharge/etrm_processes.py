@@ -15,7 +15,7 @@
 # ===============================================================================
 
 
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median, os
 from datetime import datetime
 from dateutil import rrule
 
@@ -24,7 +24,6 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.raster_manager import Rasters
 from recharge.dynamic_raster_finder import get_penman, get_prism, get_kcb
 from tools import millimeter_to_acreft as mm_af
-from tools import save_master_tracker
 
 
 class Processes(object):
@@ -37,10 +36,11 @@ class Processes(object):
 
     dgketchum 24 JUL 2016
     """
-    _point_tracker = None
+
+    tracker = None
     _point_dict_key = None
-    _master_tracker = None
     _initial_depletions = None
+    kind = None
 
     def __init__(self, date_range, output_root=None, polygons=None, static_inputs=None, initial_inputs=None,
                  point_dict=None, write_freq=None):
@@ -58,6 +58,7 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
         if point_dict:
+            self.kind = 'point'
             self._static = initialize_static_dict(static_inputs, point_dict)
             self._initial = initialize_initial_conditions_dict(initial_inputs, point_dict)
             self._zeros, self._ones = 0.0, 1.0
@@ -177,9 +178,9 @@ class Processes(object):
 
             if day == start_date:
                 if self._point_dict:
-                    self._point_tracker = initialize_point_tracker(self._master)
+                    self.tracker = initialize_point_tracker(self._master)
                 else:
-                    self._master_tracker = initialize_master_tracker(self._master)
+                    self.tracker = initialize_master_tracker(self._master)
 
             if not point_dict:
                 self._raster.update_raster_obj(m, day)
@@ -189,14 +190,28 @@ class Processes(object):
             else:
                 self._update_point_tracker(day)
 
-            if point_dict and day == end_date:
-                self._get_tracker_summary(self._point_tracker, point_dict_key)
-                return self._point_tracker
+            # if point_dict and day == end_date:
+            #     self._get_tracker_summary(self.tracker, point_dict_key)
+            #     return self.tracker
+            #
+            # elif day == end_date:
+            #     print 'last day: saving tabulated data'
+            #     save_master_tracker(self._master_tracker, self._output_root)
 
-            elif day == end_date:
-                print 'last day: saving tabulated data'
-                save_master_tracker(self._master_tracker, self._output_root)
+        if point_dict:
+            self._get_tracker_summary(self.tracker, point_dict_key)
 
+    def save_tracker(self, csv_path_filename=None):
+        if csv_path_filename is None:
+            csv_path_filename = os.path.join(self._output_root, 'etrm_master_tracker.csv')
+
+        print 'this should be your csv: {}'.format(csv_path_filename)
+        self.tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+
+    def get_point_tracker(self):
+        return self.tracker
+
+    # private
     def _do_dual_crop_coefficient(self, date):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
         """
@@ -667,11 +682,11 @@ class Processes(object):
             list_ = []
             for item in tracker_from_master:
                 list_.append(item[raster_point])
-            self._point_tracker.loc[date] = list_
+            self.tracker.loc[date] = list_
 
         else:
             # print 'master: {}'.format(m)
-            self._point_tracker.loc[date] = tracker_from_master
+            self.tracker.loc[date] = tracker_from_master
 
     def _do_daily_raster_load(self, ndvi, prism, penman, date):
 
@@ -753,7 +768,7 @@ class Processes(object):
 
         # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
-        self._master_tracker.loc[date] = tracker_from_master
+        self.tracker.loc[date] = tracker_from_master
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
