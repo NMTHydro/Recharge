@@ -20,21 +20,40 @@ from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
 
-def get_etrm_time_series(inputs_path, dict_=None):
+def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
     """# csv should be in the following format:
     # ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
     # 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
     """
 
-    folder = os.path.join(inputs_path)
-    os.chdir(folder)
-    csv_list = os.listdir(folder)
-    csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
+    if single_file:
+
+        csv = loadtxt(inputs_path, dtype=str, delimiter=',')
+        name = inputs_path.replace('.csv', '')
+        print 'reading in csv for {}'.format(name)
+
+        try:
+            new_ind = [datetime.strptime(row[0], '%Y-%m-%d') for row in csv[1:]]  # extracts should have headers
+
+        except ValueError:
+            new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv[1:]]  # extracts should have headers
+
+        arr = array(csv[1:, 1:], dtype=float)
+
+        cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
+
+        df = DataFrame(arr, index=new_ind, columns=cols)
+
+        return df
+
+    else:
+        csv_list = os.listdir(inputs_path)
+        csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
 
     print 'etrm extract csv list: \n{}'.format(csv_list)
     for file_ in csv_list:
 
-        csv = loadtxt(os.path.join(folder, file_), dtype=str, delimiter=',')
+        csv = loadtxt(os.path.join(inputs_path, file_), dtype=str, delimiter=',')
         name = file_.replace('.csv', '')
         print 'reading in csv for {}'.format(name)
 

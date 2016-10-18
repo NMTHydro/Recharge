@@ -115,7 +115,12 @@ def initialize_static_dict(inputs_path, point_dict=None):
     if point_dict:
         print 'point dict: {}'.format(point_dict)
         for key, val in point_dict.iteritems():
-            coords = val['Coords']
+            try:
+                coords = val['Coords']
+            except KeyError:
+                coords = point_dict['Coords']
+            except TypeError:
+                coords = point_dict['Coords']
             sub = {}
             for filename, value in zip(statics, static_keys):
                 full_path = os.path.join(inputs_path, filename)

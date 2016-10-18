@@ -36,9 +36,9 @@ if __name__ == '__main__':
     prism_path = os.path.join(inputs, 'PRISM')
     penman_path = os.path.join(inputs, 'PM_RAD')
     statics = os.path.join(inputs, 'statics')
-    cmb_path = os.path.join(inputs, 'chloride_mass_balance')
-    save_path = os.path.join(cmb_path, 'CMB_extracts')
-    shape = os.path.join(cmb_path, 'shapefiles', 'Samples_UTM_9FEB16.shp')
+    sa_path = os.path.join(inputs, 'sensitivity_analysis')
+    save_path = os.path.join(sa_path, 'SA_extracts')
+    shape = os.path.join(sa_path, 'sensitivity_points', 'SA_pnts_four_17OCT16.shp')
     period = datetime(2000, 1, 1), datetime(2013, 12, 31)
     extract_etrm_point_inputs(shape, ndvi_path, prism_path, penman_path, period, save_path)
 
