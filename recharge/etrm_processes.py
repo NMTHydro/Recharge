@@ -14,8 +14,8 @@
 # limitations under the License.
 # ===============================================================================
 
-
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median, os
+import os
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 from datetime import datetime
 from dateutil import rrule
 
@@ -72,10 +72,11 @@ class Processes(object):
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None):
+            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
+        :param sensitivity:
         :param sensitivity_matrix_column:
         :param date_range: The beginning and end of the simulation.
         :param results_path: Send saved raster to this path. File structure is created automatically.
@@ -151,9 +152,6 @@ class Processes(object):
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
-            if sensitivity_matrix_column:
-                self._do_parameter_adjustment(sensitivity_matrix_column)
-
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
             # [mm/day] #
@@ -161,6 +159,9 @@ class Processes(object):
                 m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
+
+            if sensitivity:
+                self._do_parameter_adjustment(sensitivity_matrix_column)
 
             self._do_dual_crop_coefficient(day)
 
@@ -186,13 +187,14 @@ class Processes(object):
                 self._raster.update_raster_obj(m, day)
                 self._update_master_tracker(day)
 
-                # if point_dict and day == end_date:
-                #     self._get_tracker_summary(self.tracker, point_dict_key)
-                #     return self.tracker
-                #
-                # elif day == end_date:
-                #     print 'last day: saving tabulated data'
-                #     save_master_tracker(self._master_tracker, self._output_root)
+            if point_dict and day == end_date:
+                self._get_tracker_summary(self.tracker, point_dict_key)
+                # print 'returning tracker: {}'.format(self.tracker)
+                return self.tracker
+
+            elif day == end_date:
+                print 'last day: saving tabulated data'
+                self.save_tracker(self.tracker)
 
         if point_dict:
             self._get_tracker_summary(self.tracker, point_dict_key)
@@ -610,7 +612,7 @@ class Processes(object):
         # m['tot_ro'] = m['ro'] + m['tot_ro']
         # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
-        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'snow'):
+        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
@@ -658,7 +660,7 @@ class Processes(object):
                                               (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         if date == self._date_range[0]:
-            print 'zero mass balance first day'
+            # print 'zero mass balance first day'
             m['mass'] = zeros(m['mass'].shape)
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
@@ -712,6 +714,8 @@ class Processes(object):
 
         m = self._master
         s = self._static
+        if self._point_dict:
+            s = s[self._point_dict_key]
 
         alpha = adjustment_array[0]
         beta = adjustment_array[1]
@@ -720,12 +724,17 @@ class Processes(object):
         zeta = adjustment_array[4]
         theta = adjustment_array[5]
 
-        m['temp'] *= alpha
+        if m['first_day']:
+            print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(alpha, beta, gamma, delta,
+                                                                            zeta, theta)
+            # taw is found once, and should be modified once
+            s['taw'] *= delta
+        # these are found daily, so can be modified daily
+        m['temp'] += alpha
         m['precip'] *= beta
         m['etrs'] *= gamma
-        s['taw'] *= delta
         m['kcb'] *= zeta
-        m['ksat'] *= theta
+        m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, date):
         # master_keys_sorted = m.keys()

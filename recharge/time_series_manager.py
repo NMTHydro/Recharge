@@ -29,6 +29,7 @@ def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
     if single_file:
 
         csv = loadtxt(inputs_path, dtype=str, delimiter=',')
+        print 'inputs path: {}'.format(inputs_path)
         name = inputs_path.replace('.csv', '')
         print 'reading in csv for {}'.format(name)
 
