@@ -31,7 +31,7 @@ time_series_manager
    :members:
 
 dict_setup
-+++++++++++
+++++++++++
 .. automodule:: recharge.dict_setup
    :members:
 

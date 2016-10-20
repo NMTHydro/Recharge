@@ -76,8 +76,8 @@ class Processes(object):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
-        :param sensitivity:
-        :param sensitivity_matrix_column:
+        :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
+        :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
         :param date_range: The beginning and end of the simulation.
         :param results_path: Send saved raster to this path. File structure is created automatically.
         :param ndvi_path: NDVI input data path.
