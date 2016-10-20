@@ -29,7 +29,7 @@ from recharge.etrm_processes import Processes
 # Set start datetime object
 SIMULATION_PERIOD = datetime(2000, 1, 1), datetime(2013, 12, 31)
 
-FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Water Storage (TAW)',
+FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Available Water (TAW)',
            'Vegetation Density (NDVI)', 'Soil Ksat']
 
 
@@ -164,8 +164,8 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
     # why not save the data as pickle, so we don't have to do the analysis each time
     # we debug the plotting
 
-    df.to_pickle(os.path.join(pickle, '_basic_sensitivity.pkl'))
-    df_norm.to_pickle(os.path.join(pickle, 'norm_sensitivity.pkl'))
+    df.to_pickle(os.path.join(pickle, '_basic_sensitivity_2.pkl'))
+    df_norm.to_pickle(os.path.join(pickle, 'norm_sensitivity_2.pkl'))
 
     # make_spider_plot(df_norm, ndvi_range=ndvi_range, all_pct=all_pct, temps=temps, fig_path=None,
     #                  show=True)

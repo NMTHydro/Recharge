@@ -50,7 +50,7 @@ def make_spider_plot(dataframe, ndvi, all_pct, temps, fig_path=None, show=False)
 
     dfs = os.listdir(dataframe)
     print 'pickled dfs: {}'.format(dfs)
-    filename = '_basic_sensitivity.pkl'
+    filename = '_basic_sensitivity_2.pkl'
     if filename in dfs:
         df = read_pickle(os.path.join(dataframe, filename))
         df.to_csv(os.path.join(fig_path, 'sample_df_basic_2.csv'))

@@ -38,7 +38,7 @@ set_printoptions(threshold=3000, edgeitems=5000, precision=3)
 set_option('display.height', None)
 set_option('display.max_rows', None)
 
-FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Water Storage (TAW)',
+FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Available Water (TAW)',
            'Vegetation Density (NDVI)', 'Soil Ksat']
 
 
@@ -49,11 +49,11 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
     if filename in dfs:
 
         df = read_pickle(os.path.join(dataframe, filename))
-        df.to_csv(os.path.join(fig_path, 'sample_df.csv'))
+        df.to_csv(os.path.join(fig_path, 'sample_norm_df.csv'))
         print df
         xx = 1
 
-        for index, row in dataframe.iterrows():
+        for index, row in df.iterrows():
             print index, row
             base = row[0][5]
             lows = []
@@ -71,7 +71,7 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
             for y, low, value in zip(ys, lows, values):
                 # The width of the 'low' and 'high' pieces
                 low_width = base - low
-                high_width = value - base
+                high_width = abs(value - base)
                 # Each bar is a "broken" horizontal bar chart
                 plt.broken_barh(
                     [(low, low_width), (base, high_width)],
@@ -87,7 +87,7 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
                 x = base + high_width / 2
                 if x <= base:
                     x = base + high_width
-                plt.text(x, y, str(round(value - low, 1)) + 'mm', va='center', ha='center')
+                    # plt.text(x, y, str(round(value - low, 1)) + 'mm', va='center', ha='center')
 
             # Draw a vertical line down the middle
             plt.axvline(base, color='black')
@@ -101,15 +101,16 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
 
             # Make the y-axis display the factors
             plt.yticks(ys, factors)
-            plt.title('Calculated Recharge Ranges at {} (mm)'.format(index.replace('_', ' ')), y=1.05)
+            plt.title('Normalized Response to Parameter Change at {} (mm)'.format(index.replace('_', ' ')),
+                      y=1.05)
             # Set the portion of the x- and y-axes to show
             plt.xlim(min(-20, 1.2 * min(lows)), base + 1.1 * max(values))
             plt.ylim(-1, len(factors))
             # plt.show()
             if show:
                 plt.show()
-            if fig_path:
-                plt.savefig('{}_tornado'.format(index), fig_path, ext='jpg', dpi=500, close=True, verbose=True)
+            # if fig_path:
+            #     plt.savefig('{}_tornado'.format(index), fig_path, ext='jpg', dpi=500, close=True, verbose=True)
             plt.close()
 
 

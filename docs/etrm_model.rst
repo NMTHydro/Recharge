@@ -53,3 +53,57 @@ upwards from damp soil to drier soil at the surface controls the rate at which w
 Therefore, if the soil is very wet at some depth, but very dry at a shallower depth, the process will occur
 at a greater rate than if the underlying soil was drier, as the gradient is greater. The ETRM attempts to
 model this process.
+
+How snow and snow melt are calculated
+-------------------------------------
+See :meth:`recharge.etrm_processes.Processes._do_snow`
+
+The ETRM snow model takes a simple approach to modeling the snow cycle.  PRISM temperature and
+precipitation are used to account for snowfall.  The mean of the maximum and minimum daily temperature
+is found; any precipitation falling during a day when this mean temperature is less than 0 C is assumed
+to be sored as snow.  While other snow-modeling techniques assume that a transition zone exists over
+which the percent of precipitation falling as snow varies over a range of elevation or temperature,
+the ETRM assumes all precipitation on any given day falls either entirely as snow or as rain.
+The storage mechanism in the ETRM simply stores the snow as a snow water equivalent (SWE).
+No attempt is made to model the temporal and spatially-varying density and texture of snow
+during its duration in the snow pack, nor to model the effect the snow has on the underlying soil
+layers.  In the ETRM, ablation of snow by sublimation and the movement of snow by wind is ignored.
+In computing the melting rate of snowpack in above-freezing conditions, a balance has been sought between the
+use of available physical parameters in a simple and computationally efficient model and the representation
+of important physical parameters.  The ETRM uses incident shortwave radiation (Rsw), a modeled albedo with
+a temperature-dependent rate of decay, and air temperature (T air) to find snow melt. Flint and Flint (2008)
+used Landsat images to calibrate their soil water balance model, and found that a melting temperature of 0C
+had to be adjusted to 1.5C to accurately represent the time-varying snowpack in the Southwest United
+States; we have implemented this adjustment in the ETRM.
+
+melt = (1 - a) * R_sw * alpha + (T_air -  1.5) * beta
+
+where melt is snow melt (SWE, [mm]), ai is albedo [-], Rsw is incoming shortwave radiation [W m-2], alpha is the
+radiation-term calibration coefficient [-], T is temperature [deg C], and beta is the temperature correlation
+coefficient [-]
+Albedo is computed each time step, is reset following any new snowfall exceeding 3 mm SWE to 0.90, and decays
+ according to an equation after Rohrer (1991):
+
+ a(i) = a_min + (a(i-1) - a_min) * f(T_air)
+
+where a(i) and a(i - 1) are albedo on the current and previous day, respectively, a(min) is the minimum albedo of
+of 0.45 (Wiscombe and Warren: 1980), a(i - 1) is the previous day's albedo, and k is the decay constant. The
+decay  constant varies depending on temperature, after Rohrer (1991).
+
+How soil hydraulic conductivity is found and adjusted
+-----------------------------------------------------
+See :meth:`recharge.etrm_processes.Processes._do_soil_ksat_adjustment`
+
+The only large-scale soil hydraulic conductivity product that covers the entire state of New Mexico (and the US)
+is derived from the STATSGO and SSURGO soils databases.
+
+This project has made use of two important soil databases compiled and released by the NRCS,
+the Digital General Soil Map of the United States (STATSGO2) and the Soil Survey Geographic Database
+(SSURGO; NRCS, 2016).  The STATSGO2 product is an extensive and generalized soils inventory mapped
+at the 1:250,000 scale, with near continuous coverage over the conterminous United States.  STATSGO2 was
+designed to be used in regional and national-scale planning, management, and geographic analysis.
+SSURGO is a detailed soils data product consisting of surveys by county or hydrologic unit at a scale
+of 1:12,000 to 1:63,000.  This larger scale provides detailed information for use by landowners,
+towns, and counties.  Many of these surveys were conducted on foot by soil scientists, and some data
+include data from laboratory analysis.  This product is updated frequently and represents data collected
+over more than 100 years of soil observations. Neither of these products covers the entire state.

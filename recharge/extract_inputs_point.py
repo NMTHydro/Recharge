@@ -38,7 +38,7 @@ if __name__ == '__main__':
     statics = os.path.join(inputs, 'statics')
     sa_path = os.path.join(inputs, 'sensitivity_analysis')
     save_path = os.path.join(sa_path, 'SA_extracts')
-    shape = os.path.join(sa_path, 'sensitivity_points', 'SA_pnts_SierBlanca_18OCT16.shp')
+    shape = os.path.join(sa_path, 'sensitivity_points', 'SA_pnts_SierBlanca_19OCT16.shp')
     period = datetime(2000, 1, 1), datetime(2013, 12, 31)
     extract_etrm_point_inputs(shape, ndvi_path, prism_path, penman_path, period, save_path)
 

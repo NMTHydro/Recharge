@@ -9,7 +9,7 @@ Welcome to Recharge's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+:maxdepth: 2
 
    frontmatter
    quick_start
