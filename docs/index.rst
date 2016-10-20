@@ -9,7 +9,7 @@ Welcome to ETRM's documentation!
 Contents:
 
 .. toctree::
-:maxdepth: 1
+   :maxdepth: 1
 
    frontmatter
    quick_start
