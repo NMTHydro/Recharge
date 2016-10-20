@@ -30,6 +30,16 @@ import recharge.point_extract_utility
 
 
 def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
+    """
+    Find NDVI image and convert to Kcb.
+
+    :param in_path: NDVI input data path.
+    :type in_path: str
+    :param date_object: Datetime object of date.
+    :param previous_kcb: Previous day's kcb value.
+    :param coords: Call if using to get point data using point_extract_utility.
+    :return: numpy array object
+    """
     # print date_object
     doy = date_object.timetuple().tm_yday
     if date_object.year == 2000:
@@ -92,7 +102,18 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
 
 
 def get_prism(in_path, date_object, variable='precip', coords=None):
+    """
+    Find PRISM image.
 
+    :param variable: type of PRISM variable sought
+    :type variable: str
+    :param in_path: PRISM input data path.
+    :type in_path: str
+    :param date_object: Datetime object of date.
+    :param coords: Call if using to get point data using point_extract_utility.
+    :type coords: str
+    :return: numpy array object
+    """
     if variable == 'precip':
 
         path = os.path.join(in_path, 'precip', '800m_std_all')  # this will need to be fixed
@@ -144,6 +165,18 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
 
 
 def get_penman(in_path, date_object, variable='etrs', coords=None):
+    """
+    Find PENMAN image.
+
+    :param variable: type of PENMAN variable sought
+    :type variable: str
+    :param in_path: PENMAN input data path.
+    :type in_path: str
+    :param date_object: Datetime object of date.
+    :param coords: Call if using to get point data using point_extract_utility.
+    :type coords: str
+    :return: numpy array object
+    """
     doy = date_object.timetuple().tm_yday
 
     if variable == 'etrs':

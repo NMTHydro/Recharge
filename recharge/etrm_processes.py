@@ -29,8 +29,8 @@ from tools import millimeter_to_acreft as mm_af
 class Processes(object):
     """
     The purpose of this class is update the etrm master dict daily.  It should work for both point and
-    distributed model runs
-    See functions for explanations.
+    distributed model runs.
+    See function explanations.
 
     Returns dict with all rasters under keys of etrm variable names.
 
@@ -78,14 +78,11 @@ class Processes(object):
 
         :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
         :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
-        :param date_range: The beginning and end of the simulation.
-        :param results_path: Send saved raster to this path. File structure is created automatically.
         :param ndvi_path: NDVI input data path.
         :param prism_path: PRISM input data path.
         :param penman_path: Reference ET and shortwave radiation data.
         :param point_dict: Dict of point metadata for the point model.
         :param point_dict_key: Passed from point model main, will be iterated through each point.
-        :param polygons: Shapes to clip and tabulate results.
         :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
         """
 
