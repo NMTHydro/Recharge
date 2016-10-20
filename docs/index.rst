@@ -11,7 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
-   frontmatter
+   about_us
    quick_start
    install
    config
