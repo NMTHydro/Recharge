@@ -364,26 +364,26 @@ class Processes(object):
         water = m['rain'] + m['melt']
 
         if not self._point_dict:
-            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
 
         else:
 
             s = s[self._point_dict_key]
-            if water < 6.0:
+            if water < 12.0:
                 if s['land_cover'] in [41, 42, 43]:
-                    m['soil_ksat'] *= 3.3
-            elif 6.0 <= water < 25.0:
+                    m['soil_ksat'] *= 1.2
+            elif 12.0 <= water < 25.0:
                 if s['land_cover'] in [41, 42, 43]:
                     m['soil_ksat'] *= 2.0
 
@@ -392,19 +392,6 @@ class Processes(object):
     def _do_soil_water_balance(self):
         """ Calculate all soil water balance at each time step.
 
-        This the most difficult part of the ETRM to maintain.  The function first defines 'water' as all liquid water
-        incident on the surface, i.e. rain plus snow melt.  The quantities of vaporized water are then checked against
-        the water in each soil layer. If vaporization exceeds available water (i.e. taw - dr < transp), that term
-        is reduced and the value is updated.
-        The function then performs a soil water balance from the 'top' (i.e., the rew/skin/ stage one evaporation layer)
-        of the soil column downwards.  Runoff is calculated as water in excess of soil saturated hydraulic conductivity,
-        which has both a summer and winter value at all sites (see etrm_processes.run). The depletion is updated
-        according to withdrawls from stage one evaporation and input of water. Water is then
-        recalculated before being applied to in the stage two (i.e., tew) layer.  This layer's depletion is then
-        updated according only to stage two evaporation and applied water.
-        Finally, any remaining water is passed to the root zone (i.e., taw) layer.  Depletion is updated according to
-        losses via transpiration and inputs from water.  Water in excess of taw is then allowed to pass below as
-        recharge.
         :return: None
         """
         m = self._master
@@ -609,19 +596,6 @@ class Processes(object):
 
     def _do_mass_balance(self, date):
         """ Checks mass balance.
-
-        This function is important because mass balance errors indicate a problem in the soil water balance or
-        in the dual crop coefficient functions.
-        Think of the water balance as occurring at the very top of the soil column.  The only water that comes in
-        is from rain and snow melt.  All other terms in the balance are subtractions from the input.  Runoff, recharge,
-        transpiration, and stage one and stage two evaporation are subtracted.  Soil water storage change is another
-        subtraction.  Remember that if the previous time step's depletion is greater than the current time step
-        depletion, the storage change is positive.  Therefore the storage change is subtracted from the inputs of rain
-        and snow melt.
-
-        To do: This function is complete.  It will need to be updated with a lateral on and off-flow once that model
-        is complete.
-
         :return:
         """
 
@@ -638,6 +612,14 @@ class Processes(object):
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
 
     def _do_daily_raster_load(self, ndvi, prism, penman, date):
+        """ Find daily raster image for each ETRM input.
+
+        :param ndvi: Path to NDVI .tif images.
+        :param prism: Path to PRISM .tif images.
+        :param penman: Path to PENMAN refET .tif images.
+        :param date: datetime.day object
+        :return: None
+        """
 
         m = self._master
 
