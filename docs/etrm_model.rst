@@ -76,18 +76,23 @@ used Landsat images to calibrate their soil water balance model, and found that 
 had to be adjusted to 1.5C to accurately represent the time-varying snowpack in the Southwest United
 States; we have implemented this adjustment in the ETRM.
 
-melt = (1 - a) * R_sw * alpha + (T_air -  1.5) * beta
+.. math::
+    melt = (1 - a) * R_{sw} * \alpha + (T_{air} -  1.5) * \beta
 
-where melt is snow melt (SWE, [mm]), ai is albedo [-], Rsw is incoming shortwave radiation [W m-2], alpha is the
-radiation-term calibration coefficient [-], T is temperature [deg C], and beta is the temperature correlation
+where :math:`melt` is snow melt (SWE, [mm]), :math:`a` is albedo [-], :math:`R_{sw}` is incoming shortwave radiation [W
+    m-2], :math:`\alpha` is the
+radiation-term calibration coefficient [-], T is temperature [deg C], and :math:`\beta` is the temperature correlation
 coefficient [-]
 Albedo is computed each time step, is reset following any new snowfall exceeding 3 mm SWE to 0.90, and decays
  according to an equation after Rohrer (1991):
 
- a(i) = a_min + (a(i-1) - a_min) * f(T_air)
+.. math::
+ a_i = a_{min} + (a_{i-1} - a_{min}) * f(T_{air})
 
-where a(i) and a(i - 1) are albedo on the current and previous day, respectively, a(min) is the minimum albedo of
-of 0.45 (Wiscombe and Warren: 1980), a(i - 1) is the previous day's albedo, and k is the decay constant. The
+where :math:`a_i` and :math:`a_{i - 1}` are albedo on the current and previous day, respectively, a(min) is the
+minimum
+albedo of
+of 0.45 (Wiscombe and Warren: 1980), :math:`a_{i - 1}` is the previous day's albedo, and k is the decay constant. The
 decay  constant varies depending on temperature, after Rohrer (1991).
 
 How soil hydraulic conductivity is found and adjusted
