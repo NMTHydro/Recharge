@@ -21,14 +21,22 @@ from datetime import datetime, timedelta
 
 
 def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
-    """# csv should be in the following format:
-    # ['date', 'ksat', 'soil_ksat', 'kcb', 'rlin', 'rg', 'etrs_Pm', 'plant height', 'min temp',
-    # 'max temp', 'temp', 'precip', 'fc', 'wp', 'taw', 'aws', 'root_z']
+    """
+    Read pre-extracted data out of a formatted csv.  Use recharge.point_extract_utility.py to do extract.
+
+    :param inputs_path: path to a folder of csv files.
+    :param dict_: dict of point locations
+    :param single_file: if the inputs path is a single file path
+    :returns dataframe of etrm time series input
+
+    csv will be in the following format
+    ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
     """
 
     if single_file:
 
         csv = loadtxt(inputs_path, dtype=str, delimiter=',')
+        print 'inputs path: {}'.format(inputs_path)
         name = inputs_path.replace('.csv', '')
         print 'reading in csv for {}'.format(name)
 
@@ -76,8 +84,17 @@ def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
 
 def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False,
                         close_threshold=0.20, return_low_err=False):
-    """read in data from an extract file
-        #  (year, dtime, H, LE, FG, RN, RG, RGin, RGout)
+    """ Analyze, clean and return dict of AmeriFlux sites and relevant data.
+
+    :param dict_: dict object of Ameriflux IDs as keys, nested dict with 'Name', 'Coords' etc
+    :param path: string path to AmeriFlux folder containing AmeriFlux csv files
+    :param return_low_err: retun dataframe of only low energy balance closure error
+    :param close_threshold: threshold of error tolerated
+    :param complete_days_only: return only full days of valid data
+    :param save_cleaned_data_path: path to save location of output
+
+
+    #  (year, dtime, H, LE, FG, RN, RG, RGin, RGout)
     # H  = sensible heat flux
     # LE = latent heat flux
     # FG = soil heat flux

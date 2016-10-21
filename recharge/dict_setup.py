@@ -113,7 +113,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
     statics = sorted(statics, key=lambda s: s.lower())
 
     if point_dict:
-        print 'point dict: {}'.format(point_dict)
+        # print 'point dict: {}'.format(point_dict)
         for key, val in point_dict.iteritems():
             try:
                 coords = val['Coords']

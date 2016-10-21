@@ -14,10 +14,10 @@
 # limitations under the License.
 # ===============================================================================
 """
-The purpose of this module is to calculate recharge over a defined geographic area.
+The purpose of this module is to create a ETRM-style raster object. This carries important geographic information
+and water balance components used in output data.
 
-this module provides (1) function -- run_distributed_ETRM.
-run_distributed_ETRM does all the work
+this module provides (1) class -- class Rasters(object):
 
 dgketchum 24 JUL 2016
 """
@@ -33,6 +33,7 @@ import recharge.dict_setup
 
 
 class Rasters(object):
+
     def __init__(self, path_to_representative_raster, polygons, outputs, simulation_period, output_root,
                  write_frequency=None):
 
@@ -58,7 +59,14 @@ class Rasters(object):
                                                                          write_frequency)
 
     def update_raster_obj(self, master, date_object, save_specific_dates=None):
+        """
+        Checks if the date is specified for writing output and calls the write and tabulation methods.
 
+        :param master: master dict object from etrm.Processes
+        :param date_object: datetime date object
+        :param save_specific_dates: list of datetime objects for which output is written
+        :return: None
+        """
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save data for a certain day
@@ -105,15 +113,12 @@ class Rasters(object):
         return None
 
     def _update_raster_tracker(self, master_dict, var, period):
-        """ Updates the cummulative rasters each period as indicated.
+        """ Updates the cumulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
 
         :param master_dict: master from etrm_processes.Processes
-        :param previous_master: last month's master dict
-        :param cumulative_dict: the difference between this dict and last
         :param var: vars are all accumulation terms from master
-        :param first: identify first day
         :return: None
         """
 
@@ -175,7 +180,14 @@ class Rasters(object):
         return None
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
+        """
+        Finds a water balance component over a particular geography and adds to a tabular dataset (dataframe) object.
 
+        :param parameter: Water balance component.
+        :param date: Datetime date object.
+        :param data_arr:
+        :return:
+        """
         region_folders = os.listdir(self._polygons)
         # print 'processing parameter: {}'.format(parameter)
 
@@ -238,7 +250,13 @@ class Rasters(object):
         return None
 
     def _save_tabulated_results_to_csv(self, results_directories, polygons):
+        """
+        Save tabulated dataframe object to csv.  Resample to specified time periods.
 
+        :param results_directories: Path to results folders.  This is created automatically in make_results_dir
+        :param polygons: Folder containing polygon folders of each type of geography (counties, etc.)
+        :return: None
+        """
         print 'results directories: {}'.format(results_directories)
         folders = os.listdir(polygons)
         for in_fold in folders:

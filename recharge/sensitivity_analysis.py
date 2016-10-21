@@ -17,26 +17,27 @@
 
 # =================================IMPORTS=======================================
 import os
-from numpy import linspace, array, insert, sum, divide, ones
+from numpy import linspace, array, insert, ones, divide
 from pandas import DataFrame
 from ogr import Open
 from datetime import datetime
 
 from recharge.time_series_manager import get_etrm_time_series
 from recharge.etrm_processes import Processes
-from utils.spiderPlot_SA import make_spider_plot
-from utils.tornadoPlot_SA import make_tornado_plot
+
 
 # Set start datetime object
 SIMULATION_PERIOD = datetime(2000, 1, 1), datetime(2013, 12, 31)
 
-FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Water Storage (TAW)',
+FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Available Water (TAW)',
            'Vegetation Density (NDVI)', 'Soil Ksat']
 
 
-def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None):
-    def round_to_value(number, roundto):
-        return round(number / roundto) * roundto
+def round_to_value(number, roundto):
+    return round(number / roundto) * roundto
+
+
+def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
 
     temps = range(-5, 6)
     all_pct = [x * 0.1 for x in range(5, 16)]
@@ -59,6 +60,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None
             arr = insert(arr, y, ndvi_range, axis=0)
             arr = arr[0:6]
             var_arrs.append(arr)
+            print 'shape arr: {}'.format(arr.shape)
             arr = []
         elif y == 5:
             arr = insert(ones_, 0, zeros, axis=0)
@@ -76,20 +78,22 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None
             arr = []
         y += 1
 
+    print 'variable arrays: {}'.format(var_arrs)
     normalize_list = [2, 0.20, 0.20, 2, 0.20, 0.50]
 
     # site_list = ['Bateman', 'Navajo_Whiskey_Ck', 'Quemazon', 'Sierra_Blanca', 'SB_1', 'SB_2', 'SB_4', 'SB_5', 'VC_1',
     #              'VC_2', 'VC_3', 'CH_1', 'CH_3', 'MG_1', 'MG_2', 'WHLR_PK', 'LP', 'South_Baldy',
     #              'Water_Canyon', 'La_Jencia', 'Socorro']
 
-    site_list = ['South_Baldy', 'Water_Canyon', 'La_Jencia', 'Socorro']
+    site_list = ['Sierra_Blanca', 'Great_Western_Mine', 'Bonito', 'Nogal']
     df = DataFrame(columns=FACTORS, index=site_list)
     df_norm = DataFrame(columns=FACTORS, index=site_list)
 
-    site_dict = {'South_Baldy': {}, 'Water_Canyon': {}, 'La_Jencia': {}, 'Socorro': {}}
+    site_dict = {'Sierra_Blanca': {}, 'Great_Western_Mine': {}, 'Bonito': {}, 'Nogal': {}}
     ds = Open(points)
     lyr = ds.GetLayer()
     # defs = lyr.GetLayerDefn()
+
     for j, feat in enumerate(lyr):
         name = feat.GetField("Name")
         name = name.replace(' ', '_')
@@ -99,30 +103,36 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None
         file_name = os.path.join(extracts, '{}.csv'.format(name))
         print file_name
         site_dict[name]['etrm'] = get_etrm_time_series(file_name, single_file=True)
-        print 'site dict before running etrm: {}'.format(site_dict)
+
+    # print 'site dict before running etrm: {}'.format(site_dict)
 
     for i, var_arr in enumerate(var_arrs):
         factor = FACTORS[i]
         print 'running modified factor: {}'.format(factor)
         print ''
-        for site, val in site_dict.iteritems():
+        for key, val in site_dict.iteritems():
+            print '\n site: {} \n '.format(key)
             results = []
             for col in var_arr.T:
                 etrm = Processes(SIMULATION_PERIOD, static_inputs=statics, initial_inputs=initials,
-                                 output_root=save_plot, point_dict=site_dict)
+                                 output_root=pickle, point_dict=site_dict)
+                tracker = etrm.run(point_dict=site_dict, point_dict_key=key, sensitivity_matrix_column=col,
+                                   sensitivity=True)
 
-                tracker = etrm.run(point_dict=site_dict, point_dict_key=val[name], sensitivity_matrix_column=col)
+                # print 'tracker: {}'.format(tracker)
+                results.append(tracker['tot_infil'][-1])
+                print 'total infil: {} \n results: {}'.format(tracker['tot_infil'][-1], results)
 
-                print 'tracker: {}'.format(tracker)
+            df.iloc[site_list.index(key), FACTORS.index(factor)] = divide(array(results), 14.0)
+        print 'df after site {}: \n {}'.format(key, df)
+    print 'df: {}'.format(df)
 
-                df.iloc[site_list.index(name), FACTORS.index(factor)] = divide(array(results), 14.0)
+    # tot_data : precip, et, tot_transp, tot_evap, infil, runoff, snow_fall, cum_mass, end_mass
 
-                # tot_data : precip, et, tot_transp, tot_evap, infil, runoff, snow_fall, cum_mass, end_mass
-
-                # "SI = [Q(Po + delP] -Q(Po - delP] / (2 * delP)"
-                # where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter,
-                # delP = change in value input
-                # find sensitivity index
+    # "SI = [Q(Po + delP] -Q(Po - delP] / (2 * delP)"
+    # where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter,
+    # delP = change in value input
+    # find sensitivity index
 
     xx = 0
     for param in df.iteritems():
@@ -151,21 +161,27 @@ def get_sensitivity_analysis(extracts, points, statics, initials, save_plot=None
             yy += 1
         xx += 1
 
-        make_spider_plot(df_norm, ndvi_range=ndvi_range, all_pct=all_pct, temps=temps, fig_path=None,
-                         show=True)
-        make_tornado_plot(df_norm, FACTORS, show=True, fig_path=None)
+    # why not save the data as pickle, so we don't have to do the analysis each time
+    # we debug the plotting
+
+    df.to_pickle(os.path.join(pickle, '_basic_sensitivity_2.pkl'))
+    df_norm.to_pickle(os.path.join(pickle, 'norm_sensitivity_2.pkl'))
+
+    # make_spider_plot(df_norm, ndvi_range=ndvi_range, all_pct=all_pct, temps=temps, fig_path=None,
+    #                  show=True)
+    # make_tornado_plot(df_norm, FACTORS, show=True, fig_path=None)
 
 
 if __name__ == '__main__':
     root = os.path.join('F:\\', 'ETRM_Inputs')
     sensitivity = os.path.join(root, 'sensitivity_analysis')
     extract_files = os.path.join(sensitivity, 'SA_extracts')
-    sa_locations = os.path.join(sensitivity, 'sensitivity_points', 'SA_pnts_four_17OCT16.shp')
+    sa_locations = os.path.join(sensitivity, 'sensitivity_points', 'SA_pnts_SierBlanca_18OCT16.shp')
     initial_conditions_path = os.path.join(root, 'initialize')
     static_inputs_path = os.path.join(root, 'statics')
-    figures_path = os.path.join(sensitivity, 'figures')
+    pickles = os.path.join(sensitivity, 'pickled')
     get_sensitivity_analysis(extract_files, sa_locations,
                              statics=static_inputs_path,
-                             initials=initial_conditions_path, save_plot=figures_path)
+                             initials=initial_conditions_path, pickle=pickles)
 
 # ==========================  EOF  ==============================================

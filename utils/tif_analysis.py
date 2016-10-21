@@ -25,15 +25,10 @@ from recharge.raster_tools import convert_raster_to_array
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
 
 input_path = 'C:\Users\David\Documents\Recharge\Thesis\Figures\maps'
-sand_tif = 'et_index_clipped.tif'
+sand_tif = 'total_precip_2000_2013_11OCT16.tif'
 
 geo = get_geo(input_path)
-et = convert_raster_to_array(input_path, sand_tif)
+ppt = convert_raster_to_array(input_path, sand_tif)
 
-ct_above = where(0.8 < et, ones(et.shape), zeros(et.shape))
-ct_below = where(0.8 >= et, ones(et.shape), zeros(et.shape))
-
-print 'shape = {}'.format(et.shape)
-print 'count et over = {}'.format(count_nonzero(ct_above))
-print 'count et over = {}'.format(count_nonzero(ct_below))
+print 'mean precip = {}'.format(ppt.mean())
 # ==========================  EOF  ==============================================

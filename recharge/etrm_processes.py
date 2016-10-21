@@ -29,8 +29,8 @@ from tools import millimeter_to_acreft as mm_af
 class Processes(object):
     """
     The purpose of this class is update the etrm master dict daily.  It should work for both point and
-    distributed model runs
-    See functions for explanations.
+    distributed model runs.
+    See function explanations.
 
     Returns dict with all rasters under keys of etrm variable names.
 
@@ -72,19 +72,17 @@ class Processes(object):
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None):
+            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
-        :param sensitivity_matrix_column:
-        :param date_range: The beginning and end of the simulation.
-        :param results_path: Send saved raster to this path. File structure is created automatically.
+        :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
+        :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
         :param ndvi_path: NDVI input data path.
         :param prism_path: PRISM input data path.
         :param penman_path: Reference ET and shortwave radiation data.
         :param point_dict: Dict of point metadata for the point model.
         :param point_dict_key: Passed from point model main, will be iterated through each point.
-        :param polygons: Shapes to clip and tabulate results.
         :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
         """
 
@@ -151,9 +149,6 @@ class Processes(object):
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
-            if sensitivity_matrix_column:
-                self._do_parameter_adjustment(sensitivity_matrix_column)
-
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
             # [mm/day] #
@@ -161,6 +156,9 @@ class Processes(object):
                 m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
+
+            if sensitivity:
+                self._do_parameter_adjustment(sensitivity_matrix_column)
 
             self._do_dual_crop_coefficient(day)
 
@@ -186,13 +184,14 @@ class Processes(object):
                 self._raster.update_raster_obj(m, day)
                 self._update_master_tracker(day)
 
-                # if point_dict and day == end_date:
-                #     self._get_tracker_summary(self.tracker, point_dict_key)
-                #     return self.tracker
-                #
-                # elif day == end_date:
-                #     print 'last day: saving tabulated data'
-                #     save_master_tracker(self._master_tracker, self._output_root)
+            if point_dict and day == end_date:
+                self._get_tracker_summary(self.tracker, point_dict_key)
+                # print 'returning tracker: {}'.format(self.tracker)
+                return self.tracker
+
+            elif day == end_date:
+                print 'last day: saving tabulated data'
+                self.save_tracker(self.tracker)
 
         if point_dict:
             self._get_tracker_summary(self.tracker, point_dict_key)
@@ -304,39 +303,6 @@ class Processes(object):
     def _do_snow(self):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
 
-        The ETRM snow model takes a simple approach to modeling the snow cycle.  PRISM temperature and
-        precipitation are used to account for snowfall.  The mean of the maximum and minimum daily temperature
-        is found; any precipitation falling during a day when this mean temperature is less than 0 C is assumed
-        to be sored as snow.  While other snow-modeling techniques assume that a transition zone exists over
-        which the percent of precipitation falling as snow varies over a range of elevation or temperature,
-        the ETRM assumes all precipitation on any given day falls either entirely as snow or as rain.
-        The storage mechanism in the ETRM simply stores the snow as a snow water equivalent (SWE).
-        No attempt is made to model the temporal and spatially-varying density and texture of snow
-        during its duration in the snow pack, nor to model the effect the snow has on the underlying soil
-        layers.  In the ETRM, ablation of snow by sublimation and the movement of snow by wind is ignored.
-        In computing the melting rate of snowpack in above-freezing conditions, a balance has been sought between the
-        use of available physical parameters in a simple and computationally efficient model and the representation
-        of important physical parameters.  The ETRM uses incident shortwave radiation (Rsw), a modeled albedo with
-        a temperature-dependent rate of decay, and air temperature (T air) to find snow melt. Flint and Flint (2008)
-        used Landsat images to calibrate their soil water balance model, and found that a melting temperature of 0C
-        had to be adjusted to 1.5C to accurately represent the time-varying snowpack in the Southwest United
-        States; we have implemented this adjustment in the ETRM.
-
-        melt = (1 - a) * R_sw * alpha + (T_air -  1.5) * beta
-
-        where melt is snow melt (SWE, [mm]), ai is albedo [-], Rsw is incoming shortwave radiation [W m-2], alpha is the
-        radiation-term calibration coefficient [-], T is temperature [deg C], and beta is the temperature correlation
-        coefficient [-]
-        Albedo is computed each time step, is reset following any new snowfall exceeding 3 mm SWE to 0.90, and decays
-         according to an equation after Rohrer (1991):
-
-         a(i) = a_min + (a(i-1) - a_min) * f(T_air)
-
-        where a(i) and a(i - 1) are albedo on the current and previous day, respectively, a(min) is the minimum albedo of
-        of 0.45 (Wiscombe and Warren: 1980), a(i - 1) is the previous day's albedo, and k is the decay constant. The
-        decay  constant varies depending on temperature, after Rohrer (1991).
-
-
         :return: None
         """
         m = self._master
@@ -384,6 +350,10 @@ class Processes(object):
         m['swe'] -= m['melt']
 
     def _do_soil_ksat_adjustment(self):
+        """ Adjust soil hydraulic conductivity according to land surface cover type.
+
+        :return: None
+        """
 
         m = self._master
         s = self._static
@@ -391,26 +361,26 @@ class Processes(object):
         water = m['rain'] + m['melt']
 
         if not self._point_dict:
-            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 41) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 25.0 * ones(m['soil_ksat'].shape)),
+            m['soil_ksat'] = where((s['land_cover'] == 42) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 50.0 * ones(m['soil_ksat'].shape)),
                                    m['soil_ksat'] * 2.0 * ones(m['soil_ksat'].shape), m['soil_ksat'])
-            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 6.0 * ones(m['soil_ksat'].shape)),
-                                   m['soil_ksat'] * 3.3 * ones(m['soil_ksat'].shape), m['soil_ksat'])
+            m['soil_ksat'] = where((s['land_cover'] == 43) & (water < 12.0 * ones(m['soil_ksat'].shape)),
+                                   m['soil_ksat'] * 1.2 * ones(m['soil_ksat'].shape), m['soil_ksat'])
 
         else:
 
             s = s[self._point_dict_key]
-            if water < 6.0:
+            if water < 12.0:
                 if s['land_cover'] in [41, 42, 43]:
-                    m['soil_ksat'] *= 3.3
-            elif 6.0 <= water < 25.0:
+                    m['soil_ksat'] *= 1.2
+            elif 12.0 <= water < 25.0:
                 if s['land_cover'] in [41, 42, 43]:
                     m['soil_ksat'] *= 2.0
 
@@ -419,19 +389,6 @@ class Processes(object):
     def _do_soil_water_balance(self):
         """ Calculate all soil water balance at each time step.
 
-        This the most difficult part of the ETRM to maintain.  The function first defines 'water' as all liquid water
-        incident on the surface, i.e. rain plus snow melt.  The quantities of vaporized water are then checked against
-        the water in each soil layer. If vaporization exceeds available water (i.e. taw - dr < transp), that term
-        is reduced and the value is updated.
-        The function then performs a soil water balance from the 'top' (i.e., the rew/skin/ stage one evaporation layer)
-        of the soil column downwards.  Runoff is calculated as water in excess of soil saturated hydraulic conductivity,
-        which has both a summer and winter value at all sites (see etrm_processes.run). The depletion is updated
-        according to withdrawls from stage one evaporation and input of water. Water is then
-        recalculated before being applied to in the stage two (i.e., tew) layer.  This layer's depletion is then
-        updated according only to stage two evaporation and applied water.
-        Finally, any remaining water is passed to the root zone (i.e., taw) layer.  Depletion is updated according to
-        losses via transpiration and inputs from water.  Water in excess of taw is then allowed to pass below as
-        recharge.
         :return: None
         """
         m = self._master
@@ -610,7 +567,7 @@ class Processes(object):
         # m['tot_ro'] = m['ro'] + m['tot_ro']
         # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
-        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'snow'):
+        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
@@ -636,19 +593,6 @@ class Processes(object):
 
     def _do_mass_balance(self, date):
         """ Checks mass balance.
-
-        This function is important because mass balance errors indicate a problem in the soil water balance or
-        in the dual crop coefficient functions.
-        Think of the water balance as occurring at the very top of the soil column.  The only water that comes in
-        is from rain and snow melt.  All other terms in the balance are subtractions from the input.  Runoff, recharge,
-        transpiration, and stage one and stage two evaporation are subtracted.  Soil water storage change is another
-        subtraction.  Remember that if the previous time step's depletion is greater than the current time step
-        depletion, the storage change is positive.  Therefore the storage change is subtracted from the inputs of rain
-        and snow melt.
-
-        To do: This function is complete.  It will need to be updated with a lateral on and off-flow once that model
-        is complete.
-
         :return:
         """
 
@@ -658,13 +602,21 @@ class Processes(object):
                                               (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         if date == self._date_range[0]:
-            print 'zero mass balance first day'
+            # print 'zero mass balance first day'
             m['mass'] = zeros(m['mass'].shape)
         m['tot_mass'] = abs(m['mass']) + m['tot_mass']
         if not self._point_dict:
             print 'total mass balance error: {}'.format(mm_af(m['tot_mass']))
 
     def _do_daily_raster_load(self, ndvi, prism, penman, date):
+        """ Find daily raster image for each ETRM input.
+
+        :param ndvi: Path to NDVI .tif images.
+        :param prism: Path to PRISM .tif images.
+        :param penman: Path to PENMAN refET .tif images.
+        :param date: datetime.day object
+        :return: None
+        """
 
         m = self._master
 
@@ -712,6 +664,8 @@ class Processes(object):
 
         m = self._master
         s = self._static
+        if self._point_dict:
+            s = s[self._point_dict_key]
 
         alpha = adjustment_array[0]
         beta = adjustment_array[1]
@@ -720,12 +674,17 @@ class Processes(object):
         zeta = adjustment_array[4]
         theta = adjustment_array[5]
 
-        m['temp'] *= alpha
+        if m['first_day']:
+            print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(alpha, beta, gamma, delta,
+                                                                            zeta, theta)
+            # taw is found once, and should be modified once
+            s['taw'] *= delta
+        # these are found daily, so can be modified daily
+        m['temp'] += alpha
         m['precip'] *= beta
         m['etrs'] *= gamma
-        s['taw'] *= delta
         m['kcb'] *= zeta
-        m['ksat'] *= theta
+        m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, date):
         # master_keys_sorted = m.keys()
