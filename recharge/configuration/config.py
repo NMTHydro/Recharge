@@ -16,6 +16,8 @@
 
 # ============= standard library imports ========================
 import os
+
+
 # ============= local library imports  ==========================
 
 
@@ -31,6 +33,17 @@ class RechargeConfiguration(object):
         self.static_inputs_path = os.path.join(self.inputs, 'statics')
         self.initial_conditions_path = os.path.join(self.inputs, 'initialize')
 
+    def print_config(self):
+        print '------------- {} Config -----------------'.format(self.__class__.__name__)
+
+        for attr in ('inputs', 'static_inputs_path', 'initial_conditions_path') + self._get_printable_attributes():
+            print '{:<30s} {}'.format(attr, getattr(self, attr))
+
+        print '-----------------------------------------'
+
+    def _get_printable_attributes(self):
+        pass
+
 
 class CMBConfiguration(RechargeConfiguration):
     cmb_shapefile = None
@@ -44,6 +57,9 @@ class CMBConfiguration(RechargeConfiguration):
 
         self.cmb_shapefile = os.path.join(cmb_path, 'shapefiles', 'CMB_sites_27SEP16.shp')
         self.extract_path = os.path.join(cmb_path, 'CMB_extracts')
+
+    def _get_printable_attributes(self):
+        return 'cmb_shapefile', 'extract_path'
 
 
 class AmerifluxConfiguration(RechargeConfiguration):
@@ -72,5 +88,8 @@ class AmerifluxConfiguration(RechargeConfiguration):
                               '4': {'Coords': '343495 3803640', 'Name': 'Sevilleta_Grass'},
                               '5': {'Coords': '386288 3811461', 'Name': 'Heritage_Pinyon_Juniper'},
                               '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_Juniper_Savanna'}}
+
+    def _get_printable_attributes(self):
+        return 'amf_file_path', 'etrm_extract', 'save_combo', 'base_amf_dict'
 
 # ============= EOF =============================================

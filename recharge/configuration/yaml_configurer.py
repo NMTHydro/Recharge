@@ -15,39 +15,33 @@
 # ===============================================================================
 
 # ============= standard library imports ========================
+import os
+import yaml
 # ============= local library imports  ==========================
-from datetime import datetime
 
 from recharge.configuration.configurer import BaseConfigurer
 
 
-class CLIConfigurer(BaseConfigurer):
+class YAMLConfigurer(BaseConfigurer):
+    user_interaction = False
+
+    def __init__(self, p):
+        if os.path.isfile(p):
+            with open(p, 'r') as rfile:
+                self._yd = yaml.load(rfile)
+        else:
+            print 'invalid file: {}'.format(p)
 
     def _get_kind(self):
-        kind = self.kind
-        if kind is None:
-            kind = raw_input('Model Kind [cmb]: ')
-        self.kind = kind
-        return kind
+        return self._yd['kind']
 
     def _get_start_date(self):
-        start_date = self._start_date
-        if start_date is None:
-            start_date = raw_input('Start date, format YYYY/MM/DD [2007/01/01]: ')
-
-        self._start_date = start_date
-        return start_date
+        return self._yd['start_date']
 
     def _get_end_date(self):
-        end_date = self._end_date
-        if end_date is None:
-            end_date = raw_input('End date, format YYYY/MM/DD [2013/12/29]: ')
-
-        self._end_date = end_date
-        return end_date
+        return self._yd['end_date']
 
     def _get_configuration(self, cfg):
-        # allow user to modify default configuration here
         return cfg
 
 # ============= EOF =============================================
