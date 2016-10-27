@@ -15,14 +15,16 @@ It’s platform-agnostic, can be used on Windows, OS X and Linux."
 2. Get [git](https://git-scm.com/downloads). Read the [documentation](https://git-scm.com/doc).
 Consider [GitHub Desktop](https://desktop.github.com/) if you like desktop GUI.
 
-3. Create a virtual environment using these [helpful instructions](https://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/).
-Virtual environments create a python environment with a python executable
+3. Create an env  using these [helpful instructions](https://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/).
+Conda envs (much like virtual envs)  create a python environment with a python executable
 and install all the packages ETRM needs, isolated from other projects and
 their dependencies.  For example, ETRM uses GDAL, Numpy, Pandas, and a number
 of other packages.  If you have another project (say, using ArcPy), you can
 have another set of packages with their dependencies and they won't interfere
 with your new project. Right click and save the environment.yml 
 from GitHub, use ```conda env create -f environment.yml```.
+For extra info and how to get started see {official docs](http://conda.pydata.org/docs/index.html)
+and a ["test drive"](http://conda.pydata.org/docs/test-drive.html).
 
 4. Get [PyCharm IDE](https://www.jetbrains.com/pycharm/download/).
 Read their [quick start guide](https://www.jetbrains.com/help/pycharm/2016.2/quick-start-guide.html).
