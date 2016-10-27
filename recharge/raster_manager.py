@@ -22,7 +22,10 @@ this module provides (1) class -- class Rasters(object):
 dgketchum 24 JUL 2016
 """
 
-from osgeo import gdal, ogr
+# from osgeo import gdal, ogr
+import gdal
+import ogr
+
 from numpy import array, where, zeros
 from calendar import monthrange
 import os
