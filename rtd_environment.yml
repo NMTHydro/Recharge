@@ -8,6 +8,7 @@ dependencies:
 - docutils=0.12=py27_2
 - freetype=2.5.5=1
 - gdal
+- libgdal
 - geos=3.4.2=0
 - hdf4=4.2.11=0
 - hdf5=1.8.16=0
