@@ -47,7 +47,7 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe', 'soil_storage']
+        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'swe', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -72,7 +72,8 @@ class Processes(object):
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False):
+            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
+            modify_soils=None):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
@@ -91,6 +92,11 @@ class Processes(object):
         s = self._static
         if point_dict:
             s = s[self._point_dict_key]
+
+        if modify_soils:
+            s['rew'] *= 0.5
+            s['tew'] *= 0.5
+
         c = self._constants
 
         start_date, end_date = self._date_range
@@ -206,6 +212,7 @@ class Processes(object):
     # private
     def _do_dual_crop_coefficient(self, date):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
+
         """
 
         m = self._master
@@ -415,7 +422,7 @@ class Processes(object):
             m['pdrew'] = m['drew']
 
             # impose limits on vaporization according to present depletions #
-            # this is a somewhat onerous way to see if evaporations exceed
+            # this is a somewhat onerous way to see if evaporation exceeds
             # the quantity of  water in that soil layer
             # additionally, if we do limit the evaporation from either the stage one
             # or stage two, we need to reduce the 'evap'
@@ -558,18 +565,18 @@ class Processes(object):
 
         # strangely, these keys wouldn't update with augmented assignment
         # i.e. m['tot_infil] += m['infil'] wasn't working
-        # m['tot_infil'] = m['infil'] + m['tot_infil']
-        # m['tot_etrs'] = m['etrs'] + m['tot_etrs']
-        # m['tot_eta'] = m['eta'] + m['tot_eta']
-        # m['tot_precip'] = m['precip'] + m['tot_precip']
-        # m['tot_rain'] = m['rain'] + m['tot_rain']
-        # m['tot_melt'] = m['melt'] + m['tot_melt']
-        # m['tot_ro'] = m['ro'] + m['tot_ro']
-        # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
+        m['tot_infil'] = m['infil'] + m['tot_infil']
+        m['tot_etrs'] = m['etrs'] + m['tot_etrs']
+        m['tot_eta'] = m['eta'] + m['tot_eta']
+        m['tot_precip'] = m['precip'] + m['tot_precip']
+        m['tot_rain'] = m['rain'] + m['tot_rain']
+        m['tot_melt'] = m['melt'] + m['tot_melt']
+        m['tot_ro'] = m['ro'] + m['tot_ro']
+        m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
-        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
-            kk = 'tot_{}'.format(k)
-            m[kk] = m[k] + m[kk]
+        # for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
+        #     kk = 'tot_{}'.format(k)
+        #     m[kk] = m[k] + m[kk]
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
@@ -581,8 +588,7 @@ class Processes(object):
                                                                                                     mm_af(m['ro']),
                                                                                                     mm_af(m['swe']),
                                                                                                     mm_af(
-                                                                                                        m[
-                                                                                                            'soil_storage']))
+                                                                                                        m['soil_storage']))
 
             print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
                                                                                            mm_af(m['tot_etrs']),

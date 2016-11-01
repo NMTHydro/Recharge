@@ -136,10 +136,10 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
         first = True
         for item in csv_list:
             if first:
-                col_check = loadtxt(item, dtype=str, skiprows=0, delimiter=',', usecols=arr_cols)
+                col_check = loadtxt(os.path.join(folder, item), dtype=str, skiprows=0, delimiter=',', usecols=arr_cols)
                 print 'headers being read: \n {}'.format(col_check[:1, :])
                 first = False
-            csv = loadtxt(item, dtype=str, skiprows=3, delimiter=',', usecols=arr_cols)
+            csv = loadtxt(os.path.join(folder, item), dtype=str, skiprows=3, delimiter=',', usecols=arr_cols)
             amf_data = append(amf_data, csv, axis=0)
 
         new_ind = [day_fraction_to_hr_min(float(row[1]), int(row[0])) for row in amf_data]

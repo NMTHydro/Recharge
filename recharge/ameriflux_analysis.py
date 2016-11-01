@@ -39,7 +39,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         return None
     # print 'amf dict w/ AMF time series: \n{}'.format(amf_dict)
 
-    get_etrm_time_series(amf_dict, inputs_path=etrm_extract, kind='amf')
+    get_etrm_time_series(etrm_extract, dict_=amf_dict)
     # print 'amf dict w/ etrm input time series: \n{}'.format(amf_dict)  # fix this so it appends to all sites
     # print 'ameriflux dict: {}'.format(amf_dict)
 
@@ -56,8 +56,10 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         print 'this should be your csv: {}'.format(csv_path_filename)
 
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+
         amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], tracker), axis=1, join='outer'))
-        obs_etrm_comb_out = os.path.join(save_combo, '{}_combo.csv'.format(val['Name']))
+
+        obs_etrm_comb_out = os.path.join(save_combo, '{}_fao_dist.csv'.format(val['Name']))
 
         print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
         amf_obs_etrm_combo.to_csv(obs_etrm_comb_out, index_label='Date')
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     amf_path = os.path.join(inputs, 'ameriflux_sites')
     amf_obs_root = os.path.join(amf_path, 'AMF_Data')
     amf_extract = os.path.join(amf_path, 'AMF_extracts')
-    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers')
+    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers_fao')
     initial_conditions_path = os.path.join(inputs, 'initialize')
     static_inputs_path = os.path.join(inputs, 'statics')
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output')
@@ -82,6 +84,6 @@ if __name__ == '__main__':
     amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo')
     get_ameriflux_data(amf_obs_root, SIMULATION_PERIOD, etrm_extract=amf_extract,
                        static_inputs=static_inputs_path, initial_path=initial_conditions_path,
-                       save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=True)
+                       save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=False)
 
 # ============= EOF =============================================
