@@ -126,7 +126,16 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
         amf_name = val['Name']
         print '\n name: {}'.format(amf_name)
         folder = os.path.join(path, amf_name)
-        csv_list = os.listdir(folder)
+        print path
+        print amf_name
+        folder_list = os.listdir(folder)
+        new_list = []
+        for item in folder_list:
+            new_list.append(os.path.join(path, amf_name, item))
+        print "this is the folder list: {}".format(folder_list)
+        print "this is the new list: {}".format(new_list)
+        csv_list = new_list
+        print folder
         print 'csv list: \n{}'.format(csv_list)
         arr_cols = [0, 2, 12, 14, 28, 30, 33, 34, 35]
         amf_data = array([]).reshape(0, len(arr_cols))
