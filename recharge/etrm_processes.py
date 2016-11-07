@@ -73,10 +73,12 @@ class Processes(object):
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
-            modify_soils=None):
+            modify_soils=None, apply_ceff=1.0):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
+        :param apply_ceff:
+        :param modify_soils:
         :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
         :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
         :param ndvi_path: NDVI input data path.
@@ -172,7 +174,7 @@ class Processes(object):
 
             self._do_soil_ksat_adjustment()
 
-            self._do_soil_water_balance()
+            self._do_soil_water_balance(apply_ceff)
 
             self._do_mass_balance(day)
 
@@ -252,7 +254,7 @@ class Processes(object):
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
 
-        # EXPERIMENTAL: stage two evap has been way too high, force slowdown with decay
+        # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         m['kr'] *= (1 / m['dry_days'] ** 2)
 
         if self._point_dict:
@@ -283,6 +285,7 @@ class Processes(object):
                 m['ke'] = m['ke_init']
                 m['adjust_ke'] = 'False'
                 ke_adjustment = 1.0
+
         else:
             m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
             m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape) + 0.01, m['ke'])
@@ -393,7 +396,7 @@ class Processes(object):
 
         return None
 
-    def _do_soil_water_balance(self):
+    def _do_soil_water_balance(self, capture_efficiency=1.0):
         """ Calculate all soil water balance at each time step.
 
         :return: None
@@ -463,7 +466,8 @@ class Processes(object):
                 m['drew'] = 0.0
                 water -= m['pdrew'] + m['evap_1']
                 if water > m['soil_ksat']:
-                    m['ro'] = water - m['soil_ksat']
+                    m['ro'] = (water - m['soil_ksat']) * capture_efficiency
+                    taw_direct = (water - m['soil_ksat']) * (1.0 - capture_efficiency)
                     water = m['soil_ksat']
                     # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
                 else:
@@ -490,6 +494,8 @@ class Processes(object):
 
             # water balance through the root zone #
             m['dr_water'] = water
+            if capture_efficiency < 1.0 and m['ro'] > 0.0:
+                water += taw_direct
             if water < m['pdr'] + m['transp']:
                 m['infil'] = 0.0
                 m['dr'] = m['pdr'] + m['transp'] - water

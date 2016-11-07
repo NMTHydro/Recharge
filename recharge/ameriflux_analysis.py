@@ -50,7 +50,8 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key)
+        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=False,
+                           apply_ceff=0.3)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
         print 'this should be your csv: {}'.format(csv_path_filename)
@@ -59,7 +60,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
 
         amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], tracker), axis=1, join='outer'))
 
-        obs_etrm_comb_out = os.path.join(save_combo, '{}_fao_dist.csv'.format(val['Name']))
+        obs_etrm_comb_out = os.path.join(save_combo, '{}_Ceff.csv'.format(val['Name']))
 
         print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
         amf_obs_etrm_combo.to_csv(obs_etrm_comb_out, index_label='Date')
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     amf_path = os.path.join(inputs, 'ameriflux_sites')
     amf_obs_root = os.path.join(amf_path, 'AMF_Data')
     amf_extract = os.path.join(amf_path, 'AMF_extracts')
-    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers_fao')
+    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers_Ceff_30pct')
     initial_conditions_path = os.path.join(inputs, 'initialize')
     static_inputs_path = os.path.join(inputs, 'statics')
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output')

@@ -36,7 +36,7 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.15,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.1, min_snow_albedo=0.45, max_snow_albedo=0.90):
-    monsoon_dates = datetime(1900, 7, 1), datetime(1900, 9, 1)
+    monsoon_dates = datetime(1900, 7, 1), datetime(1900, 10, 1)
     start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
 
     dictionary = dict(s_mon=start_monsoon, e_mon=end_monsoon, ze=soil_evap_depth, p=et_depletion_factor,
