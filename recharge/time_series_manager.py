@@ -122,7 +122,7 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
         tup = datetime(year, 1, 1) + timedelta(days=day, hours=hour, minutes=min_)
         return tup
 
-    for key, val in dict_.iteritems():
+    for key, val in dict_.iteritems(): # Changes here
         amf_name = val['Name']
         print '\n name: {}'.format(amf_name)
         folder = os.path.join(path, amf_name)
