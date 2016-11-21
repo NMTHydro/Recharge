@@ -49,7 +49,7 @@ class Processes(object):
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
-        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe', 'soil_storage']
+        # self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'swe', 'soil_storage']
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -70,14 +70,18 @@ class Processes(object):
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-            self._raster = Rasters(static_inputs, polygons, self._outputs, date_range, output_root, write_freq)
+            self._raster = Rasters(static_inputs, polygons, date_range, output_root, write_freq)# self._outputs
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False):
+            point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
+            modify_soils=None, apply_ceff=1.0, swb_mode='vertical'):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
+        :param swb_mode:
+        :param apply_ceff:
+        :param modify_soils:
         :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
         :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
         :param ndvi_path: NDVI input data path.
@@ -93,6 +97,11 @@ class Processes(object):
         s = self._static
         if point_dict:
             s = s[self._point_dict_key]
+
+        if modify_soils:
+            s['rew'] *= 0.5
+            s['tew'] *= 0.5
+
         c = self._constants
 
         start_date, end_date = self._date_range
@@ -167,10 +176,12 @@ class Processes(object):
             self._do_snow()
 
             self._do_soil_ksat_adjustment()
+            if swb_mode == 'fao':
+                self._do_fao_soil_water_balance(apply_ceff)
+            elif swb_mode == 'vertical':
+                self._do_vert_soil_water_balance(apply_ceff)
 
-            self._do_soil_water_balance()
-
-            self._do_mass_balance(day)
+            self._do_mass_balance(day, swb=swb_mode)
 
             self._do_accumulations()
 
@@ -195,8 +206,8 @@ class Processes(object):
                 print 'last day: saving tabulated data'
                 self.save_tracker(self.tracker)
 
-        if point_dict:
-            self._get_tracker_summary(self.tracker, point_dict_key)
+                # if point_dict:
+                #     self._get_tracker_summary(self.tracker, point_dict_key)
 
     def save_tracker(self, csv_path_filename=None):
         if csv_path_filename is None:
@@ -208,6 +219,7 @@ class Processes(object):
     # private
     def _do_dual_crop_coefficient(self, date):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
+
         """
 
         m = self._master
@@ -247,7 +259,7 @@ class Processes(object):
 
         m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
 
-        # EXPERIMENTAL: stage two evap has been way too high, force slowdown with decay
+        # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         m['kr'] *= (1 / m['dry_days'] ** 2)
 
         if self._point_dict:
@@ -278,6 +290,7 @@ class Processes(object):
                 m['ke'] = m['ke_init']
                 m['adjust_ke'] = 'False'
                 ke_adjustment = 1.0
+
         else:
             m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
             m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape) + 0.01, m['ke'])
@@ -290,6 +303,7 @@ class Processes(object):
         # m['evap'] = m['ke'] * m['etrs']
         m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
         m['evap_2'] = m['st_2_dur'] * m['kr'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
+        m['evap'] = m['evap_1'] + m['evap_2']
 
         # for key, val in m.iteritems():
         #     nan_ct = count_nonzero(isnan(val))
@@ -388,7 +402,174 @@ class Processes(object):
 
         return None
 
-    def _do_soil_water_balance(self):
+    def _do_fao_soil_water_balance(self, capture_efficiency=1.0):
+        """ Calculate all soil water balance at each time step.
+
+        :return: None
+        """
+        m = self._master
+        s = self._static
+
+        # find liquid water incident on the soil surface
+        water = m['rain'] + m['melt']
+
+        # update number of days of dry weather
+        m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
+
+        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
+        # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
+        ##
+        if self._point_dict:  # point
+
+            s = s[self._point_dict_key]
+
+            # give days with melt a ksat value for entire day
+            if m['melt'] > 0.0:
+                m['soil_ksat'] = s['soil_ksat']
+
+            # update variables
+            m['pdr'] = m['dr']
+            m['pde'] = m['de']
+            m['pdrew'] = m['drew']
+
+            # impose limits on vaporization according to present depletions #
+            # this is a somewhat onerous way to see if evaporation exceeds
+            # the quantity of  water in that soil layer
+            # additionally, if we do limit the evaporation from either the stage one
+            # or stage two, we need to reduce the 'evap'
+
+            if m['evap_1'] > s['rew'] - m['drew']:
+                m['evap'] -= m['evap_1'] - (s['rew'] - m['drew'])
+                m['evap_1'] = s['rew'] - m['drew']
+                m['adjust_ev_1'] = 'True'
+            else:
+                m['adjust_ev_1'] = 'False'
+
+            if m['evap_2'] > s['tew'] - m['de']:
+                m['evap'] -= m['evap_2'] - (s['tew'] - m['de'])
+                m['evap_2'] = s['tew'] - m['de']
+                m['adjust_ev_2'] = 'True'
+            else:
+                m['adjust_ev_2'] = 'False'
+
+            if m['transp'] + m['evap'] > s['taw'] - m['dr']:
+                m['transp'] -= s['taw'] - m['dr']
+                m['adjust_transp'] = 'True'
+            else:
+                m['adjust_transp'] = 'False'
+
+            m['evap'] = m['evap_1'] + m['evap_2']
+            m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
+
+            #
+            # first check runoff
+            if water > m['soil_ksat']:
+                m['ro'] = (water - m['soil_ksat']) * capture_efficiency
+                taw_direct = (water - m['soil_ksat']) * (1.0 - capture_efficiency)
+                water = m['soil_ksat']
+            else:
+                m['ro'] = 0.0
+
+            #
+            # this is where a new day starts in terms of depletions (i.e. pdr vs dr) #
+            # FAO water balance through skin layer #
+            if water < m['pdrew'] + m['evap']:
+                m['drew'] = m['pdrew'] + m['evap'] - water
+                if m['drew'] < 0.0:
+                    m['drew'] = 0.0
+                if m['drew'] > s['rew']:
+                    print 'why is drew greater than rew?'
+                    m['drew'] = s['rew']
+            elif water >= m['pdrew'] + m['evap']:
+                m['drew'] = 0.0
+            else:
+                print 'warning: water in rew not calculated'
+
+            # water balance through the TEW evaporation layer #
+            if water < m['pde'] + m['evap']:
+                m['de'] = m['pde'] + m['evap'] - water
+                if m['de'] > s['tew']:
+                    print 'why is de greater than tew?'
+                    m['de'] = s['tew']
+            elif water >= m['pde'] + m['evap']:
+                m['de'] = 0.0
+                if water > m['soil_ksat']:
+                    print 'warning: tew layer has water in excess of its ksat'
+                    water = m['soil_ksat']
+            else:
+                print 'warning: water in tew not calculated'
+
+            # water balance through the root zone #
+            m['dr_water'] = water
+            if capture_efficiency < 1.0 and m['ro'] > 0.0:
+                water += taw_direct
+            if water < m['pdr'] + m['transp'] + m['evap']:
+                m['infil'] = 0.0
+                m['dr'] = m['pdr'] + m['transp'] + m['evap'] - water
+                if m['dr'] > s['taw']:
+                    print 'why is dr greater than taw?'
+                    m['dr'] = s['taw']
+            elif water >= m['pdr'] + m['transp'] + m['evap']:
+                m['dr'] = 0.0
+                water -= m['pdr'] + m['transp'] + m['evap']
+                if water > m['soil_ksat']:
+                    print 'warning: taw layer has water in excess of its ksat'
+                m['infil'] = water
+            else:
+                print 'error calculating deep percolation from root zone'
+
+        else:  # distributed
+
+            m['pdr'] = m['dr']
+            m['pde'] = m['de']
+            m['pdrew'] = m['drew']
+
+            # print 'rain: {}, melt: {}, water: {}'.format(mm_af(m['rain']),
+            #                                              mm_af(m['melt']), mm_af(water))
+
+            m['soil_ksat'] = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
+
+            # impose limits on vaporization according to present depletions #
+            # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
+            m['evap_1'] = where(m['evap_1'] > s['rew'] - m['pdrew'], s['rew'] - m['drew'], m['evap_1'])
+            m['evap_1'] = where(m['evap_1'] < 0.0, zeros(m['evap_1'].shape), m['evap_1'])
+            m['evap_2'] = where(m['evap_2'] > s['tew'] - m['pde'], s['tew'] - m['pde'], m['evap_2'])
+            m['evap_2'] = where(m['evap_2'] < 0.0, zeros(m['evap_2'].shape), m['evap_2'])
+            m['transp'] = where(m['transp'] > s['taw'] - m['pdr'], s['taw'] - m['dr'], m['transp'])
+
+            m['evap'] = m['evap_1'] + m['evap_2']
+            m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
+
+            # print 'evap 1: {}, evap_2: {}, transpiration: {}'.format(mm_af(m['evap_1']), mm_af(m['evap_2']),
+            #                                                          mm_af(m['transp']))
+
+            # water balance through skin layer #
+            m['drew'] = where(water >= m['pdrew'] + m['evap_1'], self._zeros, m['pdrew'] + m['evap_1'] - water)
+            water = where(water < m['pdrew'] + m['evap_1'], self._zeros, water - m['pdrew'] - m['evap_1'])
+            # print 'water through skin layer: {}'.format(mm_af(water))
+            m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], self._zeros)
+            water = where(water > m['soil_ksat'], m['soil_ksat'], water)
+
+            # water balance through the stage 2 evaporation layer #
+            m['de'] = where(water >= m['pde'] + m['evap_2'], self._zeros, m['pde'] + m['evap_2'] - water)
+
+            water = where(water < m['pde'] + m['evap_2'], self._zeros, water - (m['pde'] + m['evap_2']))
+            # print 'water through  de  layer: {}'.format(mm_af(water))
+
+            # water balance through the root zone layer #
+            m['infil'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
+            # print 'deep percolation total: {}'.format(mm_af(m['infil']))
+            m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
+
+            m['soil_storage'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
+
+            # print 'water: {}, out: {}, storage: {}'.format(mm_af(water_tracker),
+            #                                                mm_af(m['ro'] + m['eta'] + m['infil']),
+            #                                                mm_af(m['soil_storage']))
+
+        return None
+
+    def _do_vert_soil_water_balance(self, capture_efficiency=1.0):
         """ Calculate all soil water balance at each time step.
 
         :return: None
@@ -417,7 +598,7 @@ class Processes(object):
             m['pdrew'] = m['drew']
 
             # impose limits on vaporization according to present depletions #
-            # this is a somewhat onerous way to see if evaporations exceed
+            # this is a somewhat onerous way to see if evaporation exceeds
             # the quantity of  water in that soil layer
             # additionally, if we do limit the evaporation from either the stage one
             # or stage two, we need to reduce the 'evap'
@@ -458,7 +639,8 @@ class Processes(object):
                 m['drew'] = 0.0
                 water -= m['pdrew'] + m['evap_1']
                 if water > m['soil_ksat']:
-                    m['ro'] = water - m['soil_ksat']
+                    m['ro'] = (water - m['soil_ksat']) * capture_efficiency
+                    taw_direct = (water - m['soil_ksat']) * (1.0 - capture_efficiency)
                     water = m['soil_ksat']
                     # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
                 else:
@@ -485,6 +667,8 @@ class Processes(object):
 
             # water balance through the root zone #
             m['dr_water'] = water
+            if capture_efficiency < 1.0 and m['ro'] > 0.0:
+                water += taw_direct
             if water < m['pdr'] + m['transp']:
                 m['infil'] = 0.0
                 m['dr'] = m['pdr'] + m['transp'] - water
@@ -560,18 +744,18 @@ class Processes(object):
 
         # strangely, these keys wouldn't update with augmented assignment
         # i.e. m['tot_infil] += m['infil'] wasn't working
-        # m['tot_infil'] = m['infil'] + m['tot_infil']
-        # m['tot_etrs'] = m['etrs'] + m['tot_etrs']
-        # m['tot_eta'] = m['eta'] + m['tot_eta']
-        # m['tot_precip'] = m['precip'] + m['tot_precip']
-        # m['tot_rain'] = m['rain'] + m['tot_rain']
-        # m['tot_melt'] = m['melt'] + m['tot_melt']
-        # m['tot_ro'] = m['ro'] + m['tot_ro']
-        # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
+        m['tot_infil'] = m['infil'] + m['tot_infil']
+        m['tot_etrs'] = m['etrs'] + m['tot_etrs']
+        m['tot_eta'] = m['eta'] + m['tot_eta']
+        m['tot_precip'] = m['precip'] + m['tot_precip']
+        m['tot_rain'] = m['rain'] + m['tot_rain']
+        m['tot_melt'] = m['melt'] + m['tot_melt']
+        m['tot_ro'] = m['ro'] + m['tot_ro']
+        m['tot_snow'] = m['snow_fall'] + m['tot_snow']
 
-        for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
-            kk = 'tot_{}'.format(k)
-            m[kk] = m[k] + m[kk]
+        # for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
+        #     kk = 'tot_{}'.format(k)
+        #     m[kk] = m[k] + m[kk]
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
@@ -593,13 +777,17 @@ class Processes(object):
                                                                                            mm_af(m['tot_ro']),
                                                                                            mm_af(m['tot_swe']))
 
-    def _do_mass_balance(self, date):
+    def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
         :return:
         """
 
         m = self._master
-        m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
+        if swb == 'fao':
+            m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
+                                     (m['pdr'] - m['dr']))
+        elif swb == 'vertical':
+            m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
                                              ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
                                               (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
@@ -765,7 +953,7 @@ class Processes(object):
         print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
         mass_balance = input_sum - output_sum
         mass_percent = (mass_balance / input_sum) * 100
-        print 'overall water balance for {} mm: {}, or {} percent'.format(name, mass_balance, mass_percent)
+        print 'overall water balance for {}: {} mm, or {} percent'.format(name, mass_balance, mass_percent)
         print '--------------------------------------------------------------------------------'
 
 # ============= EOF =============================================

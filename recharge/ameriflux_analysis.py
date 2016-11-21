@@ -33,15 +33,13 @@ BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
 def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
                        static_inputs=None, initial_path=None, save_csv=None, save_cleaned_data=None,
                        save_combo=False):
-
     amf_dict = amf_obs_time_series(BASE_AMF_DICT, amf_file_path, complete_days_only=True,
                                    save_cleaned_data_path=save_cleaned_data, return_low_err=True)
-
     if save_cleaned_data:
         return None
     # print 'amf dict w/ AMF time series: \n{}'.format(amf_dict)
 
-    get_etrm_time_series(amf_dict, inputs_path=etrm_extract, kind='amf')
+    get_etrm_time_series(etrm_extract, dict_=amf_dict)
     # print 'amf dict w/ etrm input time series: \n{}'.format(amf_dict)  # fix this so it appends to all sites
     # print 'ameriflux dict: {}'.format(amf_dict)
 
@@ -52,14 +50,17 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key)
+        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=False,
+                           apply_ceff=0.3)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
         print 'this should be your csv: {}'.format(csv_path_filename)
 
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+
         amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], tracker), axis=1, join='outer'))
-        obs_etrm_comb_out = os.path.join(save_combo, '{}_combo.csv'.format(val['Name']))
+
+        obs_etrm_comb_out = os.path.join(save_combo, '{}_Ceff.csv'.format(val['Name']))
 
         print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
         amf_obs_etrm_combo.to_csv(obs_etrm_comb_out, index_label='Date')
@@ -70,7 +71,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home) # I don't think i need to change this.
+    print 'home: {}'.format(home)
     root = os.path.join(home)
     inputs = os.path.join('/Volumes/Seagate Backup Plus Drive') # 'F:\\', 'ETRM_Inputs'
     amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
@@ -85,6 +86,6 @@ if __name__ == '__main__':
     print amf_obs_root # testing
     get_ameriflux_data(amf_obs_root, SIMULATION_PERIOD, etrm_extract=amf_extract,
                        static_inputs=static_inputs_path, initial_path=initial_conditions_path,
-                       save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=True)
+                       save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=False)
 
 # ============= EOF =============================================

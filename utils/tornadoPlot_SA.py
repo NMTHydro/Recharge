@@ -101,7 +101,8 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
 
             # Make the y-axis display the factors
             plt.yticks(ys, factors)
-            plt.title('Normalized Response to Parameter Change at {} (mm)'.format(index.replace('_', ' ')),
+            print 'location: {}'.format(index)
+            plt.title('{} [mm]'.format(index.replace('_', ' ')),
                       y=1.05)
             # Set the portion of the x- and y-axes to show
             plt.xlim(min(-20, 1.2 * min(lows)), base + 1.1 * max(values))

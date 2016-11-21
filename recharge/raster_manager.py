@@ -37,7 +37,7 @@ import recharge.dict_setup
 
 class Rasters(object):
 
-    def __init__(self, path_to_representative_raster, polygons, outputs, simulation_period, output_root,
+    def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
                  write_frequency=None):
 
         self._write_freq = write_frequency
@@ -46,19 +46,20 @@ class Rasters(object):
         # _outputs are flux totals, monthly and annual are found with _update_raster_tracker()
         # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
         # and thus we assign a list of daily outputs
-        self._outputs = outputs
+        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip']
         if write_frequency == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
 
-            self._daily_outputs = [out.replace('tot_', '') for out in outputs]
+            self._daily_outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip']
+            # [out.replace('tot_', '') for out in outputs]
             print 'your daily outputs will be from: {}'.format(self._daily_outputs)
 
         self._geo = get_geo(path_to_representative_raster)
-        self._output_tracker = recharge.dict_setup.initialize_raster_tracker(outputs,
+        self._output_tracker = recharge.dict_setup.initialize_raster_tracker(self._outputs,
                                                                              (self._geo['rows'], self._geo['cols']))
         self._results_dir = make_results_dir(output_root, polygons)
         self._simulation_period = simulation_period
-        self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, outputs, simulation_period,
+        self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, self._outputs, simulation_period,
                                                                          write_frequency)
 
     def update_raster_obj(self, master, date_object, save_specific_dates=None):
