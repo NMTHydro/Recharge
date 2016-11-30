@@ -64,7 +64,8 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
                     nd = num + 12
                 else:
                     nd = num + 15
-                raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
+                raster = os.path.join(in_path, '{}_{}_{}.tif'.format(date_object.year, start, nd))
+                # raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
                 if coords:
                     ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
                     kcb = ndvi * 1.25
@@ -80,11 +81,14 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
             if 0 <= diff <= 15:
                 pos = obj.index(num)
                 band = diff + 1
-                if num == 353:
-                    nd = num + 12
-                else:
-                    nd = num + 15
-                raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
+
+                # if num == 353:
+                #     nd = num + 12
+                # else:
+                #     nd = num + 15
+
+                raster = os.path.join(in_path, '{}_{}.tif'.format(date_object.year, pos + 1))
+                # raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
                 if coords:
                     ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
                     kcb = ndvi * 1.25
@@ -177,10 +181,13 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     :type coords: str
     :return: numpy array object
     """
+
     doy = date_object.timetuple().tm_yday
+    doy = '{:03n}'.format(doy)
 
     if variable == 'etrs':
-        raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        raster = os.path.join('PM{}'.format(date_object.year), 'PM_NM_{}_{}.tif'.format(date_object.year, doy))
+        # raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
             etrs = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return etrs
@@ -188,7 +195,8 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
 
         return etrs
     elif variable == 'rlin':
-        raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        raster = os.path.join('PM{}'.format(date_object.year), 'RLIN_NM_{}_{}.tif'.format(date_object.year, doy))
+        # raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
             rlin = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return rlin
@@ -196,7 +204,8 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
 
         return rlin
     elif variable == 'rg':
-        raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
+        raster = os.path.join('rad{}'.format(date_object.year), 'RTOT_{}_{}.tif'.format(date_object.year, doy))
+        # raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
         if coords:
             rg = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
             return rg

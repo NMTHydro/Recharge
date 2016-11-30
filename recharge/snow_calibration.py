@@ -62,7 +62,8 @@ names = [str(x[38:-2]) for x in info]
 years = [x for x in range(start.year, end.year + 1)]
 
 # Extract elevations from DEM for analysis
-shp_filename = 'C:\\Recharge_GIS\\qgis_layers\\SNOTEL_curUse_26APR16.shp'
+shp_filename = os.path.join('{a}'.format(/Volumes/Seagate Backup Plus Drive),'{b}'.format(Recharge_GIS),'{c}'.format(qgis_layers),'{d}'.format(SNOTEL_curUse_26APR16.shp))
+#shp_filename = 'C:\\Recharge_GIS\\qgis_layers\\SNOTEL_curUse_26APR16.shp'
 
 ds = ogr.Open(shp_filename)
 lyr = ds.GetLayer()
@@ -83,9 +84,11 @@ for feat in lyr:
                 name_dem_list.append(point_id_obj)
                 geom = feat.GetGeometryRef()
                 mx, my = geom.GetX(), geom.GetY()
-                path = 'C:\\Recharge_GIS\\NM_DEM'
+                path =  os.path.join('{a}'.format(/Volumes/Seagate Backup Plus Drive),'{b}'.format(Recharge_GIS),'{c}'.format(NM_DEM))
+                #path = 'C:\\Recharge_GIS\\NM_DEM'
                 raster = 'NM_30mDEM_UTM13_clp'
-                dem_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
+                dem_open = gdal.open(os.path.join('{a}'.format(a=path),'{b}.tif'.format(b=raster)))
+                #dem_open = gdal.Open('{a}\\{b}.tif'.format(a=path, b=raster))
                 gt = dem_open.GetGeoTransform()
                 rb = dem_open.GetRasterBand(1)
                 px = abs(int((mx - gt[0]) / gt[1]))
@@ -140,7 +143,8 @@ select_names = []
 for code in codes:
     print code
     snow_name = snowdict['{a}'.format(a=code)]['Name']
-    folder = "C:\\Users\\David\\Documents\\Recharge\\Snow\\Data\\{a}".format(a=snow_name)
+    #folder = os.path.join('{a}'.format(/Volumes/Seagate Backup Plus Drive),'{b}'.format(Recharge_GIS),'{c}'.format(qgis_layers),'{d}'.format(SNOTEL_curUse_26APR16.shp),'{e}'.format(),'{f}'.format(), '{g}'.format(),'{h}'.format())
+    folder = "C:\\Users\\David\\Documents\\Recharge\\Snow\\Data\\{a}".format(a=snow_name) # where is the snow data here
     os.chdir(folder)
     csvList = os.listdir(folder)
     snow_files = []
@@ -150,7 +154,8 @@ for code in codes:
                 short_code = int(element[-8:-4])
                 if short_code in years:
                     yr = element[-8:-4]
-                    sn_name = '{a}\\{b}{c}{d}.csv'.format(a=folder, b=code, c=name_fill, d=yr)
+                    sn_name = os.path.join('{a}'.format(a = folder), '{b}{c}{d}.csv'.format(b=code, c=name_fill, d=yr))
+                    #sn_name = '{a}\\{b}{c}{d}.csv'.format(a=folder, b=code, c=name_fill, d=yr)
                     snow_files.append(sn_name)
             except ValueError:
                 pass
@@ -285,9 +290,11 @@ cal_count += 1
 for site in select_codes:
     extract_name = select_names[select_codes.index(site)]
     print extract_name
+    #folder = os.path.join('{a}'.format(/Volumes/Seagate Backup Plus Drive),'{b}'.format(Recharge_GIS),'{c}'.format(qgis_layers),'{d}'.format(SNOTEL_curUse_26APR16.shp),'{e}'.format(),'{f}'.format(), '{g}'.format(),'{h}'.format())
     folder = 'C:\\Users\\David\\Documents\\Recharge\\Snow\\Data' + '\\{a}'.format(a=extract_name)
     extract_fill = '_extract2'
-    name = '{a}\\{b}{c}.csv'.format(a=folder, b=extract_name, c=extract_fill)
+    name = os.path.join('{a}'.format(a = folder), '{b}{c}.csv'.format(b=extract_name, c=extract_fill))
+    #name = '{a}\\{b}{c}.csv'.format(a=folder, b=extract_name, c=extract_fill)
     # Get a numpy object of all raster-extracted data out of the csv it is held in
     os.chdir(folder)
     recs = []

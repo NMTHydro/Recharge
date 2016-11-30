@@ -238,8 +238,11 @@ class Rasters(object):
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (self._geo['resolution'] ** 2)
-                # print 'tabular dict: {}'.format(self._tabular_dict)
-                df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']
+                #==========================================================================
+                print 'tabular dict: {}'.format(self._tabular_dict)
+                print 'parameter: {}'.format(parameter)
+                #===========================================================================
+                df = self._tabular_dict[region_type][sub_region][parameter, 'CBM'] # <= problem here
 
                 df.loc[date] = param_cubic_meters
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])

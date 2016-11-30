@@ -27,19 +27,24 @@ def extract_etrm_point_inputs(shapefile, ndvi, prism, penman, simulation_period,
     get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location)
 
 
+
 if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    inputs = os.path.join('F:\\', 'ETRM_Inputs')
+    inputs = os.path.join('/Volumes/Seagate Backup Plus Drive', 'ETRM_Inputs')
     ndvi_path = os.path.join(inputs, 'NDVI', 'NDVI_std_all')
     prism_path = os.path.join(inputs, 'PRISM')
     penman_path = os.path.join(inputs, 'PM_RAD')
     statics = os.path.join(inputs, 'statics')
-    sa_path = os.path.join(inputs, 'sensitivity_analysis')
-    save_path = os.path.join(sa_path, 'SA_extracts')
-    shape = os.path.join(sa_path, 'sensitivity_points', 'SA_pnts_SierBlanca_19OCT16.shp')
+    sa_path = os.path.join(inputs, 'shapefiles') # (inputs, 'shapefiles')
+    # sb_path is where the outputs are going. sa_path used to be for sensitivity analysis.
+    sb_path = os.path.join(inputs, 'ameriflux_sites')
+    save_path = sb_path  # os.path.join(sa_path, 'AMF_extracts')
+    shape = os.path.join(sa_path, 'amf_sites_UTM.shp')
     period = datetime(2000, 1, 1), datetime(2013, 12, 31)
+    print("Here is the save path {}".format(save_path))
     extract_etrm_point_inputs(shape, ndvi_path, prism_path, penman_path, period, save_path)
+
 
 # ==========================  EOF  ==============================================

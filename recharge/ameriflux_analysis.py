@@ -78,8 +78,8 @@ if __name__ == '__main__':
     amf_obs_root = os.path.join(amf_path, 'AMF_Data') # OK
     amf_extract = os.path.join(amf_path, 'AMF_extracts') # OK
     amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers') # OK
-    initial_conditions_path = os.path.join(inputs, 'initialize') # can't find
-    static_inputs_path = os.path.join(inputs, 'statics') # can't find what does inputs do?
+    initial_conditions_path = os.path.join(inputs, 'initialize')
+    static_inputs_path = os.path.join(inputs, 'statics')
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output') # OK
     amf_obs_processed = os.path.join(amf_path, 'AMF_obs_processed') # OK
     amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo') # OK

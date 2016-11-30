@@ -42,6 +42,7 @@ def get_inputs_at_point(coords, full_path):
     # print 'coords: {}, {}'.format(mx, my)
     dataset = gdal.Open(full_path)
     gt = dataset.GetGeoTransform()
+    #print "This here is the full path: {}".format(full_path) # For testing
     band = dataset.GetRasterBand(1)
     px = abs(int((mx - gt[0]) / gt[1]))
     py = int((my - gt[3]) / gt[5])
