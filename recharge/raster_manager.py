@@ -46,11 +46,12 @@ class Rasters(object):
         # _outputs are flux totals, monthly and annual are found with _update_raster_tracker()
         # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
         # and thus we assign a list of daily outputs
-        self._outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip']
+        # TODO: Hardcoded tot_infil vs invil, tot_etrs vs etrs etc.
+        self._outputs = ['infil', 'etrs', 'eta', 'precip'] # infil change to tot_infil
         if write_frequency == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
 
-            self._daily_outputs = ['tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip']
+            self._daily_outputs = ['infil', 'etrs', 'eta', 'precip']
             # [out.replace('tot_', '') for out in outputs]
             print 'your daily outputs will be from: {}'.format(self._daily_outputs)
 
@@ -282,6 +283,7 @@ class Rasters(object):
                         save_loc_day = os.path.join(results_directories['daily_tabulated'][region_type],
                                                     '{}.csv'.format(sub_region))
                     else:
+
                         df_month = df.resample('M').sum()
                         save_loc_day = None
 
@@ -290,8 +292,10 @@ class Rasters(object):
                     save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
                                                  '{}.csv'.format(sub_region))
 
-                    save_loc_month = os.path.join(results_directories['root'],
-                                                  results_directories['monthly_tabulated'][region_type],
+                    #save_loc_month = os.path.join(results_directories['root'],
+                                                  #results_directories['monthly_tabulated'][region_type],
+                                                  #'{}.csv'.format(sub_region))
+                    save_loc_month = os.path.join(results_directories['monthly_tabulated'][region_type],
                                                   '{}.csv'.format(sub_region))
 
                     if self._write_freq == 'daily':
