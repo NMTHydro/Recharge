@@ -75,12 +75,13 @@ class Processes(object):
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
-            modify_soils=None, apply_ceff=1.0, swb_mode='vertical'):
+            modify_soils=False, apply_rofrac=1.0, swb_mode='vertical', allen_ceff=1.0):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
         :param swb_mode:
-        :param apply_ceff:
+        :param apply_rofrac:
+        :param allen_ceff
         :param modify_soils:
         :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
         :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
@@ -177,9 +178,9 @@ class Processes(object):
 
             self._do_soil_ksat_adjustment()
             if swb_mode == 'fao':
-                self._do_fao_soil_water_balance(apply_ceff)
+                self._do_fao_soil_water_balance(apply_rofrac, allen_ceff)
             elif swb_mode == 'vertical':
-                self._do_vert_soil_water_balance(apply_ceff)
+                self._do_vert_soil_water_balance(apply_rofrac, allen_ceff)
 
             self._do_mass_balance(day, swb=swb_mode)
 
@@ -402,7 +403,7 @@ class Processes(object):
 
         return None
 
-    def _do_fao_soil_water_balance(self, capture_efficiency=1.0):
+    def _do_fao_soil_water_balance(self, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate all soil water balance at each time step.
 
         :return: None
@@ -464,8 +465,8 @@ class Processes(object):
             #
             # first check runoff
             if water > m['soil_ksat']:
-                m['ro'] = (water - m['soil_ksat']) * capture_efficiency
-                taw_direct = (water - m['soil_ksat']) * (1.0 - capture_efficiency)
+                m['ro'] = (water - m['soil_ksat']) * (1.0 - ro_local_reinfilt_frac)
+                taw_direct = (water - m['soil_ksat']) * ro_local_reinfilt_frac
                 water = m['soil_ksat']
             else:
                 m['ro'] = 0.0
@@ -501,7 +502,7 @@ class Processes(object):
 
             # water balance through the root zone #
             m['dr_water'] = water
-            if capture_efficiency < 1.0 and m['ro'] > 0.0:
+            if ro_local_reinfilt_frac < 1.0 and m['ro'] > 0.0:
                 water += taw_direct
             if water < m['pdr'] + m['transp'] + m['evap']:
                 m['infil'] = 0.0
@@ -569,7 +570,7 @@ class Processes(object):
 
         return None
 
-    def _do_vert_soil_water_balance(self, capture_efficiency=1.0):
+    def _do_vert_soil_water_balance(self, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate all soil water balance at each time step.
 
         :return: None
@@ -639,8 +640,8 @@ class Processes(object):
                 m['drew'] = 0.0
                 water -= m['pdrew'] + m['evap_1']
                 if water > m['soil_ksat']:
-                    m['ro'] = (water - m['soil_ksat']) * capture_efficiency
-                    taw_direct = (water - m['soil_ksat']) * (1.0 - capture_efficiency)
+                    m['ro'] = (water - m['soil_ksat']) * (1.0 - ro_local_reinfilt_frac)
+                    taw_direct = (water - m['soil_ksat']) * ro_local_reinfilt_frac
                     water = m['soil_ksat']
                     # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
                 else:
@@ -667,7 +668,7 @@ class Processes(object):
 
             # water balance through the root zone #
             m['dr_water'] = water
-            if capture_efficiency < 1.0 and m['ro'] > 0.0:
+            if ro_local_reinfilt_frac < 1.0 and m['ro'] > 0.0:
                 water += taw_direct
             if water < m['pdr'] + m['transp']:
                 m['infil'] = 0.0

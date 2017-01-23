@@ -51,7 +51,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=False,
-                           apply_ceff=0.3)
+                           apply_rofrac=0.3, allan_ceff=0.5)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
         print 'this should be your csv: {}'.format(csv_path_filename)
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    inputs = os.path.join('/Volumes/Seagate Backup Plus Drive') # 'F:\\', 'ETRM_Inputs'
+    inputs = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel','ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
     amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
     amf_obs_root = os.path.join(amf_path, 'AMF_Data') # OK
     amf_extract = os.path.join(amf_path, 'AMF_extracts') # OK

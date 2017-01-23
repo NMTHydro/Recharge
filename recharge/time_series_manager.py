@@ -198,9 +198,9 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
                                                                                     amf_name)
 
         if save_cleaned_data_path:
-	        df.to_csv(os.path.join('{}'.format(save_cleaned_data_path),'{}_cleaned_all.csv'.format(amf_name)))
+            df.to_csv(os.path.join('{}'.format(save_cleaned_data_path),'{}_cleaned_all.csv'.format(amf_name)))
             #df.to_csv('{}\\{}_cleaned_all.csv'.format(save_cleaned_data_path, amf_name))
-	        df_low_err.to_csv(os.path.join('{}'.format(save_cleaned_data_path), '{}_cleaned_lowErr.csv'.format(amf_name)))
+            df_low_err.to_csv(os.path.join('{}'.format(save_cleaned_data_path), '{}_cleaned_lowErr.csv'.format(amf_name)))
             df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))
 
         if return_low_err:
