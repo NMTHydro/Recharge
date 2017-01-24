@@ -75,7 +75,7 @@ class Processes(object):
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
-            modify_soils=False, apply_rofrac=1.0, swb_mode='vertical', allen_ceff=1.0):
+            modify_soils=False, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
         """
         Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
@@ -302,7 +302,7 @@ class Processes(object):
         # print 'etrs: {}'.format(mm_af(m['etrs']))
 
         # m['evap'] = m['ke'] * m['etrs']
-        m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - m['ks'] * m['kcb']) * m['etrs'] * ke_adjustment
+        m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
         m['evap_2'] = m['st_2_dur'] * m['kr'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
         m['evap'] = m['evap_1'] + m['evap_2']
 
