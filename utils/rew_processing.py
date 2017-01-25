@@ -32,6 +32,7 @@ geo = get_geo(input_path)
 sand = convert_raster_to_array(input_path, sand_tif)
 clay = convert_raster_to_array(input_path, clay_tif)
 
+#From ASCE pg 195, equations from Ritchie et al., 1989
 rew = 8 + 0.08 * clay
 rew = where(sand > 80.0, 20.0 - 0.15 * sand, rew)
 rew = where(clay > 50, 11 - 0.06 * clay, rew)

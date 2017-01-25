@@ -229,7 +229,8 @@ class Processes(object):
             s = s[self._point_dict_key]
         c = self._constants
 
-        plant_exponent = s['plant_height'] * 0.5 + 1
+        #ASCE pg 199, Eq 9.27
+        plant_exponent = s['plant_height'] * 0.5 + 1 # h varaible, derived from ??
         numerator_term = maximum(m['kcb'] - c['kc_min'], self._ones * 0.001)
         denominator_term = maximum((c['kc_max'] - c['kc_min']), self._ones * 0.001)
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
@@ -238,14 +239,16 @@ class Processes(object):
         m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
 
         ####
-        # transpiration
+        # transpiration:
+            # ks- stress coeff- ASCE pg 226, Eq 10.6
         m['ks'] = ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw']))
-        m['ks'] = minimum(m['ks'], self._ones + 0.001)
+        m['ks'] = minimum(m['ks'], self._ones + 0.001) #this 0.001 may be unneeded
         m['ks'] = maximum(self._zeros, m['ks'])
         m['transp'] = m['ks'] * m['kcb'] * m['etrs']
         # enforce winter dormancy of vegetation
         if 92 > date.timetuple().tm_yday or date.timetuple().tm_yday > 306:
-            m['transp'] = maximum(self._zeros, self._ones * 0.03)
+            m['transp'] *= 0.03
+            #m['transp'] = maximum(self._zeros, self._ones * 0.03)
             m['transp_adj'] = 'True'
         else:
             m['transp_adj'] = 'False'
@@ -258,11 +261,13 @@ class Processes(object):
         #                                                            count_nonzero(isnan(m['pde'])),
         #                                                            count_nonzero(isnan(s['rew'])))
 
-        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] + s['rew']), self._ones)
+        # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
+        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] - s['rew']), self._ones)
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         m['kr'] *= (1 / m['dry_days'] ** 2)
 
+            #this seems like a round about way to limit the min value. SWA 1/25/17
         if self._point_dict:
             if m['kr'] < 0.01:
                 m['kr'] = 0.01
@@ -272,7 +277,7 @@ class Processes(object):
         ####
         # check for stage 1 evaporation, i.e. drew < rew
         # this evaporation rate is limited only by available energy, and water in the rew
-        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs'])
+        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs']) # ASCE 194 Eq 9.22 called Fstage1
         st_1_dur = minimum(st_1_dur, self._ones * 0.99)
         m['st_1_dur'] = maximum(st_1_dur, self._zeros)
         m['st_2_dur'] = (1 - m['st_1_dur'])

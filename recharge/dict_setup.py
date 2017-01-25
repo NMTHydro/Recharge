@@ -32,6 +32,12 @@ from recharge.raster_tools import convert_raster_to_array
 from recharge.point_extract_utility import get_inputs_at_point
 
 
+"""
+kc_min is from ASCE pg 199 (0.1 to 0.15 given range)
+kc_max is from ASCE pg 225 Eq 10.3b (1.05 to 1.3 given range)
+et_depletion_factor ASCE pg 226 (0.3 to 0.7 given range) 0.5 common for ag crops
+    can adjust p for ETc as eq on ASCE pg. 392
+"""
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.15,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
