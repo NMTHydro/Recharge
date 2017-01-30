@@ -50,7 +50,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=False,
+        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=True,
                            apply_rofrac=0.7, allen_ceff=0.5)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))

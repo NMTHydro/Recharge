@@ -138,10 +138,12 @@ def initialize_static_dict(inputs_path, point_dict=None):
             print key, val
             if val['land_cover'] in [41, 42, 43]:
                 print 'previous tew: {}'.format(val['tew'])
-                val['tew'] = val['tew'] * 0.25 + val['rew']
+                val['tew'] = val['tew'] * 0.25 #I think the line below had a typo; Dan, 1/25/17
+                #val['tew'] = val['tew'] * 0.25 + val['rew']
                 print 'adjusted tew: {}'.format(val['tew'])
             elif val['land_cover'] == 52:
-                val['tew'] = val['tew'] * 0.75 + val['rew']
+                val['tew'] = val['tew'] * 0.75  #I think the line below had a typo; Dan, 1/25/17
+                #val['tew'] = val['tew'] * 0.75 + val['rew']
 
             if 320.0 < val['taw']:
                 val['taw'] = 320.0
