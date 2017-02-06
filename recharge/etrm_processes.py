@@ -100,8 +100,8 @@ class Processes(object):
             s = s[self._point_dict_key]
 
         if modify_soils:
-            s['rew'] *= 0.5
-            s['tew'] *= 0.5
+            s['rew'] *= 0.1
+            s['tew'] *= 1.0
 
         c = self._constants
 
@@ -263,10 +263,10 @@ class Processes(object):
         #                                                            count_nonzero(isnan(s['rew'])))
 
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
-        m['kr'] = minimum((s['tew'] - m['pde']) / (s['tew'] - s['rew']), self._ones) #changed denominator sign
+        m['kr'] = minimum((s['tew'] - m['pde']) / s['tew'], self._ones) #changed denominator
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
-        m['kr'] *= (1 / m['dry_days'] ** 2)
+        #m['kr'] *= (1 / m['dry_days'] ** 2)
 
             #this seems like a round about way to limit the min value. SWA 1/25/17
         #if self._point_dict:
@@ -280,6 +280,7 @@ class Processes(object):
         ####
         # check for stage 1 evaporation, i.e. drew < rew
         # this evaporation rate is limited only by available energy, and water in the rew
+
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs']) # ASCE 194 Eq 9.22; called Fstage1
         st_1_dur = minimum(st_1_dur, self._ones * 0.99)
         m['st_1_dur'] = maximum(st_1_dur, self._zeros)

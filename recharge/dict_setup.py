@@ -33,13 +33,13 @@ from recharge.point_extract_utility import get_inputs_at_point
 
 
 """
-kc_min is from ASCE pg 199 (0.1 to 0.15 given range)
+kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
 kc_max is from ASCE pg 225 Eq 10.3b (1.05 to 1.3 given range)
 et_depletion_factor ASCE pg 226 (0.3 to 0.7 given range) 0.5 common for ag crops
     can adjust p for ETc as eq on ASCE pg. 392
 """
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
-                  min_basal_crop_coef=0.15,
+                  min_basal_crop_coef=0.01,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90):
     monsoon_dates = datetime(1900, 7, 1), datetime(1900, 10, 1)
@@ -151,6 +151,9 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 val['taw'] = 50.0
             if val['taw'] < val['tew'] + val['rew']:
                 val['taw'] = val['tew'] + val['rew']
+            # I think the plant height raster is in ft instead of meters; DC, 2/6/2017
+            # and I don't think Allen's equation is a good way to get the fraction covered (f_cov) in a forest anyway.
+            val['plant_height'] *= 0.3048
 
     else:
         static_arrays = [convert_raster_to_array(inputs_path, filename) for filename in statics]
@@ -180,6 +183,10 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 #                                                                    ones(data.shape),
                 #                                                                    zeros(data.shape))), min_val)
                 data = where(data < min_val, ones(data.shape) * min_val, data)
+
+            #I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+            if key == 'plant_height':
+                stat_dct['plant_height'] *= 0.3048
 
             # apply high TAW to unconsolidated Quaternary deposits
             if key == 'quat_deposits':
