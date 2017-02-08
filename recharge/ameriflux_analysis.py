@@ -20,7 +20,7 @@ from pandas import concat, DataFrame
 from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series # from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series
 from recharge.etrm_processes import Processes   # from recharge.etrm_processes import Processes
 
-SIMULATION_PERIOD = datetime(2007, 1, 1), datetime(2013, 12, 29) # my-hard coding in time_series manager has disabled this function.
+SIMULATION_PERIOD = datetime(2007, 1, 1), datetime(2013, 12, 29)
 
 BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
                  '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
@@ -50,7 +50,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
-        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=False,
+        tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=True,
                            apply_ceff=0.3)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
@@ -73,17 +73,16 @@ if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    inputs = os.path.join('/Volumes/Seagate Backup Plus Drive') # 'F:\\', 'ETRM_Inputs'
-    amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
-    amf_obs_root = os.path.join(amf_path, 'AMF_Data') # OK
-    amf_extract = os.path.join(amf_path, 'AMF_extracts') # OK
-    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers') # OK
+    inputs = os.path.join('F:\\', 'ETRM_Inputs')
+    amf_path = os.path.join(inputs, 'ameriflux_sites')
+    amf_obs_root = os.path.join(amf_path, 'AMF_Data')
+    amf_extract = os.path.join(amf_path, 'AMF_extracts')
+    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers')
     initial_conditions_path = os.path.join(inputs, 'initialize')
     static_inputs_path = os.path.join(inputs, 'statics')
-    csv_output = os.path.join(amf_path, 'AMF_ETRM_output') # OK
-    amf_obs_processed = os.path.join(amf_path, 'AMF_obs_processed') # OK
-    amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo') # OK
-    print amf_obs_root # testing
+    csv_output = os.path.join(amf_path, 'AMF_ETRM_output')
+    amf_obs_processed = os.path.join(amf_path, 'AMF_obs_processed')
+    amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo')
     get_ameriflux_data(amf_obs_root, SIMULATION_PERIOD, etrm_extract=amf_extract,
                        static_inputs=static_inputs_path, initial_path=initial_conditions_path,
                        save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=False)
