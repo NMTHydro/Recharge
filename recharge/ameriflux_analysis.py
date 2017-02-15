@@ -21,7 +21,8 @@ from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_seri
 from recharge.etrm_processes import Processes   # from recharge.etrm_processes import Processes
 
 # test pus to github
-SIMULATION_PERIOD = datetime(2007, 1, 1), datetime(2013, 12, 29) # my-hard coding in time_series manager has disabled this function.
+SIMULATION_PERIOD = datetime(2005, 1, 1), datetime(2013, 12, 29) # my-hard coding in time_series manager has disabled this function.
+
 
 BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
                  '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
@@ -52,7 +53,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         print '\n key : {}'.format(key)
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=True,
-                           apply_rofrac=0.7, allen_ceff=0.8)
+                           apply_rofrac=0.7, allen_ceff=0.5)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
         print 'this should be your csv: {}'.format(csv_path_filename)

@@ -248,7 +248,8 @@ class Processes(object):
         m['transp'] = m['ks'] * m['kcb'] * m['etrs']
         # enforce winter dormancy of vegetation
         if 92 > date.timetuple().tm_yday or date.timetuple().tm_yday > 306:
-            m['transp'] *= 0.03
+            # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
+            m['transp'] *= 0.3
             #m['transp'] = maximum(self._zeros, self._ones * 0.03)
             m['transp_adj'] = 'True'
         else:
@@ -256,17 +257,11 @@ class Processes(object):
 
         m['transp'] = maximum(self._zeros, m['transp'])
 
-        ####
-        # stage 2 coefficient
-        # print '{} of tew, {} of pde, and {} of rew are nan'.format(count_nonzero(isnan(s['tew'])),
-        #                                                            count_nonzero(isnan(m['pde'])),
-        #                                                            count_nonzero(isnan(s['rew'])))
-
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
         m['kr'] = minimum((s['tew'] - m['pde']) / s['tew'], self._ones) #changed denominator
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
-        #m['kr'] *= (1 / m['dry_days'] ** 2)
+        # m['kr'] *= (1 / m['dry_days'] **2)
 
             #this seems like a round about way to limit the min value. SWA 1/25/17
         #if self._point_dict:
@@ -274,7 +269,7 @@ class Processes(object):
         #        m['kr'] = 0.01
         #else:
         #    m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
-            #this is a simpler way
+            # this is a simpler way
         m['kr'] = maximum(m['kr'], self._ones * 0.01)
 
         ####
@@ -282,6 +277,7 @@ class Processes(object):
         # this evaporation rate is limited only by available energy, and water in the rew
 
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs']) # ASCE 194 Eq 9.22; called Fstage1
+        #st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
         st_1_dur = minimum(st_1_dur, self._ones * 0.99)
         m['st_1_dur'] = maximum(st_1_dur, self._zeros)
         m['st_2_dur'] = (1 - m['st_1_dur'])
@@ -481,6 +477,7 @@ class Processes(object):
                 water = m['soil_ksat']
             else:
                 m['ro'] = 0.0
+                taw_direct = 0.0
 
             #
             # this is where a new day starts in terms of depletions (i.e. pdr vs dr) #
@@ -642,42 +639,40 @@ class Processes(object):
             m['drew_water'] = water
             #ceff is the capture efficency of layer 1 and layer 2
             water_av_rew = water * ceff
+            water_av_tew = water * (1.0 - ceff)
             if water_av_rew < m['pdrew'] + m['evap_1']:
                 m['ro'] = 0.0
                 m['drew'] = m['pdrew'] + m['evap_1'] - water_av_rew
                 if m['drew'] > s['rew']:
-                    print 'why is drew greater than rew?'
+                    print 'why is drew greater than rew?: by {} mm'.format(m['drew'] - s['rew'])
                     m['drew'] = s['rew']
-                water_av_tew = water * (1 - ceff)
             elif water_av_rew >= m['pdrew'] + m['evap_1']:
                 m['drew'] = 0.0
                 water_av_rew -= m['pdrew'] + m['evap_1']
                 if water_av_rew > m['soil_ksat']:
                     m['ro'] = (water_av_rew - m['soil_ksat']) * (1.0 - ro_local_reinfilt_frac)
-                    water_av_tew = (water * (1 - ceff)) + \
-                        ((water_av_rew - m['soil_ksat']) * ro_local_reinfilt_frac) + \
-                         m['soil_ksat']
+                    water_av_tew += ((water_av_rew - m['soil_ksat']) * ro_local_reinfilt_frac) + m['soil_ksat']
                     # print 'sending runoff = {}, water = {}, soil ksat = {}'.format(m['ro'], water, m['soil_ksat'])
                 else:
                     m['ro'] = 0.0
-                    water_av_tew = (water * (1 - ceff)) + (water_av_rew)
+                    water_av_tew += (water_av_rew)
             else:
                 print 'warning: water in rew not calculated'
 
             # water balance through the stage 2 evaporation layer #
-            water_av_taw = water_av_tew * (1 - ceff)
+            water_av_taw = water_av_tew * (1.0 - ceff)
             water_av_tew *= ceff
             m['de_water'] = water_av_tew
             if water_av_tew < m['pde'] + m['evap_2']:
                 m['de'] = m['pde'] + m['evap_2'] - water_av_tew
                 if m['de'] > s['tew']:
-                    print 'why is de greater than tew?'
+                    print 'why is de greater than tew?: by {} mm'.format(m['de'] - s['tew'])
                     m['de'] = s['tew']
             elif water_av_tew >= m['pde'] + m['evap_2']:
                 m['de'] = 0.0
                 water_av_taw += (water_av_tew - (m['pde'] + m['evap_2']))
-                if water_av_tew > m['soil_ksat']:
-                    print 'warning: tew layer has water in excess of its ksat'
+                #if water_av_tew > m['soil_ksat']:
+                #   print 'warning: tew layer has water in excess of its ksat'
             else:
                 print 'warning: water in tew not calculated'
 
@@ -687,13 +682,13 @@ class Processes(object):
                 m['infil'] = 0.0
                 m['dr'] = m['pdr'] + m['transp'] - water_av_taw
                 if m['dr'] > s['taw']:
-                    print 'why is dr greater than taw?'
+                    print 'why is dr greater than taw?: by {} mm'.format(m['dr'] - s['taw'])
                     m['dr'] = s['taw']
             elif water_av_taw >= m['pdr'] + m['transp']:
                 m['dr'] = 0.0
                 water_av_taw -= m['pdr'] + m['transp']
-                if water_av_taw > m['soil_ksat']:
-                    print 'warning: taw layer has water in excess of its ksat'
+                #if water_av_taw > m['soil_ksat']:
+                #    print 'warning: taw layer has water in excess of its ksat'
                 m['infil'] = water_av_taw
             else:
                 print 'error calculating deep percolation from root zone'
@@ -959,7 +954,7 @@ class Processes(object):
         print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['infil'].sum())
 
         output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
-        output_sum += delta_soil_water
+        output_sum += delta_soil_water + tracker['swe'][-1] #added swe to output_sum; Dan, 2/11/17
 
         # output_sum = tracker['transp'].sum() + tracker['evap'].sum() + tracker['ro'].sum() + tracker[
         #     'infil'].sum() + delta_soil_water

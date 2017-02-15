@@ -138,12 +138,10 @@ def initialize_static_dict(inputs_path, point_dict=None):
             print key, val
             if val['land_cover'] in [41, 42, 43]:
                 print 'previous tew: {}'.format(val['tew'])
-                val['tew'] = val['tew'] * 0.25 #I think the line below had a typo; Dan, 1/25/17
-                #val['tew'] = val['tew'] * 0.25 + val['rew']
+                val['tew'] *= 0.25
                 print 'adjusted tew: {}'.format(val['tew'])
             elif val['land_cover'] == 52:
-                val['tew'] = val['tew'] * 0.75  #I think the line below had a typo; Dan, 1/25/17
-                #val['tew'] = val['tew'] * 0.75 + val['rew']
+                val['tew'] *= 0.75
 
             if 320.0 < val['taw']:
                 val['taw'] = 320.0
@@ -184,7 +182,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 #                                                                    zeros(data.shape))), min_val)
                 data = where(data < min_val, ones(data.shape) * min_val, data)
 
-            #I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+            # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
             if key == 'plant_height':
                 stat_dct['plant_height'] *= 0.3048
 
@@ -219,14 +217,10 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
         # apply tew adjustment
         _ones = ones(stat_dct['tew'].shape)
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones, stat_dct['tew'])
 
     # print 'static dict keys: \n {}'.format(static_dict.keys())
     return stat_dct
