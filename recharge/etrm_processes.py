@@ -848,7 +848,7 @@ class Processes(object):
 
     def _do_daily_point_load(self, point_dict, date):
         m = self._master
-        # print 'point dict: {}'.format(point_dict)
+        #print 'point dict: {}'.format(point_dict)
         ts = point_dict[self._point_dict_key]['etrm']
         m['kcb'] = ts['kcb'][date]
         m['min_temp'] = ts['min_temp'][date]
