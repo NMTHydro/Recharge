@@ -118,54 +118,29 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
     :type coords: str
     :return: numpy array object
     """
+    tail = '{}{:02n}{:02n}.tif'.format(date_object.year,date_object.month,date_object.day)
     if variable == 'precip':
 
         path = os.path.join(in_path, 'precip', '800m_std_all')  # this will need to be fixed
-        raster = 'PRISMD2_NMHW2mi_{}{}{}.tif'.format(date_object.year,
-                                                     str(date_object.month).rjust(2, '0'),
-                                                     str(date_object.day).rjust(2, '0'))
-        if coords:
-            ppt = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-            return ppt
-        # print 'ppt raster: {}'.format(raster)
-        ppt = convert_raster_to_array(path, raster)
-
-        return ppt
+        raster = 'PRISMD2_NMHW2mi_{}'.format(tail)
 
     elif variable == 'min_temp':
+        path = os.path.join(in_path, 'Temp', 'Minimum_standard')
         if date_object.year in [2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]:
-            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
-            raster = 'cai_tmin_us_us_30s_{}{}{}.tif'.format(date_object.year,
-                                                            str(date_object.month).rjust(2, '0'),
-                                                            str(date_object.day).rjust(2, '0'))
-            if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-                return min_temp
-
-            min_temp = convert_raster_to_array(path, raster)
-
+            raster = 'cai_tmin_us_us_30s_{}'.format(tail)
         else:
-            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
-            raster = 'TempMin_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
-                                                           str(date_object.month).rjust(2, '0'),
-                                                           str(date_object.day).rjust(2, '0'))
-            if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-                return min_temp
-            min_temp = convert_raster_to_array(path, raster)
+            raster = 'TempMin_NMHW2Buff_{}'.format(tail)
 
-        return min_temp
-
-    if variable == 'max_temp':
+    elif variable == 'max_temp':
         path = os.path.join(in_path, 'Temp', 'Maximum_standard')
-        raster = 'TempMax_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
-                                                       str(date_object.month).rjust(2, '0'),
-                                                       str(date_object.day).rjust(2, '0'))
-        if coords:
-            max_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-            return max_temp
-        max_temp = convert_raster_to_array(path, raster)
-        return max_temp
+        raster = 'TempMax_NMHW2Buff_{}'.format(tail)
+
+    if coords:
+        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
+    else:
+        ret = convert_raster_to_array(path, raster)
+
+    return ret
 
 
 def get_penman(in_path, date_object, variable='etrs', coords=None):
@@ -182,35 +157,23 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     :return: numpy array object
     """
 
-    doy = date_object.timetuple().tm_yday
-    doy = '{:03n}'.format(doy)
+    year = date_object.year
+    tail = '{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
 
     if variable == 'etrs':
-        raster = os.path.join('PM{}'.format(date_object.year), 'PM_NM_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            etrs = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return etrs
-        etrs = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail))
 
-        return etrs
     elif variable == 'rlin':
-        raster = os.path.join('PM{}'.format(date_object.year), 'RLIN_NM_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            rlin = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return rlin
-        rlin = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail))
 
-        return rlin
     elif variable == 'rg':
-        raster = os.path.join('rad{}'.format(date_object.year), 'RTOT_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            rg = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return rg
-        rg = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
 
-        return rg
+    if coords:
+        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+    else:
+        ret = convert_raster_to_array(in_path, raster)
+
+    return ret
 
 # ============= EOF =============================================
