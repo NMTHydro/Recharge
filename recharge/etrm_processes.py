@@ -111,7 +111,7 @@ class Processes(object):
 
             self._do_dual_crop_coefficient(tm_yday, point_dict, m, s, c)
 
-            self._do_snow()
+            self._do_snow(point_dict)
 
             self._do_soil_ksat_adjustment()
             if swb_mode == 'fao':
@@ -351,7 +351,7 @@ class Processes(object):
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
         cover_fraction_upper_bound = minimum(cover_fraction_unbound, self._ones)
         # ASCE pg 198, Eq 9.26
-        m['fcov'] = fcov =  maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
+        m['fcov'] = fcov = maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
 
         # m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
         m['few'] = few = maximum(1 - fcov, self._ones * 0.001)  # uncovered fraction of ground
@@ -448,9 +448,9 @@ class Processes(object):
 
         # m['evap'] = m['ke'] * m['etrs']
         # Ketchum Thesis eq 36, 37
-        m['evap_1'] = st_1_dur * (kc_max - (ks * kcb)) * etrs * ke_adjustment
-        m['evap_2'] = st_2_dur * kr * (kc_max - (ks * kcb)) * etrs * ke_adjustment
-        m['evap'] = m['evap_1'] + m['evap_2']
+        m['evap_1'] = e1 = st_1_dur * (kc_max - (ks * kcb)) * etrs * ke_adjustment
+        m['evap_2'] = e2 = st_2_dur * kr * (kc_max - (ks * kcb)) * etrs * ke_adjustment
+        m['evap'] = e1 + e2
 
         # for key, val in m.iteritems():
         #     nan_ct = count_nonzero(isnan(val))
@@ -463,7 +463,7 @@ class Processes(object):
         #     except AttributeError:
         #         pass
 
-    def _do_snow(self):
+    def _do_snow(self, point_dict):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
 
         :return: None
@@ -474,43 +474,62 @@ class Processes(object):
         temp = m['temp']
         palb = m['albedo']
 
-        if self._point_dict:
-            if temp < 0.0 < m['precip']:
+        precip = m['precip']
+
+        a_min = c['a_min']
+        a_max = c['a_max']
+
+        if point_dict:
+            if temp < 0.0 < precip:
                 # print 'producing snow fall'
-                m['snow_fall'] = m['precip']
-                m['rain'] = 0.0
+                # m['snow_fall'] = precip
+                # m['rain'] = 0.0
+                sf = precip
+                rain = 0.0
             else:
-                m['rain'] = m['precip']
-                m['snow_fall'] = 0.0
+                # m['rain'] = precip
+                # m['snow_fall'] = 0.0
+                sf = 0.0
+                rain = precip
 
-            if m['snow_fall'] > 3.0:
+            # if m['snow_fall'] > 3.0:
+            if sf > 3.0:
                 # print 'snow: {}'.format(m['snow_fall'])
-                m['albedo'] = c['a_max']
-            elif 0.0 < m['snow_fall'] < 3.0:
+                palb = a_max
+            # elif 0.0 < m['snow_fall'] < 3.0:
+            elif 0.0 < sf < 3.0:
                 # print 'snow: {}'.format(m['snow_fall'])
-                m['albedo'] = c['a_min'] + (palb - c['a_min']) * exp(-0.12)
+                palb = a_min + (palb - a_min) * exp(-0.12)
             else:
-                m['albedo'] = c['a_min'] + (palb - c['a_min']) * exp(-0.05)
+                palb = a_min + (palb - a_min) * exp(-0.05)
 
-            if m['albedo'] < c['a_min']:
-                m['albedo'] = c['a_min']
+            if palb < a_min:
+                palb = a_min
         else:
-            m['snow_fall'] = where(temp < 0.0, m['precip'], self._zeros)
-            m['rain'] = where(temp >= 0.0, m['precip'], self._zeros)
-            alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
-            alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
-            alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
-            alb = where(alb < c['a_min'], c['a_min'], alb)
-            m['albedo'] = alb
+            sf = where(temp < 0.0, precip, self._zeros)
+            rain = where(temp >= 0.0, precip, self._zeros)
+            # alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
+            # alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
+            # alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
+            # alb = where(alb < c['a_min'], c['a_min'], alb)
+            alb = where(sf > 3.0, self._ones * a_max, palb)
+            alb = where(sf <= 3.0, a_min + (palb - a_min) * exp(-0.12), alb)
+            alb = where(sf == 0.0, a_min + (palb - a_min) * exp(-0.05), alb)
+            palb = where(alb < a_min, a_min, alb)
+            # m['albedo'] = alb
 
-        m['swe'] += m['snow_fall']
+        # m['swe'] += m['snow_fall']
+        m['swe'] += sf
 
-        melt_init = maximum(((1 - m['albedo']) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'],
+        melt_init = maximum(((1 - palb) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'],
                             zeros(m['rg'].shape))
 
         m['melt'] = minimum(m['swe'], melt_init)
-
         m['swe'] -= m['melt']
+
+        m['rain'] = rain
+        m['snow_fall'] = sf
+        m['albedo'] = palb
 
     def _do_soil_ksat_adjustment(self):
         """ Adjust soil hydraulic conductivity according to land surface cover type.
