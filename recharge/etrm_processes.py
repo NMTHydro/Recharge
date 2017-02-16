@@ -21,6 +21,7 @@ from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker
+
 """from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker"""
 from recharge.raster_manager import Rasters
@@ -70,101 +71,37 @@ class Processes(object):
             self._initial = initialize_initial_conditions_dict(initial_inputs)
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-            self._raster = Rasters(static_inputs, polygons, date_range, output_root, write_freq)# self._outputs
+            self._raster = Rasters(static_inputs, polygons, date_range, output_root, write_freq)  # self._outputs
             self._master = initialize_master_dict(self._shape)
 
     def run(self, ndvi_path=None, prism_path=None, penman_path=None,
             point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
             modify_soils=False, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
-        """
-        Perform all ETRM functions for each time step, updating master dict and saving data as specified.
 
-        :param swb_mode:
-        :param apply_rofrac:
-        :param allen_ceff
-        :param modify_soils:
-        :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
-        :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
-        :param ndvi_path: NDVI input data path.
-        :param prism_path: PRISM input data path.
-        :param penman_path: Reference ET and shortwave radiation data.
-        :param point_dict: Dict of point metadata for the point model.
-        :param point_dict_key: Passed from point model main, will be iterated through each point.
-        :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
-        """
-
-        self._point_dict_key = point_dict_key
-        m = self._master
-        s = self._static
-        if point_dict:
-            s = s[self._point_dict_key]
-
-        if modify_soils:
-            s['rew'] *= 0.1
-            s['tew'] *= 1.0
-
-        c = self._constants
+        self.initialize(point_dict, point_dict_key)
 
         start_date, end_date = self._date_range
         print 'simulation period: {}'.format((start_date, end_date))
-        start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
+
+        c = self._constants
+        m = self._master
+        s = self._static
+
+        start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         start_time = datetime.now()
         print 'start time :{}'.format(start_time)
+
         for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
-
-            if not point_dict:
-                print ''
-                print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
-                                                      b=day.timetuple().tm_yday, c=day.year)
-                self._zeros = zeros(self._shape)
-                self._ones = ones(self._shape)
-
-            if day == start_date:
-
-                m['first_day'] = True
-                m['albedo'] = self._ones * 0.45
-                m['swe'] = self._zeros  # this should be initialized correctly using simulation results
-                # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
-                # by method of Ritchie et al (1989), rew derived from percent sand/clay
-                m['dry_days'] = self._ones
-
-                if self._point_dict:
-                    m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
-                    m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
-                    m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
-                    print 'rew: {}, tew: {}, taw: {}'.format(s['rew'], s['tew'], s['taw'])
-
-                else:
-                    m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
-                    m['pde'], m['de'] = self._initial['de'], self._initial['de']
-                    m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
-                    print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
-                                                                           s['rew'].max(),
-                                                                           s['rew'].min())
-                    print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
-                                                                           s['tew'].max(),
-                                                                           s['tew'].min())
-                    print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
-                                                                           s['taw'].max(),
-                                                                           s['taw'].min())
-                    print 'soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
-                                                                                 s['soil_ksat'].mean(),
-                                                                                 s['soil_ksat'].max(),
-                                                                                 s['soil_ksat'].min())
-
-                self._initial_depletions = m['dr'] + m['de'] + m['drew']
-            else:
-                m['first_day'] = False
-
-            if self._point_dict:
+            if point_dict:
                 self._do_daily_point_load(point_dict, day)
             else:
                 self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
 
+            tm_yday = day.timetuple().tm_yday
             # the soil ksat should be read each day from the static data, then set in the master #
             # otherwise the static is updated and diminishes each day #
             # [mm/day] #
-            if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
+            if start_monsoon <= tm_yday <= end_monsoon:
                 m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
@@ -172,7 +109,7 @@ class Processes(object):
             if sensitivity:
                 self._do_parameter_adjustment(sensitivity_matrix_column)
 
-            self._do_dual_crop_coefficient(day)
+            self._do_dual_crop_coefficient(tm_yday, point_dict, m, s, c)
 
             self._do_snow()
 
@@ -186,11 +123,11 @@ class Processes(object):
 
             self._do_accumulations()
 
-            if day == start_date:
-                if self._point_dict:
-                    self.tracker = initialize_point_tracker(self._master)
+            if not self.tracker:
+                if point_dict:
+                    self.tracker = initialize_point_tracker(m)
                 else:
-                    self.tracker = initialize_master_tracker(self._master)
+                    self.tracker = initialize_master_tracker(m)
 
             if point_dict:
                 self._update_point_tracker(day)
@@ -198,17 +135,190 @@ class Processes(object):
                 self._raster.update_raster_obj(m, day)
                 self._update_master_tracker(day)
 
-            if point_dict and day == end_date:
-                self._get_tracker_summary(self.tracker, point_dict_key)
-                # print 'returning tracker: {}'.format(self.tracker)
-                return self.tracker
+            m['first_day'] = False
 
-            elif day == end_date:
-                print 'last day: saving tabulated data'
-                self.save_tracker(self.tracker)
+        if point_dict:
+            self._get_tracker_summary(self.tracker, point_dict_key)
+        else:
+            print 'saving tabulated data'
+            self.save_tracker()
 
-                # if point_dict:
-                #     self._get_tracker_summary(self.tracker, point_dict_key)
+        return self.tracker
+
+    def initialize(self, point_dict, point_dict_key):
+        m = self._master
+
+        m['first_day'] = True
+        m['albedo'] = self._ones * 0.45
+        m['swe'] = self._zeros  # this should be initialized correctly using simulation results
+        # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
+        # by method of Ritchie et al (1989), rew derived from percent sand/clay
+        m['dry_days'] = self._ones
+        s = self._static
+
+        if point_dict:
+            s = s[self._point_dict_key]
+            m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
+            m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
+            m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
+            print 'rew: {}, tew: {}, taw: {}'.format(s['rew'], s['tew'], s['taw'])
+
+        else:
+            m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
+            m['pde'], m['de'] = self._initial['de'], self._initial['de']
+            m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+            print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
+                                                                   s['rew'].max(),
+                                                                   s['rew'].min())
+            print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
+                                                                   s['tew'].max(),
+                                                                   s['tew'].min())
+            print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
+                                                                   s['taw'].max(),
+                                                                   s['taw'].min())
+            print 'soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
+                                                                         s['soil_ksat'].mean(),
+                                                                         s['soil_ksat'].max(),
+                                                                         s['soil_ksat'].min())
+
+            self._initial_depletions = m['dr'] + m['de'] + m['drew']
+
+    # def run(self, ndvi_path=None, prism_path=None, penman_path=None,
+    #         point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
+    #         modify_soils=False, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
+    #     """
+    #     Perform all ETRM functions for each time step, updating master dict and saving data as specified.
+    #
+    #     :param swb_mode:
+    #     :param apply_rofrac:
+    #     :param allen_ceff
+    #     :param modify_soils:
+    #     :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
+    #     :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
+    #     :param ndvi_path: NDVI input data path.
+    #     :param prism_path: PRISM input data path.
+    #     :param penman_path: Reference ET and shortwave radiation data.
+    #     :param point_dict: Dict of point metadata for the point model.
+    #     :param point_dict_key: Passed from point model main, will be iterated through each point.
+    #     :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
+    #     """
+    #
+    #     self._point_dict_key = point_dict_key
+    #     m = self._master
+    #     s = self._static
+    #     if point_dict:
+    #         s = s[self._point_dict_key]
+    #
+    #     if modify_soils:
+    #         s['rew'] *= 0.1
+    #         s['tew'] *= 1.0
+    #
+    #     c = self._constants
+    #
+    #     start_date, end_date = self._date_range
+    #     print 'simulation period: {}'.format((start_date, end_date))
+    #     start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
+    #     start_time = datetime.now()
+    #     print 'start time :{}'.format(start_time)
+    #     for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
+    #
+    #         if not point_dict:
+    #             print ''
+    #             print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
+    #                                                   b=day.timetuple().tm_yday, c=day.year)
+    #             self._zeros = zeros(self._shape)
+    #             self._ones = ones(self._shape)
+    #
+    #         if day == start_date:
+    #
+    #             m['first_day'] = True
+    #             m['albedo'] = self._ones * 0.45
+    #             m['swe'] = self._zeros  # this should be initialized correctly using simulation results
+    #             # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
+    #             # by method of Ritchie et al (1989), rew derived from percent sand/clay
+    #             m['dry_days'] = self._ones
+    #
+    #             if self._point_dict:
+    #                 m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
+    #                 m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
+    #                 m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
+    #                 print 'rew: {}, tew: {}, taw: {}'.format(s['rew'], s['tew'], s['taw'])
+    #
+    #             else:
+    #                 m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
+    #                 m['pde'], m['de'] = self._initial['de'], self._initial['de']
+    #                 m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+    #                 print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
+    #                                                                        s['rew'].max(),
+    #                                                                        s['rew'].min())
+    #                 print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
+    #                                                                        s['tew'].max(),
+    #                                                                        s['tew'].min())
+    #                 print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
+    #                                                                        s['taw'].max(),
+    #                                                                        s['taw'].min())
+    #                 print 'soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
+    #                                                                              s['soil_ksat'].mean(),
+    #                                                                              s['soil_ksat'].max(),
+    #                                                                              s['soil_ksat'].min())
+    #
+    #             self._initial_depletions = m['dr'] + m['de'] + m['drew']
+    #         else:
+    #             m['first_day'] = False
+    #
+    #         if self._point_dict:
+    #             self._do_daily_point_load(point_dict, day)
+    #         else:
+    #             self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
+    #
+    #         # the soil ksat should be read each day from the static data, then set in the master #
+    #         # otherwise the static is updated and diminishes each day #
+    #         # [mm/day] #
+    #         if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
+    #             m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
+    #         else:
+    #             m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
+    #
+    #         if sensitivity:
+    #             self._do_parameter_adjustment(sensitivity_matrix_column)
+    #
+    #         self._do_dual_crop_coefficient(day)
+    #
+    #         self._do_snow()
+    #
+    #         self._do_soil_ksat_adjustment()
+    #         if swb_mode == 'fao':
+    #             self._do_fao_soil_water_balance(apply_rofrac, allen_ceff)
+    #         elif swb_mode == 'vertical':
+    #             self._do_vert_soil_water_balance(apply_rofrac, allen_ceff)
+    #
+    #         self._do_mass_balance(day, swb=swb_mode)
+    #
+    #         self._do_accumulations()
+    #
+    #         if day == start_date:
+    #             if self._point_dict:
+    #                 self.tracker = initialize_point_tracker(self._master)
+    #             else:
+    #                 self.tracker = initialize_master_tracker(self._master)
+    #
+    #         if point_dict:
+    #             self._update_point_tracker(day)
+    #         else:
+    #             self._raster.update_raster_obj(m, day)
+    #             self._update_master_tracker(day)
+    #
+    #         if point_dict and day == end_date:
+    #             self._get_tracker_summary(self.tracker, point_dict_key)
+    #             # print 'returning tracker: {}'.format(self.tracker)
+    #             return self.tracker
+    #
+    #         elif day == end_date:
+    #             print 'last day: saving tabulated data'
+    #             self.save_tracker(self.tracker)
+    #
+    #             # if point_dict:
+    #             #     self._get_tracker_summary(self.tracker, point_dict_key)
 
     def save_tracker(self, csv_path_filename=None):
         if csv_path_filename is None:
@@ -218,99 +328,128 @@ class Processes(object):
         self.tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
     # private
-    def _do_dual_crop_coefficient(self, date):
+    def _do_dual_crop_coefficient(self, tm_yday, point_dict, m, s, c):
         """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
 
         """
 
-        m = self._master
-        s = self._static
-        if self._point_dict:
-            s = s[self._point_dict_key]
-        c = self._constants
+        # m = self._master
+        # s = self._static
+        # if self._point_dict:
+        #     s = s[self._point_dict_key]
+        # c = self._constants
 
-        #ASCE pg 199, Eq 9.27
-        plant_exponent = s['plant_height'] * 0.5 + 1 # h varaible, derived from ??
-        numerator_term = maximum(m['kcb'] - c['kc_min'], self._ones * 0.001)
-        denominator_term = maximum((c['kc_max'] - c['kc_min']), self._ones * 0.001)
+        kcb = m['kcb']
+        etrs = m['etrs']
+        kc_max = c['kc_max']
+        kc_min = c['kc_min']
+
+        # ASCE pg 199, Eq 9.27
+        plant_exponent = s['plant_height'] * 0.5 + 1  # h varaible, derived from ??
+        numerator_term = maximum(kcb - kc_min, self._ones * 0.001)
+        denominator_term = maximum((kc_max - kc_min), self._ones * 0.001)
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
         cover_fraction_upper_bound = minimum(cover_fraction_unbound, self._ones)
         # ASCE pg 198, Eq 9.26
-        m['fcov'] = maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
-        m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
+        m['fcov'] = fcov =  maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
+
+        # m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
+        m['few'] = few = maximum(1 - fcov, self._ones * 0.001)  # uncovered fraction of ground
 
         ####
         # transpiration:
-            # ks- stress coeff- ASCE pg 226, Eq 10.6
-        m['ks'] = ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw']))
-        m['ks'] = minimum(m['ks'], self._ones + 0.001) #this 0.001 may be unneeded
-        m['ks'] = maximum(self._zeros, m['ks'])
-        m['transp'] = m['ks'] * m['kcb'] * m['etrs']
+        # ks- stress coeff- ASCE pg 226, Eq 10.6
+
+        # m['ks'] = ((s['taw'] - m['pdr']) / ((1 - c['p']) * s['taw']))
+        taw = s['taw']
+        ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
+
+        # m['ks'] = minimum(m['ks'], self._ones + 0.001) #this 0.001 may be unneeded
+        ks = minimum(ks, self._ones + 0.001)  # this 0.001 may be unneeded
+
+        # m['ks'] = maximum(self._zeros, m['ks'])
+        ks = maximum(self._zeros, ks)
+        m['ks'] = ks
+
+        # m['transp'] = m['ks'] * m['kcb'] * m['etrs']
+        transp = ks * kcb * etrs
+
         # enforce winter dormancy of vegetation
-        if 92 > date.timetuple().tm_yday or date.timetuple().tm_yday > 306:
+        if 92 > tm_yday or tm_yday > 306:
             # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
-            m['transp'] *= 0.3
-            #m['transp'] = maximum(self._zeros, self._ones * 0.03)
+            # m['transp'] *= 0.3
+            transp *= 0.3
+
+            # m['transp'] = maximum(self._zeros, self._ones * 0.03)
             m['transp_adj'] = 'True'
         else:
             m['transp_adj'] = 'False'
 
-        m['transp'] = maximum(self._zeros, m['transp'])
-
+        # m['transp'] = maximum(self._zeros, m['transp'])
+        transp = maximum(self._zeros, transp)
+        m['transp'] = transp
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
-        m['kr'] = minimum((s['tew'] - m['pde']) / s['tew'], self._ones) #changed denominator
+        # m['kr'] = minimum((s['tew'] - m['pde']) / s['tew'], self._ones) #changed denominator
+
+        tew = s['tew']
+        kr = minimum((tew - m['pde']) / tew, self._ones)  # changed denominator
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # m['kr'] *= (1 / m['dry_days'] **2)
 
-            #this seems like a round about way to limit the min value. SWA 1/25/17
-        #if self._point_dict:
+        # this seems like a round about way to limit the min value. SWA 1/25/17
+        # if self._point_dict:
         #    if m['kr'] < 0.01:
         #        m['kr'] = 0.01
-        #else:
+        # else:
         #    m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
-            # this is a simpler way
-        m['kr'] = maximum(m['kr'], self._ones * 0.01)
+        # this is a simpler way
+        # m['kr'] = maximum(m['kr'], self._ones * 0.01)
+        kr = maximum(kr, self._ones * 0.01)
+        m['kr'] = kr
 
         ####
         # check for stage 1 evaporation, i.e. drew < rew
         # this evaporation rate is limited only by available energy, and water in the rew
 
-        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * m['etrs']) # ASCE 194 Eq 9.22; called Fstage1
-        #st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
+        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
+        # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
         st_1_dur = minimum(st_1_dur, self._ones * 0.99)
-        m['st_1_dur'] = maximum(st_1_dur, self._zeros)
-        m['st_2_dur'] = (1 - m['st_1_dur'])
+        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, self._zeros)
+        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
 
-        #ke evaporation efficency; Allen 2011, Eq 13a
-        m['ke_init'] = (m['st_1_dur'] + (m['st_2_dur'] * m['kr'])) * (c['kc_max'] - (m['ks'] * m['kcb']))
+        # ke evaporation efficency; Allen 2011, Eq 13a
+        ke_init = (st_1_dur + (st_2_dur * kr)) * (kc_max - (ks * kcb))
 
-        if self._point_dict:
-            if m['ke_init'] < 0.0:
-                m['adjust_ke'] = 'True'
-                m['ke'] = 0.01
-            if m['ke_init'] > m['few'] * c['kc_max']:
-                m['adjust_ke'] = 'True'
-                m['ke'] = m['few'] * c['kc_max']
-                ke_adjustment = m['ke'] / m['ke_init']
+        if point_dict:
+            adj_ke = 'True'
+            if ke_init < 0.0:
+                # m['adjust_ke'] = 'True'
+                ke = 0.01
+            if ke_init > few * kc_max:
+                # m['adjust_ke'] = 'True'
+                ke = few * kc_max
+                ke_adjustment = ke / ke_init
             else:
-                m['ke'] = m['ke_init']
-                m['adjust_ke'] = 'False'
+                ke = ke_init
+                # m['adjust_ke'] = 'False'
+                adj_ke = 'False'
                 ke_adjustment = 1.0
 
+            m['adjust_ke'] = adj_ke
         else:
-            m['ke'] = where(m['ke_init'] > m['few'] * c['kc_max'], m['few'] * c['kc_max'], m['ke_init'])
-            m['ke'] = where(m['ke_init'] < zeros(m['ke'].shape), zeros(m['ke'].shape) + 0.01, m['ke'])
-            ke_adjustment = where(m['ke_init'] > m['few'] * c['kc_max'], m['ke'] / m['ke_init'], self._ones)
+            ke = where(ke_init > few * kc_max, few * kc_max, ke_init)
+            ke = where(ke_init < zeros(ke.shape), zeros(ke.shape) + 0.01, ke)
+            ke_adjustment = where(ke_init > few * kc_max, ke / ke_init, self._ones)
 
-        m['ke'] = minimum(m['ke'], self._ones)
-
+        m['ke'] = minimum(ke, self._ones)
+        m['ke_init'] = ke_init
         # print 'etrs: {}'.format(mm_af(m['etrs']))
 
         # m['evap'] = m['ke'] * m['etrs']
         # Ketchum Thesis eq 36, 37
-        m['evap_1'] = m['st_1_dur'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
-        m['evap_2'] = m['st_2_dur'] * m['kr'] * (c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'] * ke_adjustment
+        m['evap_1'] = st_1_dur * (kc_max - (ks * kcb)) * etrs * ke_adjustment
+        m['evap_2'] = st_2_dur * kr * (kc_max - (ks * kcb)) * etrs * ke_adjustment
         m['evap'] = m['evap_1'] + m['evap_2']
 
         # for key, val in m.iteritems():
@@ -637,7 +776,7 @@ class Processes(object):
             # this is where a new day starts in terms of depletions (i.e. pdr vs dr) #
             # water balance through skin layer #
             m['drew_water'] = water
-            #ceff is the capture efficency of layer 1 and layer 2
+            # ceff is the capture efficency of layer 1 and layer 2
             water_av_rew = water * ceff
             water_av_tew = water * (1.0 - ceff)
             if water_av_rew < m['pdrew'] + m['evap_1']:
@@ -671,7 +810,7 @@ class Processes(object):
             elif water_av_tew >= m['pde'] + m['evap_2']:
                 m['de'] = 0.0
                 water_av_taw += (water_av_tew - (m['pde'] + m['evap_2']))
-                #if water_av_tew > m['soil_ksat']:
+                # if water_av_tew > m['soil_ksat']:
                 #   print 'warning: tew layer has water in excess of its ksat'
             else:
                 print 'warning: water in tew not calculated'
@@ -687,7 +826,7 @@ class Processes(object):
             elif water_av_taw >= m['pdr'] + m['transp']:
                 m['dr'] = 0.0
                 water_av_taw -= m['pdr'] + m['transp']
-                #if water_av_taw > m['soil_ksat']:
+                # if water_av_taw > m['soil_ksat']:
                 #    print 'warning: taw layer has water in excess of its ksat'
                 m['infil'] = water_av_taw
             else:
@@ -794,11 +933,11 @@ class Processes(object):
         m = self._master
         if swb == 'fao':
             m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
-                                     (m['pdr'] - m['dr']))
+                                                 (m['pdr'] - m['dr']))
         elif swb == 'vertical':
             m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
-                                             ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
-                                              (m['pdrew'] - m['drew'])))
+                                                 ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
+                                                  (m['pdrew'] - m['drew'])))
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         if date == self._date_range[0]:
             # print 'zero mass balance first day'
@@ -848,7 +987,7 @@ class Processes(object):
 
     def _do_daily_point_load(self, point_dict, date):
         m = self._master
-        #print 'point dict: {}'.format(point_dict)
+        # print 'point dict: {}'.format(point_dict)
         ts = point_dict[self._point_dict_key]['etrm']
         m['kcb'] = ts['kcb'][date]
         m['min_temp'] = ts['min_temp'][date]
@@ -954,7 +1093,7 @@ class Processes(object):
         print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['infil'].sum())
 
         output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
-        output_sum += delta_soil_water + tracker['swe'][-1] #added swe to output_sum; Dan, 2/11/17
+        output_sum += delta_soil_water + tracker['swe'][-1]  # added swe to output_sum; Dan, 2/11/17
 
         # output_sum = tracker['transp'].sum() + tracker['evap'].sum() + tracker['ro'].sum() + tracker[
         #     'infil'].sum() + delta_soil_water
