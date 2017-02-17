@@ -25,7 +25,7 @@ dgketchum 24 JUL 2016
 import os
 from numpy import where, isnan
 
-from recharge.raster_tools import convert_raster_to_array
+from recharge.raster_tools import convert_raster_to_array, apply_mask
 import recharge.point_extract_utility
 
 NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
@@ -33,7 +33,7 @@ NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
 PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 
 
-def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
+def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
     """
     Find NDVI image and convert to Kcb.
 
@@ -78,7 +78,7 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
         return kcb
 
     else:
-        ndvi = convert_raster_to_array(in_path, raster, band=band)
+        ndvi = apply_mask(mask_path, convert_raster_to_array(in_path, raster, band=band))
 
         kcb = ndvi * 1.25
 
@@ -165,7 +165,7 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
 #     return kcb
 #
 
-def get_prism(in_path, date_object, variable='precip', coords=None):
+def get_prism(mask_path, in_path, date_object, variable='precip', coords=None):
     """
     Find PRISM image.
 
@@ -202,10 +202,10 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
     else:
         ret = convert_raster_to_array(root, raster)
 
-    return ret
+    return apply_mask(mask_path, ret)
 
 
-def get_penman(in_path, date_object, variable='etrs', coords=None):
+def get_penman(mask_path, in_path, date_object, variable='etrs', coords=None):
     """
     Find PENMAN image.
 
@@ -236,6 +236,6 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     else:
         ret = convert_raster_to_array(in_path, raster)
 
-    return ret
+    return apply_mask(mask_path, ret)
 
 # ============= EOF =============================================

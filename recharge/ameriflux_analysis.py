@@ -76,7 +76,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    inputs = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel','ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
+    inputs = os.path.join('F:\\','ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
     amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
     amf_obs_root = os.path.join(amf_path, 'AMF_Data') # OK
     amf_extract = os.path.join(amf_path, 'AMF_extracts') # OK

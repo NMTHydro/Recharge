@@ -19,7 +19,8 @@ The purpose of this module is to provide some simple tools needed for raster pro
 
 """
 from osgeo import gdal
-from numpy import array
+from numpy import array, asarray
+from numpy.ma import masked_where, nomask, filled
 from datetime import datetime
 import os
 
@@ -54,6 +55,42 @@ def get_raster_geo_attributes(statics_path):
                        'data_type': band.DataType, 'projection': dataset.GetProjection(),
                        'geotransform': dataset.GetGeoTransform(), 'resolution': dataset.GetGeoTransform()[1]}
     return raster_geo_dict
+
+# def apply_mask(mask_path, rast_to_mask):
+#     #raster_attrib = get_geo(mask_path)
+#     out = None
+#     file_name = next((filename for filename in os.listdir(mask_path) if filename.endswith('.tif')), None)
+#     if file_name is not None:
+#         #file_name = mask_raster[0]
+#         mask_array = convert_raster_to_array(mask_path,file_name)
+#         masked_arr = masked_where(mask_array == 0, rast_to_mask)
+#         out = masked_arr.compressed()
+#
+#     return out
+
+def apply_mask(mask_path, arr):
+    out = None
+    file_name = next((fn for fn in os.listdir(mask_path) if fn.endswith('.tif')), None)
+    if file_name is not None:
+        mask = convert_raster_to_array(mask_path, file_name)
+        idxs = asarray(mask, dtype=bool)
+        # or
+        # idxs = where(mask==1)[0]
+        out = arr[idxs].flatten()
+    return out
+
+def remake_array(mask_path, arr):
+    out = None
+    file_name = next((filename for filename in os.listdir(mask_path) if filename.endswith('.tif')), None)
+    if file_name is not None:
+        mask_array = convert_raster_to_array(mask_path, file_name)
+        masked_arr = masked_where(mask_array == 0, mask_array)
+        masked_arr[~masked_arr.mask]=arr.ravel()
+        masked_arr.mask = nomask
+        arr = masked_arr.filled(0)
+        out = arr
+
+    return out
 
 
 def make_results_dir(out_path, shapes):

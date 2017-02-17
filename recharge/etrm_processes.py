@@ -21,6 +21,7 @@ from dateutil import rrule
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker
+from recharge.raster_tools import apply_mask
 
 """from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     initialize_point_tracker, set_constants, initialize_master_tracker"""
@@ -30,6 +31,11 @@ from tools import millimeter_to_acreft as mm_af
 
 POINT = 10
 DISTRIBUTED = 20
+
+def add_extension(p, ext='.txt'):
+    if not p.endswith(ext):
+        p = '{}{}'.format(p, ext)
+    return p
 
 
 class Processes(object):
@@ -48,9 +54,9 @@ class Processes(object):
     _initial_depletions = None
     _mode = None
 
-    def __init__(self, date_range, output_root=None, polygons=None, static_inputs=None, initial_inputs=None,
+    def __init__(self, date_range, mask_path, output_root=None, polygons=None, static_inputs=None, initial_inputs=None,
                  point_dict=None, write_freq=None):
-
+        self._mask_path = mask_path
         self._output_root = output_root
         self._date_range = date_range
         self._point_dict = point_dict
@@ -71,11 +77,11 @@ class Processes(object):
             self._mode = POINT
         else:
             self._polygons = polygons
-            self._static = initialize_static_dict(static_inputs)
-            self._initial = initialize_initial_conditions_dict(initial_inputs)
+            self._static = initialize_static_dict(static_inputs, mask_path)
+            self._initial = initialize_initial_conditions_dict(initial_inputs, mask_path)
             self._shape = self._static['taw'].shape
             self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-            self._raster = Rasters(static_inputs, polygons, date_range, output_root, write_freq)  # self._outputs
+            self._raster = Rasters(static_inputs, mask_path, polygons, date_range, output_root, write_freq)  # self._outputs
             self._master = initialize_master_dict(self._shape)
             self._mode = DISTRIBUTED
 
@@ -130,7 +136,7 @@ class Processes(object):
 
             self._do_accumulations()
 
-            if not self.tracker:
+            if self.tracker is None:
                 if self._mode == POINT:
                     self.tracker = initialize_point_tracker(m)
                 else:
@@ -139,7 +145,7 @@ class Processes(object):
             if self._mode == POINT:
                 self._update_point_tracker(day)
             else:
-                self._raster.update_raster_obj(m, day)
+                self._raster.update_raster_obj(m, self._mask_path, day)
                 self._update_master_tracker(day)
 
             m['first_day'] = False
@@ -192,12 +198,22 @@ class Processes(object):
 
             self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
-    def save_tracker(self, csv_path_filename=None):
-        if csv_path_filename is None:
-            csv_path_filename = os.path.join(self._output_root, 'etrm_master_tracker.csv')
+    def save_tracker(self, path=None):
+        base = 'etrm_master_tracker'
+        if path is None:
+            path = add_extension(os.path.join(self._output_root, base), '.csv')
 
-        print 'this should be your csv: {}'.format(csv_path_filename)
-        self.tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+        if os.path.isfile(path):
+            cnt=0
+            while 1:
+                path = os.path.join(self._output_root, '{}-{:04n}.csv'.format(base, cnt))
+                if not os.path.isfile(path):
+                    break
+                cnt+=1
+
+        path = add_extension(path, '.csv')
+        print 'this should be your csv: {}'.format(path)
+        self.tracker.to_csv(path, na_rep='nan', index_label='Date')
 
     # private
     def _do_dual_crop_coefficient(self, tm_yday, m, s, c):
@@ -871,31 +887,31 @@ class Processes(object):
 
         m = self._master
 
-        m['pkcb'] = m['kcb']
-        m['kcb'] = get_kcb(ndvi, date, m['pkcb'])
+        m['kcb'] = get_kcb(self._mask_path, ndvi, date, m['pkcb'])
         # print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
 
-        m['min_temp'] =min_temp = get_prism(prism, date, variable='min_temp')
-        m['max_temp'] =max_temp = get_prism(prism, date, variable='max_temp')
+        m['min_temp'] =min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
+        m['max_temp'] =max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
 
         m['temp'] = (min_temp + max_temp) / 2
         # print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
 
-        precip = get_prism(prism, date, variable='precip')
+        precip = get_prism(self._mask_path, prism, date, variable='precip')
         m['precip'] = where(precip < self._zeros, self._zeros, precip)
         # print 'raw precip nan values = {}'.format(count_nonzero(isnan(m['precip'])))
         # print 'precip min {} precip max on day {} is {}'.format(m['precip'].min(), date, m['precip'].max())
         # print 'total precip et on {}: {:.2e} AF'.format(date, (m['precip'].sum() / 1000) * (250 ** 2) / 1233.48)
 
-        etrs = get_penman(penman, date, variable='etrs')
+        etrs = get_penman(self._mask_path, penman, date, variable='etrs')
         # print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         etrs = where(etrs < self._zeros, self._zeros, etrs)
         m['etrs'] = where(isnan(etrs), self._zeros, etrs)
         # print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         # print 'total ref et on {}: {:.2e} AF'.format(date, (m['etrs'].sum() / 1000) * (250 ** 2) / 1233.48)
 
-        m['rg'] = get_penman(penman, date, variable='rg')
+        m['rg'] = get_penman(self._mask_path, penman, date, variable='rg')
 
+        m['pkcb'] = m['kcb']
         return None
 
     def _do_daily_point_load(self, date):

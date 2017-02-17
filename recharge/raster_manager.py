@@ -30,14 +30,14 @@ from numpy import array, where, zeros
 from calendar import monthrange
 import os
 
-from recharge.raster_tools import make_results_dir
-from recharge.raster_tools import get_raster_geo_attributes as get_geo
+from recharge.raster_tools import make_results_dir, apply_mask, remake_array
+from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
 import recharge.dict_setup
 
 
 class Rasters(object):
 
-    def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
+    def __init__(self, path_to_representative_raster, mask_path, polygons, simulation_period, output_root,
                  write_frequency=None):
 
         self._write_freq = write_frequency
@@ -47,7 +47,7 @@ class Rasters(object):
         # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
         # and thus we assign a list of daily outputs
         # TODO: Hardcoded tot_infil vs invil, tot_etrs vs etrs etc.
-        self._outputs = ['infil', 'etrs', 'eta', 'precip'] # infil change to tot_infil
+        self._outputs = ['infil', 'etrs', 'eta', 'precip', 'kcb'] # infil change to tot_infil
         if write_frequency == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
 
@@ -63,7 +63,7 @@ class Rasters(object):
         self._tabular_dict = recharge.dict_setup.initialize_tabular_dict(polygons, self._outputs, simulation_period,
                                                                          write_frequency)
 
-    def update_raster_obj(self, master, date_object, save_specific_dates=None):
+    def update_raster_obj(self, master, mask_path, date_object, save_specific_dates=None):
         """
         Checks if the date is specified for writing output and calls the write and tabulation methods.
 
@@ -85,8 +85,11 @@ class Rasters(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
         if self._write_freq == 'daily':
             for element in self._daily_outputs:
+                master[element] = remake_array(mask_path, master[element])
                 data_array = master[element]
+                master[element] = apply_mask(mask_path, master[element])
                 self._sum_raster_by_shape(element, date_object, data_array)
+
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
@@ -94,16 +97,20 @@ class Rasters(object):
             print ''
             print 'saving monthly data for {}'.format(date_object)
             for element in self._outputs:
+                master[element] = remake_array(mask_path, master[element])
                 self._update_raster_tracker(master, element, period='monthly')
                 self._write_raster(element, date_object, period='monthly')
+                master[element] = apply_mask(mask_path, master[element])
                 if not self._write_freq:
                     self._sum_raster_by_shape(element, date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in self._outputs:
+                master[element] = remake_array(mask_path, master[element])
                 self._update_raster_tracker(master, element, period='annual')
                 self._write_raster(element, date_object, period='annual')
+                master[element] = apply_mask(mask_path, master[element])
 
         # save tabulated results at end of simulation
         if date_object == self._simulation_period[1]:
@@ -164,10 +171,10 @@ class Rasters(object):
             filename = os.path.join(self._results_dir['root'], self._results_dir['daily_rasters'], file_)
             array_to_save = master[key]
 
-        # elif period == 'simulation':
-        #     file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
-        #     filename = os.path.join(self._results_dir['root'], self._results_dir['simulation_tot_rasters'], file_)
-        #     array_to_save = master[key]
+        elif period == 'simulation':
+            file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
+            filename = os.path.join(self._results_dir['root'], self._results_dir['simulation_tot_rasters'], file_)
+            array_to_save = master[key]
 
         else:
             array_to_save = None
