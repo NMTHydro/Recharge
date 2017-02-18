@@ -37,7 +37,7 @@ import recharge.dict_setup
 
 class Rasters(object):
 
-    def __init__(self, path_to_representative_raster, mask_path, polygons, simulation_period, output_root,
+    def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
                  write_frequency=None):
 
         self._write_freq = write_frequency
