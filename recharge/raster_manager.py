@@ -36,7 +36,6 @@ import recharge.dict_setup
 
 
 class Rasters(object):
-
     def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
                  write_frequency=None):
 
@@ -47,7 +46,7 @@ class Rasters(object):
         # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
         # and thus we assign a list of daily outputs
         # TODO: Hardcoded tot_infil vs invil, tot_etrs vs etrs etc.
-        self._outputs = ['infil', 'etrs', 'eta', 'precip', 'kcb'] # infil change to tot_infil
+        self._outputs = ['infil', 'etrs', 'eta', 'precip', 'kcb']  # infil change to tot_infil
         if write_frequency == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
 
@@ -85,11 +84,8 @@ class Rasters(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
         if self._write_freq == 'daily':
             for element in self._daily_outputs:
-                master[element] = remake_array(mask_path, master[element])
-                data_array = master[element]
-                master[element] = apply_mask(mask_path, master[element])
-                self._sum_raster_by_shape(element, date_object, data_array)
-
+                arr = remake_array(mask_path, master[element])
+                self._sum_raster_by_shape(element, date_object, arr)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
@@ -97,34 +93,26 @@ class Rasters(object):
             print ''
             print 'saving monthly data for {}'.format(date_object)
             for element in self._outputs:
-                master[element] = remake_array(mask_path, master[element])
-                self._update_raster_tracker(master, element, period='monthly')
+                arr = remake_array(mask_path, master[element])
+                self._update_raster_tracker(arr, element, period='monthly')
                 self._write_raster(element, date_object, period='monthly')
-                master[element] = apply_mask(mask_path, master[element])
                 if not self._write_freq:
                     self._sum_raster_by_shape(element, date_object)
 
         # save annual data
         if date_object.day == 31 and date_object.month == 12:
             for element in self._outputs:
-                master[element] = remake_array(mask_path, master[element])
-                self._update_raster_tracker(master, element, period='annual')
+                arr = remake_array(mask_path, master[element])
+                self._update_raster_tracker(arr, element, period='annual')
                 self._write_raster(element, date_object, period='annual')
-                master[element] = apply_mask(mask_path, master[element])
 
         # save tabulated results at end of simulation
         if date_object == self._simulation_period[1]:
             print 'tab dict: \n{}'.format(self._tabular_dict)
             print 'saving the simulation master tracker'
-            # for element in self._outputs:
-            #     self._write_raster(element, date_object, period='simulation', master=master)
-            # for element in ['dr', 'de', 'drew']:
-            #     self._write_raster(master[element], date_object, period='simulation', master=master)
             self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
 
-        return None
-
-    def _update_raster_tracker(self, master_dict, var, period):
+    def _update_raster_tracker(self, vv, var, period):
         """ Updates the cumulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
@@ -135,20 +123,17 @@ class Rasters(object):
         """
 
         if period == 'annual':
-            self._output_tracker['current_year'][var] = master_dict[var] - self._output_tracker['last_yr'][var]
-            self._output_tracker['last_yr'][var] = master_dict[var]
+            self._output_tracker['current_year'][var] = vv - self._output_tracker['last_yr'][var]
+            self._output_tracker['last_yr'][var] = vv
+        elif period == 'monthly':
 
-        if period == 'monthly':
+            self._output_tracker['current_month'][var] = vv - self._output_tracker['last_mo'][var]
 
-            self._output_tracker['current_month'][var] = master_dict[var] - self._output_tracker['last_mo'][var]
-
-            print 'mean value master {} today: {}'.format(var, master_dict[var].mean())
+            print 'mean value master {} today: {}'.format(var, vv.mean())
             print 'mean value output tracker today: {}'.format(self._output_tracker['current_month'][var].mean())
             print 'mean value output tracker yesterday: {}'.format(self._output_tracker['last_mo'][var].mean())
 
-            self._output_tracker['last_mo'][var] = master_dict[var]
-
-        return None
+            self._output_tracker['last_mo'][var] = vv
 
     def _write_raster(self, key, date, period=None, master=None):
 
@@ -189,7 +174,6 @@ class Rasters(object):
         output_band.WriteArray(array_to_save, 0, 0)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
         del out_data_set, output_band
-        return None
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
         """
@@ -246,11 +230,11 @@ class Rasters(object):
 
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (self._geo['resolution'] ** 2)
-                #==========================================================================
+                # ==========================================================================
                 print 'tabular dict: {}'.format(self._tabular_dict)
                 print 'parameter: {}'.format(parameter)
-                #===========================================================================
-                df = self._tabular_dict[region_type][sub_region][parameter, 'CBM'] # <= problem here
+                # ===========================================================================
+                df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']  # <= problem here
 
                 df.loc[date] = param_cubic_meters
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
@@ -299,9 +283,9 @@ class Rasters(object):
                     save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
                                                  '{}.csv'.format(sub_region))
 
-                    #save_loc_month = os.path.join(results_directories['root'],
-                                                  #results_directories['monthly_tabulated'][region_type],
-                                                  #'{}.csv'.format(sub_region))
+                    # save_loc_month = os.path.join(results_directories['root'],
+                    # results_directories['monthly_tabulated'][region_type],
+                    # '{}.csv'.format(sub_region))
                     save_loc_month = os.path.join(results_directories['monthly_tabulated'][region_type],
                                                   '{}.csv'.format(sub_region))
 
