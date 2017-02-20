@@ -218,15 +218,22 @@ class Processes(object):
 
         # ASCE pg 199, Eq 9.27
         plant_exponent = s['plant_height'] * 0.5 + 1  # h varaible, derived from ??
-        numerator_term = maximum(kcb - kc_min, self._ones * 0.001)
-        denominator_term = maximum((kc_max - kc_min), self._ones * 0.001)
+
+        # numerator_term = maximum(kcb - kc_min, self._ones * 0.001)
+        # denominator_term = maximum((kc_max - kc_min), self._ones * 0.001)
+        t = 0.001
+        numerator_term = maximum(kcb-kc_min, t)
+        denominator_term = maximum(kc_max-kc_min, t)
+
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
-        cover_fraction_upper_bound = minimum(cover_fraction_unbound, self._ones)
+        # cover_fraction_upper_bound = minimum(cover_fraction_unbound, self._ones)
+        cover_fraction_upper_bound = minimum(cover_fraction_unbound, 1)
         # ASCE pg 198, Eq 9.26
-        m['fcov'] = fcov = maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
+        # m['fcov'] = fcov = maximum(cover_fraction_upper_bound, self._ones * 0.001)  # covered fraction of ground
+        m['fcov'] = fcov = maximum(cover_fraction_upper_bound, t)  # covered fraction of ground
 
         # m['few'] = maximum(1 - m['fcov'], self._ones * 0.001)  # uncovered fraction of ground
-        m['few'] = few = maximum(1 - fcov, self._ones * 0.001)  # uncovered fraction of ground
+        m['few'] = few = maximum(1 - fcov, t)  # uncovered fraction of ground
 
         ####
         # transpiration:
@@ -237,10 +244,11 @@ class Processes(object):
         ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
 
         # m['ks'] = minimum(m['ks'], self._ones + 0.001) #this 0.001 may be unneeded
-        ks = minimum(ks, self._ones + 0.001)  # this 0.001 may be unneeded
-
+        # ks = minimum(ks, self._ones + 0.001)  # this 0.001 may be unneeded
+        ks = minimum(1+0.001, ks)
         # m['ks'] = maximum(self._zeros, m['ks'])
-        ks = maximum(self._zeros, ks)
+        # ks = maximum(self._zeros, ks)
+        ks = maximum(0, ks)
         m['ks'] = ks
 
         # m['transp'] = m['ks'] * m['kcb'] * m['etrs']
@@ -257,13 +265,13 @@ class Processes(object):
             m['transp_adj'] = True
 
         # m['transp'] = maximum(self._zeros, m['transp'])
-        transp = maximum(self._zeros, transp)
+        transp = maximum(0, transp)
         m['transp'] = transp
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
         # m['kr'] = minimum((s['tew'] - m['pde']) / s['tew'], self._ones) #changed denominator
 
         tew = s['tew']
-        kr = minimum((tew - m['pde']) / tew, self._ones)  # changed denominator
+        kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # m['kr'] *= (1 / m['dry_days'] **2)
@@ -276,7 +284,7 @@ class Processes(object):
         #    m['kr'] = where(m['kr'] < zeros(m['kr'].shape), ones(m['kr'].shape) * 0.01, m['kr'])
         # this is a simpler way
         # m['kr'] = maximum(m['kr'], self._ones * 0.01)
-        kr = maximum(kr, self._ones * 0.01)
+        kr = maximum(kr, 0.01)
         m['kr'] = kr
 
         ####
@@ -285,8 +293,8 @@ class Processes(object):
 
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
         # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
-        st_1_dur = minimum(st_1_dur, self._ones * 0.99)
-        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, self._zeros)
+        st_1_dur = minimum(st_1_dur, 0.99)
+        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
         m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
 
         # ke evaporation efficency; Allen 2011, Eq 13a
@@ -296,7 +304,7 @@ class Processes(object):
         ke = where(ke_init < zeros(ke.shape), zeros(ke.shape) + 0.01, ke)
         ke_adjustment = where(ke_init > few * kc_max, ke / ke_init, self._ones)
 
-        m['ke'] = minimum(ke, self._ones)
+        m['ke'] = minimum(ke, 1)
         m['ke_init'] = ke_init
         # print 'etrs: {}'.format(mm_af(m['etrs']))
 
@@ -337,8 +345,7 @@ class Processes(object):
         # m['swe'] += m['snow_fall']
         m['swe'] += sf
 
-        melt_init = maximum(((1 - palb) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'],
-                            zeros(m['rg'].shape))
+        melt_init = maximum(((1 - palb) * m['rg'] * c['snow_alpha']) + (temp - 1.8) * c['snow_beta'], 0)
 
         m['melt'] = melt = minimum(m['swe'], melt_init)
         m['swe'] -= melt
