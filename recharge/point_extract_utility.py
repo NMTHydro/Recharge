@@ -79,28 +79,29 @@ def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_per
         print name
         geom = feat.GetGeometryRef()
         mx, my = geom.GetX(), geom.GetY()
-        if name == 'Valles_Coniferous':
-            print 'already did Valles Coniferous, skipping....'
-        else:
-            for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
-                if day.timetuple().tm_yday == 01:
-                    print 'year {}'.format(day.year)
-                dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
-                            recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
-                            recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
-                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
-                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
-                            (
-                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
-                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
-                                                                     coords=(mx, my))) / 2.,
-                            recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
+        """Took these last three lines out bc it was skipping Valles Coniferous and we don't want that necessarily."""
+        #if name == 'Valles_Coniferous':
+            #print 'already did Valles Coniferous, skipping....'
+        #else:
+        for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
+            if day.timetuple().tm_yday == 01:
+                print 'year {}'.format(day.year)
+            dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
+                        (
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
+                                                                 coords=(mx, my))) / 2.,
+                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
 
-                df.loc[day] = dynamics
+            df.loc[day] = dynamics
 
-            print 'df for {}: \n{}'.format(name, df)
-            csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
-            df.to_csv(csv_path_filename, na_rep='nan', index_label='Date', header=True)
+        print 'df for {}: \n{}'.format(name, df)
+        csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
+        df.to_csv(csv_path_filename, na_rep='nan', index_label='Date', header=True)
 
     return None
 

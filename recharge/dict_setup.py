@@ -28,8 +28,9 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
-from recharge.raster_tools import convert_raster_to_array
+from recharge.raster_tools import convert_raster_to_array, apply_mask
 from recharge.point_extract_utility import get_inputs_at_point
+
 
 
 """
@@ -62,7 +63,8 @@ def initialize_master_dict(shape=None):
 
     master = dict()
     if shape:  # distributed
-        master['pkcb'] = zeros(shape)
+        #master['pkcb'] = zeros(shape)
+        master['pkcb'] = None
         master['infil'] = zeros(shape)
         master['kcb'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
@@ -77,7 +79,8 @@ def initialize_master_dict(shape=None):
         master['tot_swe'] = zeros(shape)
 
     else:
-        master['pkcb'] = 0.0
+        #master['pkcb'] = 0.0
+        master['pkcb'] = None
         master['infil'] = 0.0
         master['kcb'] = 0.0
         master['infil'] = 0.0
@@ -95,7 +98,7 @@ def initialize_master_dict(shape=None):
     return master
 
 
-def initialize_static_dict(inputs_path, point_dict=None):
+def initialize_static_dict(inputs_path, mask_path=None, point_dict=None):
     """# build list of static rasters from current use file
     # convert rasters to arrays
     # give variable names to each raster"""
@@ -138,12 +141,10 @@ def initialize_static_dict(inputs_path, point_dict=None):
             print key, val
             if val['land_cover'] in [41, 42, 43]:
                 print 'previous tew: {}'.format(val['tew'])
-                val['tew'] = val['tew'] * 0.25 #I think the line below had a typo; Dan, 1/25/17
-                #val['tew'] = val['tew'] * 0.25 + val['rew']
+                val['tew'] *= 0.25
                 print 'adjusted tew: {}'.format(val['tew'])
             elif val['land_cover'] == 52:
-                val['tew'] = val['tew'] * 0.75  #I think the line below had a typo; Dan, 1/25/17
-                #val['tew'] = val['tew'] * 0.75 + val['rew']
+                val['tew'] *= 0.75
 
             if 320.0 < val['taw']:
                 val['taw'] = 320.0
@@ -156,7 +157,10 @@ def initialize_static_dict(inputs_path, point_dict=None):
             val['plant_height'] *= 0.3048
 
     else:
-        static_arrays = [convert_raster_to_array(inputs_path, filename) for filename in statics]
+        print 'statics', statics
+        static_arrays = [apply_mask(mask_path, convert_raster_to_array(inputs_path, filename)) for filename in statics]
+        # static_arrays = [apply_mask(mask_path,static_array) for static_array in static_arrays]
+
         for key, data in zip(static_keys, static_arrays):
             stat_dct[key] = data
 
@@ -184,7 +188,7 @@ def initialize_static_dict(inputs_path, point_dict=None):
                 #                                                                    zeros(data.shape))), min_val)
                 data = where(data < min_val, ones(data.shape) * min_val, data)
 
-            #I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+            # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
             if key == 'plant_height':
                 stat_dct['plant_height'] *= 0.3048
 
@@ -219,20 +223,17 @@ def initialize_static_dict(inputs_path, point_dict=None):
 
         # apply tew adjustment
         _ones = ones(stat_dct['tew'].shape)
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones + stat_dct['rew'],
-                                stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones, stat_dct['tew'])
 
     # print 'static dict keys: \n {}'.format(static_dict.keys())
+
     return stat_dct
 
 
-def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
+def initialize_initial_conditions_dict(initial_inputs_path, mask_path=None, point_dict=None):
     # read in initial soil moisture conditions from spin up, put in dict
 
     initial_cond_keys = ['de', 'dr', 'drew']
@@ -251,7 +252,7 @@ def initialize_initial_conditions_dict(initial_inputs_path, point_dict=None):
             initial_cond_dict[key] = sub
 
     else:
-        initial_cond_arrays = [convert_raster_to_array(initial_inputs_path, filename) for filename in initial_cond]
+        initial_cond_arrays = [apply_mask(mask_path, convert_raster_to_array(initial_inputs_path, filename)) for filename in initial_cond]
         for key, data in zip(initial_cond_keys, initial_cond_arrays):
             data = where(isnan(data), zeros(data.shape), data)
             initial_cond_dict[key] = data

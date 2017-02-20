@@ -25,11 +25,15 @@ dgketchum 24 JUL 2016
 import os
 from numpy import where, isnan
 
-from recharge.raster_tools import convert_raster_to_array
+from recharge.raster_tools import convert_raster_to_array, apply_mask
 import recharge.point_extract_utility
 
+NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
+        225, 241, 257, 273, 289, 305, 321, 337, 353)
+PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 
-def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
+
+def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
     """
     Find NDVI image and convert to Kcb.
 
@@ -42,70 +46,126 @@ def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
     """
     # print date_object
     doy = date_object.timetuple().tm_yday
-    if date_object.year == 2000:
-        raster = '{}_{}.tif'.format(date_object.year, doy)
-        if coords:
-            ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            kcb = ndvi * 1.25
-            return kcb
-        ndvi = convert_raster_to_array(in_path, raster, band=1)
-        kcb = ndvi * 1.25
+    year = date_object.year
 
-    elif date_object.year == 2001:
-        obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
-               225, 241, 257, 273, 289, 305, 321, 337, 353]
-        for num in obj:
+    if year == 2000:
+        band = 1
+        raster = '{}_{}.tif'.format(year, doy)
+    elif year == 2001:
+        for num in NUMS:
             diff = doy - num
             if 0 <= diff <= 15:
-                pos = obj.index(num)
-                start = obj[pos]
-                band = diff + 1
+                start = num
                 if num == 353:
                     nd = num + 12
                 else:
                     nd = num + 15
-                raster = os.path.join(in_path, '{}_{}_{}.tif'.format(date_object.year, start, nd))
-                # raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
-                if coords:
-                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-                    kcb = ndvi * 1.25
-                    return kcb
-                ndvi = convert_raster_to_array(in_path, raster, band=band)
-                kcb = ndvi * 1.25
 
+                band = diff + 1
+                raster = '{}_{}_{}.tif'.format(year, start, nd)
+                break
     else:
-        obj = [1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
-               225, 241, 257, 273, 289, 305, 321, 337, 353]
-        for num in obj:
+        for i, num in enumerate(NUMS):
             diff = doy - num
             if 0 <= diff <= 15:
-                pos = obj.index(num)
                 band = diff + 1
+                raster = '{}_{}.tif'.format(year, i + 1)
+                break
 
-                # if num == 353:
-                #     nd = num + 12
-                # else:
-                #     nd = num + 15
+    if coords:
+        ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+        kcb = ndvi * 1.25
+        return kcb
 
-                raster = os.path.join(in_path, '{}_{}.tif'.format(date_object.year, pos + 1))
-                # raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
-                if coords:
-                    ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-                    kcb = ndvi * 1.25
-                    return kcb
-                ndvi = convert_raster_to_array(in_path, raster, band=band)
-                kcb = ndvi * 1.25
-
-    if previous_kcb is None:
-        pass
     else:
-        kcb = where(isnan(kcb) == True, previous_kcb, kcb)
-        kcb = where(abs(kcb) > 100., previous_kcb, kcb)
+        ndvi = apply_mask(mask_path, convert_raster_to_array(in_path, raster, band=band))
 
-    return kcb
+        kcb = ndvi * 1.25
+
+        if previous_kcb is None:
+            pass
+        else:
+            kcb = where(isnan(kcb) is True, previous_kcb, kcb)
+            kcb = where(abs(kcb) > 100., previous_kcb, kcb)
+
+        return kcb
 
 
-def get_prism(in_path, date_object, variable='precip', coords=None):
+# def get_kcb(in_path, date_object, previous_kcb=None, coords=None):
+#     """
+#     Find NDVI image and convert to Kcb.
+#
+#     :param in_path: NDVI input data path.
+#     :type in_path: str
+#     :param date_object: Datetime object of date.
+#     :param previous_kcb: Previous day's kcb value.
+#     :param coords: Call if using to get point data using point_extract_utility.
+#     :return: numpy array object
+#     """
+#     # print date_object
+#     doy = date_object.timetuple().tm_yday
+#     if date_object.year == 2000:
+#         raster = '{}_{}.tif'.format(date_object.year, doy)
+#         if coords:
+#             ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+#             kcb = ndvi * 1.25
+#             return kcb
+#         ndvi = convert_raster_to_array(in_path, raster, band=1)
+#         kcb = ndvi * 1.25
+#
+#     elif date_object.year == 2001:
+#         for pos, num in enumerate(NUMS):
+#             diff = doy - num
+#             if 0 <= diff <= 15:
+#                 # pos = obj.index(num)
+#                 # start = obj[pos]
+#                 start = num
+#                 band = diff + 1
+#                 if num == 353:
+#                     nd = num + 12
+#                 else:
+#                     nd = num + 15
+#                 raster = os.path.join(in_path, '{}_{}_{}.tif'.format(date_object.year, start, nd))
+#                 # raster = '{a}\\{b}_{c}_{d}.tif'.format(a=in_path, b=date_object.year, c=start, d=nd)
+#                 if coords:
+#                     ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+#                     kcb = ndvi * 1.25
+#                     return kcb
+#                 ndvi = convert_raster_to_array(in_path, raster, band=band)
+#                 kcb = ndvi * 1.25
+#
+#     else:
+#
+#         for num in obj:
+#             diff = doy - num
+#             if 0 <= diff <= 15:
+#                 pos = obj.index(num)
+#                 band = diff + 1
+#
+#                 # if num == 353:
+#                 #     nd = num + 12
+#                 # else:
+#                 #     nd = num + 15
+#
+#                 raster = os.path.join(in_path, '{}_{}.tif'.format(date_object.year, pos + 1))
+#                 # raster = '{a}\\{b}_{c}.tif'.format(a=in_path, b=date_object.year, c=pos + 1, d=nd)
+#                 if coords:
+#                     ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+#                     kcb = ndvi * 1.25
+#                     return kcb
+#                 ndvi = convert_raster_to_array(in_path, raster, band=band)
+#                 kcb = ndvi * 1.25
+#
+#     if previous_kcb is None:
+#         pass
+#     else:
+#         kcb = where(isnan(kcb) == True, previous_kcb, kcb)
+#         kcb = where(abs(kcb) > 100., previous_kcb, kcb)
+#
+#     return kcb
+#
+
+def get_prism(mask_path, in_path, date_object, variable='precip', coords=None):
     """
     Find PRISM image.
 
@@ -118,57 +178,34 @@ def get_prism(in_path, date_object, variable='precip', coords=None):
     :type coords: str
     :return: numpy array object
     """
+    year = date_object.year
+    tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
+
     if variable == 'precip':
 
-        path = os.path.join(in_path, 'precip', '800m_std_all')  # this will need to be fixed
-        raster = 'PRISMD2_NMHW2mi_{}{}{}.tif'.format(date_object.year,
-                                                     str(date_object.month).rjust(2, '0'),
-                                                     str(date_object.day).rjust(2, '0'))
-        if coords:
-            ppt = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-            return ppt
-        # print 'ppt raster: {}'.format(raster)
-        ppt = convert_raster_to_array(path, raster)
-
-        return ppt
+        root = os.path.join(in_path, 'precip', '800m_std_all')  # this will need to be fixed
+        raster = 'PRISMD2_NMHW2mi_{}'.format(tail)
 
     elif variable == 'min_temp':
-        if date_object.year in [2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]:
-            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
-            raster = 'cai_tmin_us_us_30s_{}{}{}.tif'.format(date_object.year,
-                                                            str(date_object.month).rjust(2, '0'),
-                                                            str(date_object.day).rjust(2, '0'))
-            if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-                return min_temp
-
-            min_temp = convert_raster_to_array(path, raster)
-
+        root = os.path.join(in_path, 'Temp', 'Minimum_standard')
+        if year in PRISM_YEARS:
+            raster = 'cai_tmin_us_us_30s_{}'.format(tail)
         else:
-            path = os.path.join(in_path, 'Temp', 'Minimum_standard')
-            raster = 'TempMin_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
-                                                           str(date_object.month).rjust(2, '0'),
-                                                           str(date_object.day).rjust(2, '0'))
-            if coords:
-                min_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-                return min_temp
-            min_temp = convert_raster_to_array(path, raster)
+            raster = 'TempMin_NMHW2Buff_{}'.format(tail)
 
-        return min_temp
+    elif variable == 'max_temp':
+        root = os.path.join(in_path, 'Temp', 'Maximum_standard')
+        raster = 'TempMax_NMHW2Buff_{}'.format(tail)
 
-    if variable == 'max_temp':
-        path = os.path.join(in_path, 'Temp', 'Maximum_standard')
-        raster = 'TempMax_NMHW2Buff_{}{}{}.tif'.format(date_object.year,
-                                                       str(date_object.month).rjust(2, '0'),
-                                                       str(date_object.day).rjust(2, '0'))
-        if coords:
-            max_temp = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(path, raster))
-            return max_temp
-        max_temp = convert_raster_to_array(path, raster)
-        return max_temp
+    if coords:
+        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(root, raster))
+    else:
+        ret = convert_raster_to_array(root, raster)
+
+    return apply_mask(mask_path, ret)
 
 
-def get_penman(in_path, date_object, variable='etrs', coords=None):
+def get_penman(mask_path, in_path, date_object, variable='etrs', coords=None):
     """
     Find PENMAN image.
 
@@ -182,35 +219,23 @@ def get_penman(in_path, date_object, variable='etrs', coords=None):
     :return: numpy array object
     """
 
-    doy = date_object.timetuple().tm_yday
-    doy = '{:03n}'.format(doy)
+    year = date_object.year
+    tail = '{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
 
     if variable == 'etrs':
-        raster = os.path.join('PM{}'.format(date_object.year), 'PM_NM_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'PM{}\\PM_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            etrs = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return etrs
-        etrs = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail))
 
-        return etrs
     elif variable == 'rlin':
-        raster = os.path.join('PM{}'.format(date_object.year), 'RLIN_NM_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'PM{}\\RLIN_NM_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            rlin = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return rlin
-        rlin = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail))
 
-        return rlin
     elif variable == 'rg':
-        raster = os.path.join('rad{}'.format(date_object.year), 'RTOT_{}_{}.tif'.format(date_object.year, doy))
-        # raster = 'rad{}\\RTOT_{}_{}.tif'.format(date_object.year, date_object.year, str(doy).rjust(3, '0'))
-        if coords:
-            rg = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
-            return rg
-        rg = convert_raster_to_array(in_path, raster)
+        raster = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
 
-        return rg
+    if coords:
+        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+    else:
+        ret = convert_raster_to_array(in_path, raster)
+
+    return apply_mask(mask_path, ret)
 
 # ============= EOF =============================================

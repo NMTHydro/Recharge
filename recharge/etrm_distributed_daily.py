@@ -40,11 +40,17 @@ save_outputs = []
 
 
 def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, statics, initials,
-                             clip_polygons, tabulation_frequency='daily'):
+                             mask_path, clip_polygons, tabulation_frequency='daily'):
 
-    etrm = Processes(date_range, raster_out_data, clip_polygons, statics, initials, write_freq=tabulation_frequency)
-
-    etrm.run(ndvi, prism, penman)
+    etrm = Processes(date_range, mask_path,
+                     output_root=raster_out_data,
+                     polygons=clip_polygons,
+                     static_inputs=statics,
+                     initial_inputs=initials,
+                     )
+    etrm.run(ndvi_path=ndvi, prism_path=prism, penman_path=penman)
+    #etrm = Processes(date_range, raster_out_data, mask_path, clip_polygons, statics, initials, write_freq=tabulation_frequency)
+    #etrm.run(mask_path, ndvi, prism, penman)
 
     return None
 
@@ -54,17 +60,19 @@ if __name__ == '__main__':
     print 'home: {}'.format(home)
     root = os.path.join(home)
     #initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'Array_Results', 'initialize')
-    initial_conditions_path = os.path.join(os.path.abspath(os.sep), '/Volumes/Seagate Backup Plus Drive', 'ETRM_Inputs', 'initialize')
-    dynamic_inputs_path = os.path.join('/Volumes/Seagate Backup Plus Drive', 'ETRM_Inputs')
+    initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'F:\\', 'ETRM_Inputs', 'initialize')
+    dynamic_inputs_path = os.path.join('F:\\', 'ETRM_Inputs')
     static_inputs_path = os.path.join(dynamic_inputs_path, 'statics')
     ndvi_path = os.path.join(dynamic_inputs_path, 'NDVI', 'NDVI_std_all')
     prism_path = os.path.join(dynamic_inputs_path, 'PRISM')
     penman_path = os.path.join(dynamic_inputs_path, 'PM_RAD')
+    mask_path = os.path.join(dynamic_inputs_path, 'Mask')
     # output_polygons does any "name_Polygons" subfolder in the NM_Geo_Shapes directory
-    output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
-    output_path = os.path.join('/Volumes/Seagate Backup Plus Drive', 'ETRM_Results')
-    simulation_period = datetime(2013, 1, 1), datetime(2013, 12, 31)
+    #output_polygons = os.path.join(dynamic_inputs_path, 'NM_Geo_Shapes')
+    output_polygons = os.path.join(dynamic_inputs_path, 'Blank_Geo')
+    output_path = os.path.join('F:\\', 'ETRM_Results')
+    simulation_period = datetime(2013, 12, 29), datetime(2013, 12, 31)
     get_distributed_recharge(simulation_period, ndvi_path, prism_path, penman_path, output_path,
-                             static_inputs_path, initial_conditions_path, output_polygons)
+                             static_inputs_path, initial_conditions_path,  mask_path, output_polygons)
 
 # ============= EOF =============================================
