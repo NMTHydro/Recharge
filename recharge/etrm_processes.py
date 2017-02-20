@@ -21,7 +21,7 @@ from dateutil import rrule
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
 
-from recharge.raster_manager import Rasters
+from recharge.raster_manager import RasterManager
 from recharge.dynamic_raster_finder import get_penman, get_prism, get_kcb
 from tools import millimeter_to_acreft as mm_af
 
@@ -35,7 +35,7 @@ def add_extension(p, ext='.txt'):
 def time_it(func, *args, **kw):
     st = time.time()
     ret = func(*args, **kw)
-    print '######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time()-st)
+    print '######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time() - st)
     return ret
 
 
@@ -66,7 +66,7 @@ class Processes(object):
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        self._constants = set_constants()
+        self._constants = time_it(set_constants)
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
@@ -75,21 +75,23 @@ class Processes(object):
         static_inputs = os.path.join(input_root, 'statics'),
         initial_inputs = os.path.join(input_root, 'initialize')
 
-        self._static = initialize_static_dict(static_inputs, self._mask_path)
-        self._initial = initialize_initial_conditions_dict(initial_inputs, self._mask_path)
+        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
         self._shape = self._static['taw'].shape
+        self._initial = time_it(initialize_initial_conditions_dict, initial_inputs, self._mask_path)
+        self._master = time_it(initialize_master_dict, self._shape)
+
         self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster = Rasters(static_inputs, polygons, date_range, output_root, write_freq)  # self._outputs
-        self._master = initialize_master_dict(self._shape)
+        self._raster_manager = RasterManager(static_inputs, polygons, date_range, output_root,
+                                             write_freq)  # self._outputs
 
         self._ndvi = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
         self._prism = os.path.join(input_root, 'PRISM')
         self._penman = os.path.join(input_root, 'PM_RAD')
         self._start_date, self._end_date = date_range
 
-    def run(self, sensitivity_matrix_column=None, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
-
         time_it(self.initialize)
+
+    def run(self, sensitivity_matrix_column=None, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
 
         start, end = self._start_date, self._end_date
         self._info('Simulation period: start={}, end={}'.format(start, end))
@@ -97,6 +99,7 @@ class Processes(object):
         c = self._constants
         m = self._master
         s = self._static
+        rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
 
@@ -129,23 +132,25 @@ class Processes(object):
             if swb_mode == 'fao':
                 time_it(self._do_fao_soil_water_balance, m, s, apply_rofrac)
             elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance,apply_rofrac, allen_ceff)
+                time_it(self._do_vert_soil_water_balance, apply_rofrac, allen_ceff)
 
             time_it(self._do_mass_balance, day, swb=swb_mode)
 
-            time_it(self._do_accumulations())
+            time_it(self._do_accumulations)
 
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            time_it(self._raster.update_raster_obj, m, self._mask_path, day)
-            time_it(self._update_master_tracker(day))
+            time_it(rm.update_raster_obj, m, self._mask_path, day)
+            time_it(self._update_master_tracker, day)
 
             m['first_day'] = False
 
+        time_it(rm.save_csv)
+
         self._info('saving tabulated data')
         self.save_tracker()
-        self._info('Execution time: {}'.format(time.time()-st))
+        self._info('Execution time: {}'.format(time.time() - st))
 
     def initialize(self):
         m = self._master
@@ -156,13 +161,13 @@ class Processes(object):
         # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
         # by method of Ritchie et al (1989), rew derived from percent sand/clay
         m['dry_days'] = self._ones
-        s = self._static
 
         m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
         m['pde'], m['de'] = self._initial['de'], self._initial['de']
         m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
-        for key in ('rew', 'tew','taw', 'soil_ksay'):
+        s = self._static
+        for key in ('rew', 'tew', 'taw', 'soil_ksay'):
             v = s[key]
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
@@ -455,54 +460,87 @@ class Processes(object):
 
         water = m['rain'] + m['melt']
 
-        m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
+        # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
+        dd = m['dry_days']
+        dd[water < 0.1] = dd + 1
+        dd[water >= 0.1] = 1
+        m['dry_days'] = dd
 
         # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
 
-        m['pdr'] = m['dr']
-        m['pde'] = m['de']
-        m['pdrew'] = m['drew']
+        m['pdr'] = pdr = m['dr']
+        m['pde'] = pde = m['de']
+        m['pdrew'] = pdrew = m['drew']
 
         # print 'rain: {}, melt: {}, water: {}'.format(mm_af(m['rain']),
         #                                              mm_af(m['melt']), mm_af(water))
 
-        m['soil_ksat'] = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
+        m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
         # impose limits on vaporization according to present depletions #
         # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
-        m['evap_1'] = where(m['evap_1'] > s['rew'] - m['pdrew'], s['rew'] - m['drew'], m['evap_1'])
-        m['evap_1'] = where(m['evap_1'] < 0.0, zeros(m['evap_1'].shape), m['evap_1'])
-        m['evap_2'] = where(m['evap_2'] > s['tew'] - m['pde'], s['tew'] - m['pde'], m['evap_2'])
-        m['evap_2'] = where(m['evap_2'] < 0.0, zeros(m['evap_2'].shape), m['evap_2'])
-        m['transp'] = where(m['transp'] > s['taw'] - m['pdr'], s['taw'] - m['dr'], m['transp'])
+        evap_1 = m['evap_1']
 
-        m['evap'] = m['evap_1'] + m['evap_2']
-        m['eta'] = m['transp'] + m['evap_1'] + m['evap_2']
+        dv = s['rew'] - pdrew
+        evap_1 = where(evap_1 > dv, dv, evap_1)
+        evap_1[evap_1 < 0] = 0
+
+        evap_2 = m['evap_2']
+        dv = s['tew'] - pde
+
+        evap_2 = where(evap_2 > dv, dv, evap_2)
+        evap_2[evap_2 < 0] = 0
+
+        transp = m['transp']
+        dv = s['taw'] - m['pdr']
+        # transp[transp > dv] = dv
+        # m['transp'] = where(m['transp'] > s['taw'] - m['pdr'], s['taw'] - m['dr'], m['transp'])
+        transp = where(transp > dv, dv, transp)
+
+        m['evap'] = evap_1 + evap_2
+        m['eta'] = transp + evap_1 + evap_2
 
         # print 'evap 1: {}, evap_2: {}, transpiration: {}'.format(mm_af(m['evap_1']), mm_af(m['evap_2']),
         #                                                          mm_af(m['transp']))
 
         # water balance through skin layer #
-        m['drew'] = where(water >= m['pdrew'] + m['evap_1'], self._zeros, m['pdrew'] + m['evap_1'] - water)
-        water = where(water < m['pdrew'] + m['evap_1'], self._zeros, water - m['pdrew'] - m['evap_1'])
+        drew = where(water >= pdrew + evap_1, self._zeros, pdrew + evap_1 - water)
+        water = where(water < pdrew + evap_1, self._zeros, water - pdrew - evap_1)
         # print 'water through skin layer: {}'.format(mm_af(water))
-        m['ro'] = where(water > m['soil_ksat'], water - m['soil_ksat'], self._zeros)
-        water = where(water > m['soil_ksat'], m['soil_ksat'], water)
+
+        # m['ro'] = where(water > soil_ksat, water - soil_ksat, self._zeros)
+        ro = m['ro']
+        ro[water > soil_ksat] = water - soil_ksat
+        ro[water <= soil_ksat] = 0
+        m['ro'] = ro
+
+        # water = where(water > m['soil_ksat'], m['soil_ksat'], water)
+        water[water > soil_ksat] = soil_ksat
 
         # water balance through the stage 2 evaporation layer #
-        m['de'] = where(water >= m['pde'] + m['evap_2'], self._zeros, m['pde'] + m['evap_2'] - water)
+        v = pde + evap_2
+        de = where(water >= v, self._zeros, v - water)
 
-        water = where(water < m['pde'] + m['evap_2'], self._zeros, water - (m['pde'] + m['evap_2']))
+        water = where(water < v, self._zeros, water - v)
         # print 'water through  de  layer: {}'.format(mm_af(water))
 
         # water balance through the root zone layer #
-        m['infil'] = where(water >= m['pdr'] + m['transp'], water - m['pdr'] - m['transp'], self._zeros)
-        # print 'deep percolation total: {}'.format(mm_af(m['infil']))
-        m['dr'] = where(water >= m['pdr'] + m['transp'], self._zeros, m['pdr'] + m['transp'] - water)
+        v = pdr + transp
+        m['infil'] = where(water >= v, water - pdr - transp, self._zeros)
 
-        m['soil_storage'] = ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
+        # print 'deep percolation total: {}'.format(mm_af(m['infil']))
+        dr = where(water >= v, self._zeros, v - water)
+
+        m['soil_storage'] = ((pdr - dr) + (pde - de) + (pdrew - drew))
+
+        m['drew'] = drew
+        m['de'] = de
+        m['dr'] = dr
+        m['evap_1'] = evap_1
+        m['evap_2'] = evap_2
+        m['transp'] = transp
 
     def _do_accumulations(self):
         """ This function simply accumulates all terms.
@@ -554,26 +592,42 @@ class Processes(object):
 
         melt = m['melt']
         rain = m['rain']
-        ro = m['ro']
-        transp = m['transp']
-        evap = m['evap']
-        infil = m['infil']
+        # ro = m['ro']
+        # transp = m['transp']
+        # evap = m['evap']
+        # infil = m['infil']
 
-        mass = rain + melt - ro + transp + evap + infil
-        if swb == 'fao':
-            mass -= (m['pdr'] - m['dr'])
-        elif swb == 'vertical':
-            mass -= ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) + (m['pdrew'] - m['drew']))
+        ddr = m['pdr'] - m['dr']
+        dde = m['pde'] - m['de']
+        ddrew = m['pdrew'] - m['drew']
+
+        b = 0
+        if swb == 'vertical':
+            b = dde + ddrew
+
+        a = m['ro'] + m['transp'] + m['evap'] + m['infil'] + ddr + b
+        mass = rain + melt - a
+        # mass = rain + melt - ro + transp + evap + infil - ddr
+
+        # if swb == 'fao':
+        #     m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
+        #                              (m['pdr'] - m['dr']))
+        # elif swb == 'vertical':
+        #     m['mass'] = m['rain'] + m['melt'] - (m['ro'] + m['transp'] + m['evap'] + m['infil'] +
+        #                                      ((m['pdr'] - m['dr']) + (m['pde'] - m['de']) +
+        #                                       (m['pdrew'] - m['drew'])))
+        # if swb == 'vertical':
+        # mass -= (m['pde'] - m['de']) + (m['pdrew'] - m['drew'])
 
         m['mass'] = mass
         # print 'mass from _do_mass_balance: {}'.format(mm_af(m['mass']))
         # if date == self._date_range[0]:
         #     # print 'zero mass balance first day'
         #     m['mass'] = zeros(m['mass'].shape)
-        m['tot_mass'] =tot_mass= abs(mass) + m['tot_mass']
+        m['tot_mass'] = tot_mass = abs(mass) + m['tot_mass']
         self._debug('total mass balance error: {}'.format(mm_af(tot_mass)))
 
-    def _do_daily_raster_load(self,  date):
+    def _do_daily_raster_load(self, date):
         """ Find daily raster image for each ETRM input.
 
         param date: datetime.day object
@@ -626,18 +680,7 @@ class Processes(object):
         m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, date):
-        # master_keys_sorted = m.keys()
-        # master_keys_sorted.sort()
-        # print 'master keys sorted: {}, length {}'.format(master_keys_sorted, len(master_keys_sorted))
-
         m = self._master
-        # tracker_from_master = []
-        # for key in sorted(m):
-        #     try:
-        #         tracker_from_master.append(mm_af(m[key]))
-        #     except AttributeError:
-        #         # this is to handle the non-float (e.g. boolean) parameters which can't be converted to AF
-        #         tracker_from_master.append(m[key])
 
         def factory(k):
             v = m[k]
@@ -656,32 +699,51 @@ class Processes(object):
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
+
+        s1 = tracker['evap_1'].sum()
+        s2 = tracker['evap_2'].sum()
+        et = tracker['evap'].sum()
+        ts = tracker['transp'].sum()
+
+        ps = tracker['precip'].sum()
+        rs = tracker['rain'].sum()
+        ms = tracker['melt'].sum()
+        ros = tracker['ro'].sum()
+        infils = tracker['infil'].sum()
+
         # print 'summary stats for {}:\n{}'.format(name, tracker.describe())
         print '---------------------------------Tracker Summary--------------------------------'
         print 'a look at vaporization:'
-        print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(tracker['evap_1'].sum(),
-                                                                                        tracker['evap_2'].sum(),
-                                                                                        tracker['evap_1'].sum() +
-                                                                                        tracker['evap_2'].sum(),
-                                                                                        tracker['evap'].sum())
-        print 'total transpiration = {}'.format(tracker['transp'].sum())
-        depletions = ['drew', 'de', 'dr']
-        capacities = [s['rew'], s['tew'], s['taw']]
+        print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(s1, s2, s1 + s2, et)
+        print 'total transpiration = {}'.format(ts)
+
+        depletions = ('drew', 'de', 'dr')
+        capacities = (s['rew'], s['tew'], s['taw'])
+
         starting_water = sum((x - tracker[y][0] for x, y in zip(capacities, depletions)))
         ending_water = sum((x - tracker[y][-1] for x, y in zip(capacities, depletions)))
+
         delta_soil_water = ending_water - starting_water
         print 'soil water change = {}'.format(delta_soil_water)
-        print 'input precip = {}, rain = {}, melt = {}'.format(tracker['precip'].sum(), tracker['rain'].sum(),
-                                                               tracker['melt'].sum())
-        print 'remaining snow on ground (swe) = {}'.format(tracker['swe'][-1])
 
-        input_sum = tracker['swe'][-1] + tracker['melt'].sum() + tracker['rain'].sum()
+        print 'input precip = {}, rain = {}, melt = {}'.format(ps, rs, ms)
 
-        print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, tracker['precip'].sum())
+        rswe = tracker['swe'][-1]
+        print 'remaining snow on ground (swe) = {}'.format(rswe)
+
+        # input_sum = tracker['swe'][-1] + tracker['melt'].sum() + tracker['rain'].sum()
+        input_sum = rswe + ms + rs
+
         print 'total inputs (swe, rain, melt): {}'.format(input_sum)
-        print 'total runoff = {}, total recharge = {}'.format(tracker['ro'].sum(), tracker['infil'].sum())
+        print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, ps)
+        print 'total runoff = {}, total recharge = {}'.format(ros, infils)
 
-        output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
+        # output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
+        # output_sum = reduce(lambda a, b: a + b, (sum(tracker[k]) for k in ('transp', 'evap', 'ro', 'infil')))
+        # output_sum = sum(sum(tracker[k]) for k in ('transp', 'evap', 'ro', 'infil'))
+        output_sum = ts + et + ros + infils
+
+        # output_sum = sum((tracker[k] for k in ('transp', 'evap', 'ro', 'infil')))
         output_sum += delta_soil_water + tracker['swe'][-1]  # added swe to output_sum; Dan, 2/11/17
 
         # output_sum = tracker['transp'].sum() + tracker['evap'].sum() + tracker['ro'].sum() + tracker[
@@ -824,7 +886,7 @@ class Processes(object):
 #         if point_dict:
 #             self._update_point_tracker(day)
 #         else:
-#             self._raster.update_raster_obj(m, day)
+#             self._raster_manager.update_raster_obj(m, day)
 #             self._update_master_tracker(day)
 #
 #         if point_dict and day == end_date:
