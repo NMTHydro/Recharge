@@ -81,7 +81,16 @@ def remake_array(mask_path, arr):
 
     return out
 
-def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+
+def save_daily_pts(wfile, day, data):
+    print('Saving daily NDVI data for {}'.format(day.strftime('%Y-%m-%d')))
+
+    datestr = day.strftime('%Y,%m,%d')
+    for datum in data:
+        wfile.write('{},{}\n'.format(datestr, ','.join(datum)))
+
+
+def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
 
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
