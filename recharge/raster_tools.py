@@ -81,6 +81,25 @@ def remake_array(mask_path, arr):
 
     return out
 
+def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+
+    year = day.strftime('%Y')
+    this_month = day.strftime('%m')
+    month_day = day.strftime('%d')
+    print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
+    for a, b, c, d, e, f, g, h, i in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+        with open(filename, "a") as wfile:
+            wfile.write('{},{},{},{},{},{},{},{},{},{},{},{} \n'.format(year, this_month, month_day, a, b, c, d, e, f, g, h, i))
+
+
+# def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+#     year = day.strftime('%Y')
+#     this_month = day.strftime('%m')
+#     month_day = day.strftime('%d')
+#     for datum in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+#         with open(filename, "a") as wfile:
+#             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
+
 
 def make_results_dir(out_root, shapes):
     """
