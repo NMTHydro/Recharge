@@ -22,7 +22,7 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-from numpy import zeros, isnan, count_nonzero, where, ones, median
+from numpy import zeros, isnan, count_nonzero, where, ones, median, minimum
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
@@ -31,14 +31,14 @@ from osgeo import ogr
 from recharge.raster_tools import convert_raster_to_array, apply_mask
 from recharge.point_extract_utility import get_inputs_at_point
 
-
-
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
 kc_max is from ASCE pg 225 Eq 10.3b (1.05 to 1.3 given range)
 et_depletion_factor ASCE pg 226 (0.3 to 0.7 given range) 0.5 common for ag crops
     can adjust p for ETc as eq on ASCE pg. 392
 """
+
+
 def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.01,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
@@ -63,7 +63,7 @@ def initialize_master_dict(shape=None):
 
     master = dict()
     if shape:  # distributed
-        #master['pkcb'] = zeros(shape)
+        # master['pkcb'] = zeros(shape)
         master['pkcb'] = None
         master['infil'] = zeros(shape)
         master['kcb'] = zeros(shape)
@@ -79,7 +79,7 @@ def initialize_master_dict(shape=None):
         master['tot_swe'] = zeros(shape)
 
     else:
-        #master['pkcb'] = 0.0
+        # master['pkcb'] = 0.0
         master['pkcb'] = None
         master['infil'] = 0.0
         master['kcb'] = 0.0
@@ -98,139 +98,73 @@ def initialize_master_dict(shape=None):
     return master
 
 
-def initialize_static_dict(inputs_path, mask_path=None, point_dict=None):
-    """# build list of static rasters from current use file
-    # convert rasters to arrays
-    # give variable names to each raster"""
-
+def initialize_static_dict(inputs_path, mask_path):
     print 'static inputs path: {}'.format(inputs_path)
 
-    # define NLCD land cover land use with a dict of classifications
-    # the following is for reference:
-    # land_classes = {'unclssified': 1, 'open_water': 11, 'developed_open': 21, 'developed_low': 22,
-    #                 'developed_med': 23, 'developed_high': 24, 'barren': 31, 'deciduous': 41,
-    #                 'evergreen': 42, 'mixed_forest': 43, 'shrub_scrub': 52, 'grassland': 71,
-    #                 'pasture_hay': 81, 'cultivated': 82, 'woody_wetlands': 90}
+    statics = sorted((fn for fn in os.listdir(inputs_path) if fn.endswith('.tif')))
 
-    # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
-    static_keys = ['bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw',
-                   'tew']
-    statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
-    # print 'len static keys: {} len statics:{}'.format(len(static_keys), len(statics))
+    d = {}
+    gdict = globals()
+    keys = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
+    for k, fn in zip(keys, statics):
+        arr = apply_mask(mask_path, convert_raster_to_array(inputs_path, fn))
 
-    stat_dct = {}
-    statics = sorted(statics, key=lambda s: s.lower())
+        try:
+            arr = gdict['initial_{}'.format(k)](arr)
+        except KeyError:
+            pass
 
-    if point_dict:
-        # print 'point dict: {}'.format(point_dict)
-        for key, val in point_dict.iteritems():
-            try:
-                coords = val['Coords']
-            except KeyError:
-                coords = point_dict['Coords']
-            except TypeError:
-                coords = point_dict['Coords']
-            sub = {}
-            for filename, value in zip(statics, static_keys):
-                full_path = os.path.join(inputs_path, filename)
-                sub[value] = get_inputs_at_point(coords, full_path)
-            stat_dct[key] = sub
-        print 'static dict {}'.format(stat_dct)
+        d[k] = arr
 
-        for key, val in stat_dct.iteritems():
-            print key, val
-            if val['land_cover'] in [41, 42, 43]:
-                print 'previous tew: {}'.format(val['tew'])
-                val['tew'] *= 0.25
-                print 'adjusted tew: {}'.format(val['tew'])
-            elif val['land_cover'] == 52:
-                val['tew'] *= 0.75
+    q = d['quat_deposits']
+    taw = d['taw']
+    tew = d['tew']
+    land_cover = d['land_cover']
 
-            if 320.0 < val['taw']:
-                val['taw'] = 320.0
-            if 50.0 > val['taw']:
-                val['taw'] = 50.0
-            if val['taw'] < val['tew'] + val['rew']:
-                val['taw'] = val['tew'] + val['rew']
-            # I think the plant height raster is in ft instead of meters; DC, 2/6/2017
-            # and I don't think Allen's equation is a good way to get the fraction covered (f_cov) in a forest anyway.
-            val['plant_height'] *= 0.3048
+    # apply high TAW to unconsolidated Quaternary deposits
+    min_val = 250
+    taw = where(q > 0.0, min_val, taw)
 
-    else:
-        print 'statics', statics
-        static_arrays = [apply_mask(mask_path, convert_raster_to_array(inputs_path, filename)) for filename in statics]
-        # static_arrays = [apply_mask(mask_path,static_array) for static_array in static_arrays]
+    # apply bounds to TAW
+    min_val = 50.0
+    max_val = 320.0
 
-        for key, data in zip(static_keys, static_arrays):
-            stat_dct[key] = data
+    data = d['taw']
+    taw = where(data < min_val, min_val, taw)
+    taw = where(data > max_val, max_val, taw)
 
-        for key, data in zip(static_keys, static_arrays):
-            if key == 'tew':
-                min_val = 10
-                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                #                                                                    ones(data.shape),
-                #                                                                    zeros(data.shape))), min_val)
+    v = tew + d['rew']
+    taw = where(taw < v, v, taw)
 
-                # apply a minimum tew
-                data = where(data <= min_val, ones(data.shape) * min_val, data)
+    non_zero = count_nonzero(data < min_val)
+    print 'taw has {} cells below the minimum'.format(non_zero, min_val)
+    print 'taw median: {}, mean {}, max {}, min {}'.format(median(taw), taw.mean(), taw.max(), taw.min())
+    d['taw'] = taw
 
-            if key == 'soil_ksat':
-                min_val = 20
-                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                #                                                                    ones(data.shape),
-                #                                                                    zeros(data.shape))), min_val)
-                data = where(data <= min_val, ones(data.shape) * min_val, data)
+    # apply tew adjustment
+    tew = where(land_cover == 41, tew * 0.25, tew)
+    tew = where(land_cover == 42, tew * 0.25, tew)
+    tew = where(land_cover == 43, tew * 0.25, tew)
+    d['tew'] = where(land_cover == 52, tew * 0.75, tew)
 
-            if key == 'root_z':
-                min_val = 100
-                # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
-                #                                                                    ones(data.shape),
-                #                                                                    zeros(data.shape))), min_val)
-                data = where(data < min_val, ones(data.shape) * min_val, data)
+    return d
 
-            # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
-            if key == 'plant_height':
-                stat_dct['plant_height'] *= 0.3048
 
-            # apply high TAW to unconsolidated Quaternary deposits
-            if key == 'quat_deposits':
-                min_val = 250
-                # print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
-                #                                                         ones(data.shape),
-                #                                                         zeros(data.shape))), min_val)
+def initial_plant_height(arr):
+    # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+    return arr * 0.3048
 
-                stat_dct['taw'] = where(data > 0.0, ones(data.shape) * min_val, stat_dct['taw'])
 
-            # apply bounds to TAW
-            if key == 'taw':
+def initial_root_z(arr):
+    return minimum(arr, 100)
 
-                min_val = 50.0
-                max_val = 320.0
-                stat_dct['taw'] = where(data < min_val, ones(data.shape) * min_val, stat_dct['taw'])
-                stat_dct['taw'] = where(data > max_val, ones(data.shape) * max_val, stat_dct['taw'])
-                stat_dct['taw'] = where(stat_dct['taw'] < stat_dct['tew'] + stat_dct['rew'],
-                                        stat_dct['tew'] + stat_dct['rew'],
-                                        stat_dct['taw'])
 
-                print '{} has {} cells below the minimum'.format(key, count_nonzero(where(data < min_val,
-                                                                                          ones(data.shape),
-                                                                                          zeros(data.shape))), min_val)
-                print 'taw median: {}, mean {}, max {}, min {}'.format(median(stat_dct['taw']), stat_dct['taw'].mean(),
-                                                                       stat_dct['taw'].max(),
-                                                                       stat_dct['taw'].min())
-            else:
-                stat_dct[key] = data
+def initial_soil_ksat(arr):
+    return minimum(arr, 20)
 
-        # apply tew adjustment
-        _ones = ones(stat_dct['tew'].shape)
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
-        stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones, stat_dct['tew'])
 
-    # print 'static dict keys: \n {}'.format(static_dict.keys())
-
-    return stat_dct
+def initial_tew(arr):
+    return minimum(arr, 10)
 
 
 def initialize_initial_conditions_dict(initial_inputs_path, mask_path=None, point_dict=None):
@@ -252,7 +186,8 @@ def initialize_initial_conditions_dict(initial_inputs_path, mask_path=None, poin
             initial_cond_dict[key] = sub
 
     else:
-        initial_cond_arrays = [apply_mask(mask_path, convert_raster_to_array(initial_inputs_path, filename)) for filename in initial_cond]
+        initial_cond_arrays = [apply_mask(mask_path, convert_raster_to_array(initial_inputs_path, filename)) for
+                               filename in initial_cond]
         for key, data in zip(initial_cond_keys, initial_cond_arrays):
             data = where(isnan(data), zeros(data.shape), data)
             initial_cond_dict[key] = data
@@ -354,8 +289,137 @@ def cmb_sample_site_data(shape):
 
     return cmb_dict
 
-
-if __name__ == '__main__':
-    pass
-
 # ============= EOF =============================================
+# def initialize_static_dict(inputs_path, mask_path=None, point_dict=None):
+#     """# build list of static rasters from current use file
+#     # convert rasters to arrays
+#     # give variable names to each raster"""
+#
+#     print 'static inputs path: {}'.format(inputs_path)
+#
+#     # define NLCD land cover land use with a dict of classifications
+#     # the following is for reference:
+#     # land_classes = {'unclssified': 1, 'open_water': 11, 'developed_open': 21, 'developed_low': 22,
+#     #                 'developed_med': 23, 'developed_high': 24, 'barren': 31, 'deciduous': 41,
+#     #                 'evergreen': 42, 'mixed_forest': 43, 'shrub_scrub': 52, 'grassland': 71,
+#     #                 'pasture_hay': 81, 'cultivated': 82, 'woody_wetlands': 90}
+#
+#     # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
+#     static_keys = ['bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw',
+#                    'tew']
+#     statics = [filename for filename in os.listdir(inputs_path) if filename.endswith('.tif')]
+#     # print 'len static keys: {} len statics:{}'.format(len(static_keys), len(statics))
+#
+#     stat_dct = {}
+#     statics = sorted(statics, key=lambda s: s.lower())
+#
+#     if point_dict:
+#         # print 'point dict: {}'.format(point_dict)
+#         for key, val in point_dict.iteritems():
+#             try:
+#                 coords = val['Coords']
+#             except KeyError:
+#                 coords = point_dict['Coords']
+#             except TypeError:
+#                 coords = point_dict['Coords']
+#             sub = {}
+#             for filename, value in zip(statics, static_keys):
+#                 full_path = os.path.join(inputs_path, filename)
+#                 sub[value] = get_inputs_at_point(coords, full_path)
+#             stat_dct[key] = sub
+#         print 'static dict {}'.format(stat_dct)
+#
+#         for key, val in stat_dct.iteritems():
+#             print key, val
+#             if val['land_cover'] in [41, 42, 43]:
+#                 print 'previous tew: {}'.format(val['tew'])
+#                 val['tew'] *= 0.25
+#                 print 'adjusted tew: {}'.format(val['tew'])
+#             elif val['land_cover'] == 52:
+#                 val['tew'] *= 0.75
+#
+#             if 320.0 < val['taw']:
+#                 val['taw'] = 320.0
+#             if 50.0 > val['taw']:
+#                 val['taw'] = 50.0
+#             if val['taw'] < val['tew'] + val['rew']:
+#                 val['taw'] = val['tew'] + val['rew']
+#             # I think the plant height raster is in ft instead of meters; DC, 2/6/2017
+#             # and I don't think Allen's equation is a good way to get the fraction covered (f_cov) in a forest anyway.
+#             val['plant_height'] *= 0.3048
+#
+#     else:
+#         print 'statics', statics
+#         static_arrays = [apply_mask(mask_path, convert_raster_to_array(inputs_path, filename)) for filename in statics]
+#         # static_arrays = [apply_mask(mask_path,static_array) for static_array in static_arrays]
+#
+#         for key, data in zip(static_keys, static_arrays):
+#             stat_dct[key] = data
+#
+#         for key, data in zip(static_keys, static_arrays):
+#             if key == 'tew':
+#                 min_val = 10
+#                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+#                 #                                                                    ones(data.shape),
+#                 #                                                                    zeros(data.shape))), min_val)
+#
+#                 # apply a minimum tew
+#                 data = where(data <= min_val, ones(data.shape) * min_val, data)
+#
+#             if key == 'soil_ksat':
+#                 min_val = 20
+#                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+#                 #                                                                    ones(data.shape),
+#                 #                                                                    zeros(data.shape))), min_val)
+#                 data = where(data <= min_val, ones(data.shape) * min_val, data)
+#
+#             if key == 'root_z':
+#                 min_val = 100
+#                 # print '{} has {} values of less than {}'.format(key, count_nonzero(where(data <= min_val,
+#                 #                                                                    ones(data.shape),
+#                 #                                                                    zeros(data.shape))), min_val)
+#                 data = where(data < min_val, ones(data.shape) * min_val, data)
+#
+#             # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+#             if key == 'plant_height':
+#                 stat_dct['plant_height'] *= 0.3048
+#
+#             # apply high TAW to unconsolidated Quaternary deposits
+#             if key == 'quat_deposits':
+#                 min_val = 250
+#                 # print '{} has {} cells'.format(key, count_nonzero(where(data > 0.0,
+#                 #                                                         ones(data.shape),
+#                 #                                                         zeros(data.shape))), min_val)
+#
+#                 stat_dct['taw'] = where(data > 0.0, ones(data.shape) * min_val, stat_dct['taw'])
+#
+#             # apply bounds to TAW
+#             if key == 'taw':
+#
+#                 min_val = 50.0
+#                 max_val = 320.0
+#                 stat_dct['taw'] = where(data < min_val, ones(data.shape) * min_val, stat_dct['taw'])
+#                 stat_dct['taw'] = where(data > max_val, ones(data.shape) * max_val, stat_dct['taw'])
+#                 stat_dct['taw'] = where(stat_dct['taw'] < stat_dct['tew'] + stat_dct['rew'],
+#                                         stat_dct['tew'] + stat_dct['rew'],
+#                                         stat_dct['taw'])
+#
+#                 print '{} has {} cells below the minimum'.format(key, count_nonzero(where(data < min_val,
+#                                                                                           ones(data.shape),
+#                                                                                           zeros(data.shape))), min_val)
+#                 print 'taw median: {}, mean {}, max {}, min {}'.format(median(stat_dct['taw']), stat_dct['taw'].mean(),
+#                                                                        stat_dct['taw'].max(),
+#                                                                        stat_dct['taw'].min())
+#             else:
+#                 stat_dct[key] = data
+#
+#         # apply tew adjustment
+#         _ones = ones(stat_dct['tew'].shape)
+#         stat_dct['tew'] = where(stat_dct['land_cover'] == 41, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+#         stat_dct['tew'] = where(stat_dct['land_cover'] == 42, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+#         stat_dct['tew'] = where(stat_dct['land_cover'] == 43, stat_dct['tew'] * 0.25 * _ones, stat_dct['tew'])
+#         stat_dct['tew'] = where(stat_dct['land_cover'] == 52, stat_dct['tew'] * 0.75 * _ones, stat_dct['tew'])
+#
+#     # print 'static dict keys: \n {}'.format(static_dict.keys())
+#
+#     return stat_dct
