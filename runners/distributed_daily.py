@@ -15,26 +15,31 @@
 # ===============================================================================
 
 from datetime import datetime
+import os
 from recharge.etrm_processes import Processes
 
 
-def run(date_range, input_root, output_root):
-    etrm = Processes(date_range, input_root, output_root)
-    etrm.run()
+def run(root, output_root):
+
+    date_range = datetime(2013, 12, 29), datetime(2013, 12, 31)
+
+    mask_path = os.path.join(root, 'Mask')
+
+    etrm = Processes(date_range, mask_path,
+                     output_root= output_root,
+                     polygons= os.path.join(root, 'Blank_Geo'),
+                     static_inputs= os.path.join(root, 'statics'),
+                     initial_inputs=os.path.join(root, 'initialize'))
+
+    ndvi = os.path.join(root, 'NDVI', 'NDVI_std_all')
+    prism = os.path.join(root, 'PRISM')
+    penman = os.path.join(root, 'PM_RAD')
+
+    etrm.run(ndvi_path=ndvi, prism_path=prism, penman_path=penman)
 
 
 if __name__ == '__main__':
-    start_year = 2013
-    start_month = 12
-    start_day = 29
-
-    end_year = 2013
-    end_month = 12
-    end_day = 31
-
-    run((datetime(start_year, start_month, start_day),
-         datetime(end_year, end_month, end_day)),
-        'F:\\ETRM_Inputs',
+    run('F:\\ETRM_Inputs',
         'F:\\ETRM_Results')
 
 # ============= EOF =============================================
