@@ -56,17 +56,6 @@ def get_raster_geo_attributes(statics_path):
                        'geotransform': dataset.GetGeoTransform(), 'resolution': dataset.GetGeoTransform()[1]}
     return raster_geo_dict
 
-# def apply_mask(mask_path, rast_to_mask):
-#     #raster_attrib = get_geo(mask_path)
-#     out = None
-#     file_name = next((filename for filename in os.listdir(mask_path) if filename.endswith('.tif')), None)
-#     if file_name is not None:
-#         #file_name = mask_raster[0]
-#         mask_array = convert_raster_to_array(mask_path,file_name)
-#         masked_arr = masked_where(mask_array == 0, rast_to_mask)
-#         out = masked_arr.compressed()
-#
-#     return out
 
 def apply_mask(mask_path, arr):
     out = None
@@ -74,10 +63,9 @@ def apply_mask(mask_path, arr):
     if file_name is not None:
         mask = convert_raster_to_array(mask_path, file_name)
         idxs = asarray(mask, dtype=bool)
-        # or
-        # idxs = where(mask==1)[0]
         out = arr[idxs].flatten()
     return out
+
 
 def remake_array(mask_path, arr):
     out = None
@@ -85,7 +73,7 @@ def remake_array(mask_path, arr):
     if file_name is not None:
         mask_array = convert_raster_to_array(mask_path, file_name)
         masked_arr = masked_where(mask_array == 0, mask_array)
-        masked_arr[~masked_arr.mask]=arr.ravel()
+        masked_arr[~masked_arr.mask] = arr.ravel()
         masked_arr.mask = nomask
         arr = masked_arr.filled(0)
         out = arr
@@ -112,7 +100,7 @@ def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slop
 #             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
 
 
-def make_results_dir(out_path, shapes):
+def make_results_dir(out_root, shapes):
     """
     Creates a directory tree of empty folders that will recieve ETRM model output rasters.
 
@@ -121,40 +109,36 @@ def make_results_dir(out_path, shapes):
     :return: dict of directory paths
     """
 
-    empties = ['annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
-               'monthly_tabulated', 'daily_tabulated', 'daily_rasters']
+    empties = ('annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
+               'monthly_tabulated', 'daily_tabulated', 'daily_rasters')
     now = datetime.now()
     tag = now.strftime('%Y_%m_%d')
-    folder = 'ETRM_Results_{}'.format(tag)
-    os.chdir(out_path)
-    new_dir = os.path.join(out_path, folder)
-    results_directories = {x: None for x in empties}
-    results_directories['root'] = os.path.join(out_path, folder)
-    if not os.path.isdir(folder):
-        os.makedirs(new_dir)
+
+    out_root = os.path.join(out_root, 'ETRM_Results_{}'.format(tag))
+
+    results_directories = {'root': out_root}
+
+    if not os.path.isdir(out_root):
+        os.makedirs(out_root)
         for item in empties:
-            empty = os.path.join(new_dir, item)
+            empty = os.path.join(out_root, item)
             os.makedirs(empty)
             results_directories[item] = empty
-        region_types = os.listdir(shapes)
-        for tab_folder in ['annual_tabulated', 'monthly_tabulated', 'daily_tabulated']:
-            results_directories[tab_folder] = {}
-            for region_type in region_types:
-                a, b = region_type.split('_P')
-                dst = os.path.join(new_dir, tab_folder, a)
-                os.makedirs(dst)
-                results_directories[tab_folder].update({a: dst})
+
     else:
-        for item in empties:
-            empty = os.path.join(new_dir, item)
-            results_directories[item] = os.path.join(empty)
-        region_types = os.listdir(shapes)
-        for tab_folder in ['annual_tabulated', 'monthly_tabulated', 'daily_tabulated']:
-            results_directories[tab_folder] = {}
-            for region_type in region_types:
-                a, b = region_type.split('_P')
-                dst = os.path.join(new_dir, tab_folder, a)
-                results_directories[tab_folder].update({a: dst})
+        results_directories = {item: os.path.join(out_root, item) for item in empties}
+
+    region_types = os.listdir(shapes)
+    for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
+        d = {}
+        for region_type in region_types:
+            a, b = region_type.split('_P')
+            dst = os.path.join(out_root, tab_folder, a)
+            os.makedirs(dst)
+            d[a] = dst
+
+    results_directories[tab_folder] = d
+
     print 'results dirs: \n{}'.format(results_directories)
     return results_directories
 

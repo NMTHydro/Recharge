@@ -26,7 +26,7 @@ import os
 from numpy import where, isnan
 
 from recharge.raster_tools import convert_raster_to_array, apply_mask
-import recharge.point_extract_utility
+from recharge.point_extract_utility import get_inputs_at_point
 
 NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
         225, 241, 257, 273, 289, 305, 321, 337, 353)
@@ -73,7 +73,7 @@ def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
                 break
 
     if coords:
-        ndvi = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+        ndvi = get_inputs_at_point(coords, os.path.join(in_path, raster))
         kcb = ndvi * 1.25
         return kcb
 
@@ -198,7 +198,7 @@ def get_prism(mask_path, in_path, date_object, variable='precip', coords=None):
         raster = 'TempMax_NMHW2Buff_{}'.format(tail)
 
     if coords:
-        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(root, raster))
+        ret = get_inputs_at_point(coords, os.path.join(root, raster))
     else:
         ret = convert_raster_to_array(root, raster)
 
@@ -232,7 +232,7 @@ def get_penman(mask_path, in_path, date_object, variable='etrs', coords=None):
         raster = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
 
     if coords:
-        ret = recharge.point_extract_utility.get_inputs_at_point(coords, os.path.join(in_path, raster))
+        ret = get_inputs_at_point(coords, os.path.join(in_path, raster))
     else:
         ret = convert_raster_to_array(in_path, raster)
 
