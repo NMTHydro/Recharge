@@ -43,17 +43,18 @@ def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
                   min_basal_crop_coef=0.01,
                   max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
                   max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90):
-    monsoon_dates = datetime(1900, 7, 1), datetime(1900, 10, 1)
-    start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
+    # monsoon_dates = datetime(1900, 7, 1), datetime(1900, 10, 1)
+    # start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
 
-    dictionary = dict(s_mon=start_monsoon, e_mon=end_monsoon, ze=soil_evap_depth, p=et_depletion_factor,
-                      kc_min=min_basal_crop_coef,
-                      kc_max=max_basal_crop_coef, snow_alpha=snow_alpha, snow_beta=snow_beta,
-                      ke_max=max_ke, a_min=min_snow_albedo, a_max=max_snow_albedo)
+    d = dict(s_mon=datetime(1900, 7, 1), e_mon=datetime(1900, 10, 1), ze=soil_evap_depth,
+             p=et_depletion_factor,
+             kc_min=min_basal_crop_coef,
+             kc_max=max_basal_crop_coef, snow_alpha=snow_alpha, snow_beta=snow_beta,
+             ke_max=max_ke, a_min=min_snow_albedo, a_max=max_snow_albedo)
 
-    print 'constants dict: {}'.format(dictionary)
+    print 'constants dict: {}'.format(d)
 
-    return dictionary
+    return d
 
 
 def initialize_master_dict(shape=None):
@@ -61,10 +62,9 @@ def initialize_master_dict(shape=None):
     :param shape: shape of the model domain, (1, 1) or raster.shape
     """
 
-    master = dict()
+    master = dict(pkcb=None)
     if shape:  # distributed
         # master['pkcb'] = zeros(shape)
-        master['pkcb'] = None
         master['infil'] = zeros(shape)
         master['kcb'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
@@ -80,7 +80,6 @@ def initialize_master_dict(shape=None):
 
     else:
         # master['pkcb'] = 0.0
-        master['pkcb'] = None
         master['infil'] = 0.0
         master['kcb'] = 0.0
         master['infil'] = 0.0
@@ -98,21 +97,39 @@ def initialize_master_dict(shape=None):
     return master
 
 
-def initialize_static_dict(inputs_path, mask_path):
-    print 'static inputs path: {}'.format(inputs_path)
+def initialize_static_dict(inputs_root, mask_path):
+    def initial_plant_height(r):
+        # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+        return r * 0.3048
 
-    statics = sorted((fn for fn in os.listdir(inputs_path) if fn.endswith('.tif')))
+    def initial_root_z(r):
+        return minimum(r, 100)
+
+    def initial_soil_ksat(r):
+        return minimum(r, 20)
+
+    def initial_tew(r):
+        return minimum(r, 10)
+
+    print 'static inputs path: {}'.format(inputs_root)
+
+    # statics = sorted((fn for fn in os.listdir(inputs_root) if fn.endswith('.tif')))
+    statics = tiff_list(inputs_root)
 
     d = {}
-    gdict = globals()
+    # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
     keys = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
     for k, fn in zip(keys, statics):
-        arr = apply_mask(mask_path, convert_raster_to_array(inputs_path, fn))
+        arr = apply_mask(mask_path, convert_raster_to_array(inputs_root, fn))
 
-        try:
-            arr = gdict['initial_{}'.format(k)](arr)
-        except KeyError:
-            pass
+        if k == 'plant_height':
+            arr = initial_plant_height(arr)
+        elif k == 'root_z':
+            arr = initial_root_z(arr)
+        elif k == 'soil_ksat':
+            arr = initial_soil_ksat(arr)
+        elif k == 'tew':
+            arr = initial_tew(arr)
 
         d[k] = arr
 
@@ -150,108 +167,65 @@ def initialize_static_dict(inputs_path, mask_path):
     return d
 
 
-def initial_plant_height(arr):
-    # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
-    return arr * 0.3048
+def tiff_list(root, sort=True):
+    fs = [fn for fn in os.listdir(root) if fn.endswith('.tif')]
+    if sort:
+        fs = sorted(fs)
+    return fs
 
 
-def initial_root_z(arr):
-    return minimum(arr, 100)
-
-
-def initial_soil_ksat(arr):
-    return minimum(arr, 20)
-
-
-def initial_tew(arr):
-    return minimum(arr, 10)
-
-
-def initialize_initial_conditions_dict(initial_inputs_path, mask_path=None, point_dict=None):
+def initialize_initial_conditions_dict(inputs_root, mask_path):
     # read in initial soil moisture conditions from spin up, put in dict
 
-    initial_cond_keys = ['de', 'dr', 'drew']
+    fs = tiff_list(inputs_root)
 
-    initial_cond = [filename for filename in os.listdir(initial_inputs_path) if filename.endswith('.tif')]
-    initial_cond.sort()
-    initial_cond_dict = {}
-    if point_dict:
-        for key, val in point_dict.iteritems():
-            coords = val['Coords']
-            sub = {}
-            for filename, value in zip(initial_cond, initial_cond_keys):
-                full_path = os.path.join(initial_inputs_path, filename)
-                sub[value] = get_inputs_at_point(coords, full_path)
+    d = {}
+    for k, fn in zip(('de', 'dr', 'drew'), fs):
+        raster = convert_raster_to_array(inputs_root, fn)
+        data = apply_mask(mask_path, raster)
+        d[k] = data
 
-            initial_cond_dict[key] = sub
+        print '{} has {} nan values'.format(k, count_nonzero(isnan(data)))
+        print '{} has {} negative values'.format(k, count_nonzero(data < 0.0))
 
-    else:
-        initial_cond_arrays = [apply_mask(mask_path, convert_raster_to_array(initial_inputs_path, filename)) for
-                               filename in initial_cond]
-        for key, data in zip(initial_cond_keys, initial_cond_arrays):
-            data = where(isnan(data), zeros(data.shape), data)
-            initial_cond_dict[key] = data
-
-            print '{} has {} nan values'.format(key, count_nonzero(isnan(data)))
-            print '{} has {} negative values'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
-                                                                              zeros(data.shape))))
-
-    return initial_cond_dict
-
-
-def initialize_point_tracker(master):
-    """ Create DataFrame to plot point time series, these are empty lists that will
-     be filled as the simulation progresses"""
-
-    tracker_keys = [key for key, val in master.iteritems()]
-    tracker_keys.sort()
-
-    tracker = DataFrame(columns=tracker_keys)
-
-    return tracker
+    return d
 
 
 def initialize_raster_tracker(tracked_outputs, shape):
-    _zeros = zeros(shape)
-    raster_track_dict = {'current_year': {}, 'current_month': {}, 'current_day': {}, 'last_mo': {}, 'last_yr': {},
-                         'yesterday': {}}
-    # emulated initialize_tab_dict here
-    for super_key, super_val in raster_track_dict.iteritems():
-        sub = {}
-        for key in tracked_outputs:
-            sub[key] = _zeros
-        raster_track_dict[super_key] = sub
-    return raster_track_dict
+    keys = ('current_year', 'current_month','current_day','last_mo','last_yr','yesterday')
+    tkeys = tracked_outputs.keys()
+    d = {k: {tk: zeros(shape) for tk in tkeys()} for k in keys}
+    return d
 
 
-def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
-    folders = os.listdir(shapes)
-    units = ['AF', 'CBM']
-    outputs_arr = [[output, output] for output in outputs]
-    outputs_arr = [val for sublist in outputs_arr for val in sublist]
-    # if the write frequency of flux sums over shapes is daily, use normal master keys rather than 'tot_param'
+def initialize_tabular_dict(input_root, outputs, date_range_, write_freq):
+    units = ('AF', 'CBM')
+
+    outputs_arr = [o for output in outputs for o in (output, output)]
+
+    # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'
     if write_freq == 'daily':
         outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
+
     units_arr = units * len(outputs)
-    arrays = [outputs_arr, units_arr]
-    cols = MultiIndex.from_arrays(arrays)
+
+    cols = MultiIndex.from_arrays((outputs_arr, units_arr))
     ind = date_range(date_range_[0], date_range_[1], freq='D')
 
     tab_dict = {}
-    print 'folders: {}'.format(folders)
-    for f in folders:
+    print 'polygon folder: {}'.format(input_root)
+    for f in os.listdir(input_root):
         print 'folder: {}'.format(f)
         region_type = f.replace('_Polygons', '')
         print 'region type: {}'.format(region_type)
-        print 'polygon folder: {}'.format(shapes)
+
         d = {}
-        files = os.listdir(os.path.join(shapes, f))
-        polygons = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
-        print 'polygons: {}'.format(polygons)
-        for element in polygons:
-            df = DataFrame(index=ind, columns=cols).fillna(0.0)
-            print 'sub region : {}'.format(element)
-            d[element] = df
+        for ff in os.listdir(os.path.join(input_root, f)):
+            if ff.endswith('.shp'):
+                subreg = ff[:-4]
+                print 'sub region : {}'.format(subreg)
+                df = DataFrame(index=ind, columns=cols).fillna(0.0)
+                d[subreg] = df
 
         tab_dict[region_type] = d
 
@@ -263,12 +237,7 @@ def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will
      be filled as the simulation progresses"""
-
-    tracker_keys = [key for key, val in master.iteritems()]
-    tracker_keys.sort()
-
-    tracker = DataFrame(columns=tracker_keys)
-
+    tracker = DataFrame(columns=sorted(master.keys()))
     return tracker
 
 
@@ -290,6 +259,80 @@ def cmb_sample_site_data(shape):
     return cmb_dict
 
 # ============= EOF =============================================
+# def initialize_tabular_dict(shapes, outputs, date_range_, write_freq):
+#     folders = os.listdir(shapes)
+#     units = ['AF', 'CBM']
+#     outputs_arr = [[output, output] for output in outputs]
+#     outputs_arr = [val for sublist in outputs_arr for val in sublist]
+#     # if the write frequency of flux sums over shapes is daily, use normal master keys rather than 'tot_param'
+#     if write_freq == 'daily':
+#         outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
+#     units_arr = units * len(outputs)
+#     arrays = [outputs_arr, units_arr]
+#     cols = MultiIndex.from_arrays(arrays)
+#     ind = date_range(date_range_[0], date_range_[1], freq='D')
+#
+#     tab_dict = {}
+#     print 'folders: {}'.format(folders)
+#     for f in folders:
+#         print 'folder: {}'.format(f)
+#         region_type = f.replace('_Polygons', '')
+#         print 'region type: {}'.format(region_type)
+#         print 'polygon folder: {}'.format(shapes)
+#         d = {}
+#         files = os.listdir(os.path.join(shapes, f))
+#         polygons = [shape.strip('.shp') for shape in files if shape.endswith('.shp')]
+#         print 'polygons: {}'.format(polygons)
+#         for element in polygons:
+#             df = DataFrame(index=ind, columns=cols).fillna(0.0)
+#             print 'sub region : {}'.format(element)
+#             d[element] = df
+#
+#         tab_dict[region_type] = d
+#
+#     # print 'your tabular results dict:\n{}'.format(tab_dict)
+#
+#     return tab_dict
+# def initialize_point_tracker(master):
+#     """ Create DataFrame to plot point time series, these are empty lists that will
+#      be filled as the simulation progresses"""
+#
+#     tracker_keys = [key for key, val in master.iteritems()]
+#     tracker_keys.sort()
+#
+#     tracker = DataFrame(columns=tracker_keys)
+#
+#     return tracker
+# def initialize_initial_conditions_dict(initial_inputs_path, mask_path=None, point_dict=None):
+#     # read in initial soil moisture conditions from spin up, put in dict
+#
+#     initial_cond_keys = ['de', 'dr', 'drew']
+#
+#     initial_cond = [filename for filename in os.listdir(initial_inputs_path) if filename.endswith('.tif')]
+#     initial_cond.sort()
+#     initial_cond_dict = {}
+#     if point_dict:
+#         for key, val in point_dict.iteritems():
+#             coords = val['Coords']
+#             sub = {}
+#             for filename, value in zip(initial_cond, initial_cond_keys):
+#                 full_path = os.path.join(initial_inputs_path, filename)
+#                 sub[value] = get_inputs_at_point(coords, full_path)
+#
+#             initial_cond_dict[key] = sub
+#
+#     else:
+#         initial_cond_arrays = [apply_mask(mask_path, convert_raster_to_array(initial_inputs_path, filename)) for
+#                                filename in initial_cond]
+#         for key, data in zip(initial_cond_keys, initial_cond_arrays):
+#             data = where(isnan(data), zeros(data.shape), data)
+#             initial_cond_dict[key] = data
+#
+#             print '{} has {} nan values'.format(key, count_nonzero(isnan(data)))
+#             print '{} has {} negative values'.format(key, count_nonzero(where(data < 0.0, ones(data.shape),
+#                                                                               zeros(data.shape))))
+#
+#     return initial_cond_dict
 # def initialize_static_dict(inputs_path, mask_path=None, point_dict=None):
 #     """# build list of static rasters from current use file
 #     # convert rasters to arrays
