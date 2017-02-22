@@ -28,7 +28,6 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
-from recharge.dynamic_raster_finder import get_inputs_at_point
 from recharge.raster_tools import convert_raster_to_array, apply_mask
 
 """
