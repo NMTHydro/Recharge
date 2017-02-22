@@ -28,8 +28,8 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
+from recharge.dynamic_raster_finder import get_inputs_at_point
 from recharge.raster_tools import convert_raster_to_array, apply_mask
-from recharge.point_extract_utility import get_inputs_at_point
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
