@@ -233,7 +233,8 @@ class Processes(object):
         ####
         # transpiration:
         # ks- stress coeff- ASCE pg 226, Eq 10.6
-        taw = s['taw']
+        # TAW could be zero at lakes.
+        taw = maximum(s['taw'], 0.001)
         ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
         ks = minimum(1+0.001, ks)  # this +0.001 may be unneeded
         ks = maximum(0, ks)
@@ -254,7 +255,8 @@ class Processes(object):
         m['transp'] = transp
 
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
-        tew = s['tew']
+        # TEW is zero at lakes.
+        tew = maximum(s['tew'], 0.001)
         kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
 
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
@@ -427,10 +429,9 @@ class Processes(object):
         :return: None
         """
         water = m['rain'] + m['melt']
-
         # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
         dd = m['dry_days']
-        dd[water < 0.1] = dd + 1
+        dd = where (water < 0.1, dd + 1, dd)
         dd[water >= 0.1] = 1
         m['dry_days'] = dd
 
@@ -469,10 +470,8 @@ class Processes(object):
 
 
         # Surface runoff (Hortonian- using storm duration modified ksat values)
-        ro = m['ro']
-        ro[water > soil_ksat] = water - soil_ksat
-        water[water > soil_ksat] = soil_ksat
-        ro[water <= soil_ksat] = 0
+        ro = where(water > soil_ksat, water - soil_ksat, 0)
+        water = where(water > soil_ksat, soil_ksat, water)
         water_av_taw = ro * ro_local_reinfilt_frac
         ro *= (1 - ro_local_reinfilt_frac)
         m['ro'] = ro
@@ -487,7 +486,9 @@ class Processes(object):
         drew = maximum(drew, rew)
 
         # add excess water to the water available to TEW (Is this coding ok?)
-        water_av_tew[water_av_rew >= pdrew + evap_1] += (water_av_rew - (pdrew + evap_1))
+        water_av_tew = where(water_av_rew >= pdrew + evap_1,
+                             water_av_tew + water_av_rew - (pdrew + evap_1),
+                             water_av_tew)
 
 
         # water balance through the stage 2 evaporation layer #
@@ -500,9 +501,9 @@ class Processes(object):
         de = maximum(de, tew)
 
         # add excess water to the water available to TAW (Help coding this more cleanly?)
-        water_av_taw = where(water_av_tew >= pde + evap_2, water_av_taw + water_av_tew - (pde + evap_2),
+        water_av_taw = where(water_av_tew >= pde + evap_2,
+                             water_av_taw + water_av_tew - (pde + evap_2),
                              water_av_taw)
-
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone

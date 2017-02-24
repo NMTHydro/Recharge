@@ -137,27 +137,27 @@ class RasterManager(object):
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
 
         rd = self._results_dir
-        root = rd['root']
+        #root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
         if period == 'annual':
             file_ = '{}_{}.tif'.format(key, date.year)
-            filename = os.path.join(root, rd['annual_rasters'], file_)
+            filename = os.path.join(rd['annual_rasters'], file_)
             array_to_save = tracker['current_year'][key]
 
         elif period == 'monthly':
             file_ = '{}_{}_{}.tif'.format(key, date.month, date.year)
-            filename = os.path.join(root, rd['monthly_rasters'], file_)
+            filename = os.path.join(rd['monthly_rasters'], file_)
             array_to_save = tracker['current_month'][key]
             print 'saving {}, mean: {}'.format(key, tracker['current_month'][key].mean())
 
         elif period == 'single_day':
             file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
-            filename = os.path.join(root, rd['daily_rasters'], file_)
+            filename = os.path.join(rd['daily_rasters'], file_)
             array_to_save = master[key]
 
         elif period == 'simulation':
             file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
-            filename = os.path.join(root, rd['simulation_tot_rasters'], file_)
+            filename = os.path.join(rd['simulation_tot_rasters'], file_)
             array_to_save = master[key]
 
         else:

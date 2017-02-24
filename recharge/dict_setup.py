@@ -22,7 +22,7 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-from numpy import zeros, isnan, count_nonzero, where, ones, median, minimum
+from numpy import zeros, isnan, count_nonzero, where, ones, median, minimum, maximum
 import os
 from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
@@ -108,7 +108,10 @@ def initialize_static_dict(inputs_root, mask_path):
         return minimum(r, 20)
 
     def initial_tew(r):
-        return minimum(r, 10)
+        return maximum(minimum(r, 10),0.001)
+
+    def initial_rew(r):
+        return maximum(r,0.001)
 
     print 'static inputs path: {}'.format(inputs_root)
 
@@ -123,6 +126,8 @@ def initialize_static_dict(inputs_root, mask_path):
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)
+        elif k == 'rew':
+            arr = initial_rew(arr)
         elif k == 'root_z':
             arr = initial_root_z(arr)
         elif k == 'soil_ksat':
