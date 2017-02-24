@@ -34,7 +34,7 @@ from recharge.raster_tools import make_results_dir, apply_mask, remake_array
 from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 
-OUTPUTS = ('infil', 'etrs', 'eta', 'precip', 'kcb')
+OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'kcb')
 DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip')
 
 class RasterManager(object):
