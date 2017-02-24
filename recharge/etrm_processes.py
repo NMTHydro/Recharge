@@ -62,6 +62,7 @@ class Processes(object):
                  write_freq=None):
 
         self._mask_path = os.path.join(input_root, mask)
+        self._polygons_path = os.path.join(input_root, polygons)
         self._output_root = output_root
 
         # Define user-controlled constants, these are constants to start with day one, replace
@@ -72,7 +73,7 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
-        static_inputs = os.path.join(input_root, 'statics'),
+        static_inputs = os.path.join(input_root, 'statics')
         initial_inputs = os.path.join(input_root, 'initialize')
 
         self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
@@ -81,12 +82,12 @@ class Processes(object):
         self._master = time_it(initialize_master_dict, self._shape)
 
         # self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster_manager = RasterManager(static_inputs, polygons, date_range, output_root,
+        self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root,
                                              write_freq)  # self._outputs
 
-        self._ndvi = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
-        self._prism = os.path.join(input_root, 'PRISM')
-        self._penman = os.path.join(input_root, 'PM_RAD')
+        self._ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+        self._prism_path = os.path.join(input_root, 'PRISM')
+        self._penman_path = os.path.join(input_root, 'PM_RAD')
         self._start_date, self._end_date = date_range
 
         time_it(self.initialize)
@@ -167,7 +168,7 @@ class Processes(object):
         m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
         s = self._static
-        for key in ('rew', 'tew', 'taw', 'soil_ksay'):
+        for key in ('rew', 'tew', 'taw', 'soil_ksat'):
             v = s[key]
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)

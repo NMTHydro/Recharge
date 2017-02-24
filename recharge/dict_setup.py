@@ -191,9 +191,8 @@ def initialize_initial_conditions_dict(inputs_root, mask_path):
 
 
 def initialize_raster_tracker(tracked_outputs, shape):
-    keys = ('current_year', 'current_month','current_day','last_mo','last_yr','yesterday')
-    tkeys = tracked_outputs.keys()
-    d = {k: {tk: zeros(shape) for tk in tkeys()} for k in keys}
+    keys = ('current_year', 'current_month', 'current_day', 'last_mo', 'last_yr', 'yesterday')
+    d = {k: {tk: zeros(shape) for tk in tracked_outputs} for k in keys}
     return d
 
 
