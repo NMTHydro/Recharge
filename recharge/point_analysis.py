@@ -103,7 +103,7 @@ def get_extracted_data(point_dict, simulation_period, etrm_extract=None,
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
 
         tracker = etrm.run(simulation_period, point_dict=point_dict, point_dict_key=key, modify_soils=True,
-                           apply_rofrac=0.7, allen_ceff=0.8)
+                           ro_reinf_frac=0.7, allen_ceff=0.8)
 
         # look out for that key! might be a problem
 

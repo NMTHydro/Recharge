@@ -43,7 +43,7 @@ def run(input_root, simulation_period):
     get_etrm_time_series(etrm_extract, dict_=amf_dict)
     for key, val in amf_dict.iteritems():
         etrm = Processes(simulation_period, input_root, output_root)
-        etrm.run(apply_rofrac=0.7, allen_ceff=0.8)
+        etrm.run(ro_reinf_frac=0.7, allen_ceff=0.8)
 
         save_run(etrm, output_root, combo_root, val)
 

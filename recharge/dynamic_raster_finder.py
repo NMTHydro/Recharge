@@ -116,7 +116,7 @@ def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
             pass
         else:
             kcb = where(isnan(kcb) is True, previous_kcb, kcb)
-            kcb = where(abs(kcb) > 100., previous_kcb, kcb)
+            kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
 
         return kcb
 

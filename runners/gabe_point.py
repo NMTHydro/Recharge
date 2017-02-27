@@ -60,7 +60,7 @@ def run(input_root, coords_path):
         print 'key : {}'.format(key)
 
         tracker = etrm.run(simulation_period, point_dict=point_dict, point_dict_key=key, modify_soils=True,
-                           apply_rofrac=0.7, allen_ceff=0.8)
+                           ro_reinf_frac=0.7, allen_ceff=0.8)
 
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(amf_trackers, '{}.csv'.format(val['Name']))
