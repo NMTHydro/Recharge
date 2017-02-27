@@ -59,11 +59,10 @@ class Processes(object):
                  output_root,
                  mask='Mask',
                  polygons='Blank_Geo',
-                 write_freq=None,
-                 taw_modification=None):
+                 write_freq=None):
 
         #TAW MOD CHANGE
-        self.taw_mod = taw_modification
+        #self.taw_mod = taw_modification
         self._mask_path = os.path.join(input_root, mask)
         self._polygons_path = os.path.join(input_root, polygons)
         self._output_root = output_root
@@ -80,7 +79,7 @@ class Processes(object):
         initial_inputs = os.path.join(input_root, 'initialize')
 
         #TAW MOD CHANGE
-        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path, self.taw_mod)
+        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
         self._shape = self._static['taw'].shape
         self._initial = time_it(initialize_initial_conditions_dict, initial_inputs, self._mask_path)
         self._master = time_it(initialize_master_dict, self._shape)
@@ -156,6 +155,17 @@ class Processes(object):
         self._info('saving tabulated data')
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
+
+    def modify_taw(self, taw_modification):
+
+        s = self._static
+
+        taw = s['taw']
+
+        taw = taw * taw_modification
+
+        s['taw'] = taw
+
 
     def initialize(self):
         m = self._master
