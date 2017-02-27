@@ -159,11 +159,8 @@ class Processes(object):
     def modify_taw(self, taw_modification):
 
         s = self._static
-
         taw = s['taw']
-
         taw = taw * taw_modification
-
         s['taw'] = taw
 
 
