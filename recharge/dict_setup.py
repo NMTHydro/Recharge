@@ -95,8 +95,8 @@ def initialize_master_dict(shape=None):
 
     return master
 
-
-def initialize_static_dict(inputs_root, mask_path):
+#TAW MOD CHANGE
+def initialize_static_dict(inputs_root, mask_path, taw_mod=None):
     def initial_plant_height(r):
         # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
         return r * 0.3048
@@ -161,6 +161,11 @@ def initialize_static_dict(inputs_root, mask_path):
     print 'taw has {} cells below the minimum'.format(non_zero, min_val)
     print 'taw median: {}, mean {}, max {}, min {}'.format(median(taw), taw.mean(), taw.max(), taw.min())
     d['taw'] = taw
+
+    #TAW MOD CHANGE
+    if taw_mod:
+
+        d['taw'] = taw_mod * taw
 
     # apply tew adjustment
     tew = where(land_cover == 41, tew * 0.25, tew)

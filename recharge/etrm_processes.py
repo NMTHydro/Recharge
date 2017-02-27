@@ -59,8 +59,11 @@ class Processes(object):
                  output_root,
                  mask='Mask',
                  polygons='Blank_Geo',
-                 write_freq=None):
+                 write_freq=None,
+                 taw_modification=None):
 
+        #TAW MOD CHANGE
+        self.taw_mod = taw_modification
         self._mask_path = os.path.join(input_root, mask)
         self._polygons_path = os.path.join(input_root, polygons)
         self._output_root = output_root
@@ -76,7 +79,8 @@ class Processes(object):
         static_inputs = os.path.join(input_root, 'statics')
         initial_inputs = os.path.join(input_root, 'initialize')
 
-        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
+        #TAW MOD CHANGE
+        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path, self.taw_mod)
         self._shape = self._static['taw'].shape
         self._initial = time_it(initialize_initial_conditions_dict, initial_inputs, self._mask_path)
         self._master = time_it(initialize_master_dict, self._shape)
