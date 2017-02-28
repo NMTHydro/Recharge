@@ -62,6 +62,7 @@ class Processes(object):
                  write_freq=None):
 
         self._mask_path = os.path.join(input_root, mask)
+        self._polygons_path = os.path.join(input_root, polygons)
         self._output_root = output_root
 
         # Define user-controlled constants, these are constants to start with day one, replace
@@ -72,7 +73,7 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
-        static_inputs = os.path.join(input_root, 'statics'),
+        static_inputs = os.path.join(input_root, 'statics')
         initial_inputs = os.path.join(input_root, 'initialize')
 
         self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
@@ -81,17 +82,17 @@ class Processes(object):
         self._master = time_it(initialize_master_dict, self._shape)
 
         # self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster_manager = RasterManager(static_inputs, polygons, date_range, output_root,
+        self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root,
                                              write_freq)  # self._outputs
 
-        self._ndvi = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
-        self._prism = os.path.join(input_root, 'PRISM')
-        self._penman = os.path.join(input_root, 'PM_RAD')
+        self._ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+        self._prism_path = os.path.join(input_root, 'PRISM')
+        self._penman_path = os.path.join(input_root, 'PM_RAD')
         self._start_date, self._end_date = date_range
 
         time_it(self.initialize)
 
-    def run(self, sensitivity_matrix_column=None, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
+    def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
 
         start, end = self._start_date, self._end_date
         self._info('Simulation period: start={}, end={}'.format(start, end))
@@ -130,9 +131,9 @@ class Processes(object):
             time_it(self._do_soil_ksat_adjustment, m, s)
 
             if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, apply_rofrac)
+                time_it(self._do_fao_soil_water_balance, m, s, ro_reinf_frac)
             elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, apply_rofrac, allen_ceff)
+                time_it(self._do_vert_soil_water_balance, m, s, ro_reinf_frac, allen_ceff)
 
             time_it(self._do_mass_balance, day, swb=swb_mode)
 
@@ -167,7 +168,7 @@ class Processes(object):
         m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
 
         s = self._static
-        for key in ('rew', 'tew', 'taw', 'soil_ksay'):
+        for key in ('rew', 'tew', 'taw', 'soil_ksat'):
             v = s[key]
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
@@ -232,9 +233,10 @@ class Processes(object):
         ####
         # transpiration:
         # ks- stress coeff- ASCE pg 226, Eq 10.6
-        taw = s['taw']
+        # TAW could be zero at lakes.
+        taw = maximum(s['taw'], 0.001)
         ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
-        ks = minimum(1+0.001, ks)  # this +0.001 may be unneeded
+        ks = minimum(1 + 0.001, ks)  # this +0.001 may be unneeded
         ks = maximum(0, ks)
         m['ks'] = ks
 
@@ -253,9 +255,9 @@ class Processes(object):
         m['transp'] = transp
 
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
-        tew = s['tew']
+        # TEW is zero at lakes.
+        tew = maximum(s['tew'], 0.001)
         kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
-
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
 
@@ -396,8 +398,8 @@ class Processes(object):
 
         # water balance through skin layer #
         drew = where(water >= pdrew + evap_1, 0, pdrew + evap_1 - water)
+
         water = where(water < pdrew + evap_1, 0, water - pdrew - evap_1)
-        # print 'water through skin layer: {}'.format(mm_af(water))
         m['ro'] = where(water > soil_ksat, water - soil_ksat, 0)
         water = where(water > soil_ksat, soil_ksat, water)
 
@@ -405,10 +407,8 @@ class Processes(object):
         de = where(water >= pde + evap_2, 0, pde + evap_2 - water)
 
         water = where(water < pde + evap_2, 0, water - (pde + evap_2))
-        # print 'water through  de  layer: {}'.format(mm_af(water))
 
         # water balance through the root zone layer #
-        # print 'deep percolation total: {}'.format(mm_af(m['infil']))
         dr = where(water >= pdr + transp, 0, pdr + transp - water)
 
         m['infil'] = where(water >= pdr + transp, water - pdr - transp, 0)
@@ -425,17 +425,9 @@ class Processes(object):
 
         :return: None
         """
-        water = m['rain'] + m['melt']
+        # if snow is melting, set ksat to 24 hour value
+        m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
-        # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
-        dd = m['dry_days']
-        dd[water < 0.1] = dd + 1
-        dd[water >= 0.1] = 1
-        m['dry_days'] = dd
-
-        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
-        # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
-        ##
 
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
@@ -444,8 +436,6 @@ class Processes(object):
         rew = s['rew']
         tew = s['tew']
         taw = s['taw']
-        # if snow is melting, set ksat to 24 hour value
-        m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
         # impose limits on vaporization according to present depletions #
         # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
@@ -463,19 +453,28 @@ class Processes(object):
         wr = taw - m['pdr']
         transp = where(transp > wr, wr, transp)
 
-        m['evap'] = evap_1 + evap_2
         m['eta'] = transp + evap_1 + evap_2
+        m['evap_1'] = evap_1
+        m['evap_2'] = evap_2
+        m['evap'] = evap_1 + evap_2
+        m['transp'] = transp
 
+        # apply water to the surface
+        water = m['rain'] + m['melt']
+        # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
+        dd = m['dry_days']
+        dd = where(water < 0.1, dd + 1, 1)
+        m['dry_days'] = dd
+
+        # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
+        ##
 
         # Surface runoff (Hortonian- using storm duration modified ksat values)
-        ro = m['ro']
-        ro[water > soil_ksat] = water - soil_ksat
-        water[water > soil_ksat] = soil_ksat
-        ro[water <= soil_ksat] = 0
+        ro = where(water > soil_ksat, water - soil_ksat, 0)
+        water = where(water > soil_ksat, soil_ksat, water)
         water_av_taw = ro * ro_local_reinfilt_frac
         ro *= (1 - ro_local_reinfilt_frac)
         m['ro'] = ro
-
         # water balance through the stage 1 evaporation layer #
         # capture efficiency of soil- some water may bypass REW even before it fills
         water_av_rew = water * ceff
@@ -483,10 +482,12 @@ class Processes(object):
 
         # fill depletion in REW if possible
         drew = where(water_av_rew >= pdrew + evap_1, 0, pdrew + evap_1 - water_av_rew)
-        drew = maximum(drew, rew)
+        drew = minimum(drew, rew)
 
         # add excess water to the water available to TEW (Is this coding ok?)
-        water_av_tew[water_av_rew >= pdrew + evap_1] += (water_av_rew - (pdrew + evap_1))
+        water_av_tew = where(water_av_rew >= pdrew + evap_1,
+                             water_av_tew + water_av_rew - (pdrew + evap_1),
+                             water_av_tew)
 
 
         # water balance through the stage 2 evaporation layer #
@@ -496,32 +497,26 @@ class Processes(object):
 
         # fill depletion in TEW if possible
         de = where(water_av_tew >= pde + evap_2, 0, pde + evap_2 - water_av_tew)
-        de = maximum(de, tew)
+        de = minimum(de, tew)
 
         # add excess water to the water available to TAW (Help coding this more cleanly?)
-        water_av_taw = where(water_av_tew >= pde + evap_2, water_av_taw + water_av_tew - (pde + evap_2),
+        water_av_taw = where(water_av_tew >= pde + evap_2,
+                             water_av_taw + water_av_tew - (pde + evap_2),
                              water_av_taw)
-
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone
 
-        # fill depletion in TEW if possible
-        de = where(water_av_tew >= pde + evap_2, 0, pde + evap_2 - water_av_tew)
-        de = maximum(de, tew)
-
+        # fill depletion in TAW if possible
         depletion = pdr + transp
         m['infil'] = where(water_av_taw >= depletion, water_av_taw - depletion, 0)
         dr = where(water_av_taw >= depletion, 0, depletion - water_av_taw)
 
-        m['soil_storage'] = ((pdr - dr) + (pde - de) + (pdrew - drew))
+        m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
         m['drew'] = drew
         m['de'] = de
         m['dr'] = dr
-        m['evap_1'] = evap_1
-        m['evap_2'] = evap_2
-        m['transp'] = transp
 
     def _do_accumulations(self):
         """ This function simply accumulates all terms.
@@ -618,26 +613,18 @@ class Processes(object):
         m = self._master
 
         m['kcb'] = get_kcb(self._mask_path, ndvi, date, m['pkcb'])
-        # print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
 
         m['min_temp'] = min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
         m['max_temp'] = max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
 
         m['temp'] = (min_temp + max_temp) / 2
-        # print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
 
         precip = get_prism(self._mask_path, prism, date, variable='precip')
         m['precip'] = where(precip < 0, 0, precip)
-        # print 'raw precip nan values = {}'.format(count_nonzero(isnan(m['precip'])))
-        # print 'precip min {} precip max on day {} is {}'.format(m['precip'].min(), date, m['precip'].max())
-        # print 'total precip et on {}: {:.2e} AF'.format(date, (m['precip'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         etrs = get_penman(self._mask_path, penman, date, variable='etrs')
-        # print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         etrs = where(etrs < 0, 0, etrs)
         m['etrs'] = where(isnan(etrs), 0, etrs)
-        # print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
-        # print 'total ref et on {}: {:.2e} AF'.format(date, (m['etrs'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         m['rg'] = get_penman(self._mask_path, penman, date, variable='rg')
 
@@ -660,12 +647,14 @@ class Processes(object):
     def _update_master_tracker(self, m, date):
         def factory(k):
             v = m[k]
-            try:
-                v = mm_af(v)
-            except AttributeError:
-                # this is to handle the non-float (e.g. boolean) parameters which can't be converted to AF
-                pass
 
+            if k in ('dry_days','kcb','kr','ks','ke','fcov','few','albedo',
+                     'max_temp','min_temp','rg','st_1_dur','st_2_dur',):
+                v = v.mean()
+            elif ('first_day', 'transp_adj'):
+                v = v.median()
+            else:
+                v = mm_af(v)
             return v
 
         tracker_from_master = [factory(key) for key in sorted(m)]

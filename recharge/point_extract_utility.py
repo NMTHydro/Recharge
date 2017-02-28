@@ -20,35 +20,7 @@ from osgeo import gdal, ogr
 from dateutil import rrule
 from pandas import DataFrame, date_range
 from numpy import nan
-
-import recharge.dynamic_raster_finder
-
-
-def get_inputs_at_point(coords, full_path):
-    """
-    Finds the point value for any coordinate in a raster object.
-
-    :param coords: Coordinates in format '999999 0000000' UTM
-    :type coords: str
-    :param full_path: Path to raster.
-    :type full_path: str
-    :return: Point value of a raster, float
-    """
-    if type(coords) == str:
-        mx, my = coords.split(' ')
-        mx, my = int(mx), int(my)
-    else:
-        mx, my = coords
-    # print 'coords: {}, {}'.format(mx, my)
-    dataset = gdal.Open(full_path)
-    gt = dataset.GetGeoTransform()
-    #print "This here is the full path: {}".format(full_path) # For testing
-    band = dataset.GetRasterBand(1)
-    px = abs(int((mx - gt[0]) / gt[1]))
-    py = int((my - gt[3]) / gt[5])
-    obj = band.ReadAsArray(px, py, 1, 1)
-
-    return obj[0][0]
+from recharge.dynamic_raster_finder import get_kcb, get_penman, get_prism
 
 
 def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location):
@@ -78,7 +50,7 @@ def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_per
             name = feat.GetField('Sample')
         print name
         geom = feat.GetGeometryRef()
-        mx, my = geom.GetX(), geom.GetY()
+        coords = geom.GetX(), geom.GetY()
         """Took these last three lines out bc it was skipping Valles Coniferous and we don't want that necessarily."""
         #if name == 'Valles_Coniferous':
             #print 'already did Valles Coniferous, skipping....'
@@ -86,16 +58,17 @@ def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_per
         for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
             if day.timetuple().tm_yday == 01:
                 print 'year {}'.format(day.year)
-            dynamics = [recharge.dynamic_raster_finder.get_kcb(ndvi, day, coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='rg', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_penman(penman, day, variable='etrs', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)),
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp', coords=(mx, my)),
-                        (
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='min_temp', coords=(mx, my)) +
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='max_temp',
-                                                                 coords=(mx, my))) / 2.,
-                        recharge.dynamic_raster_finder.get_prism(prism, day, variable='precip', coords=(mx, my))]
+
+            min_temp = get_prism(prism, day, variable='min_temp', coords=coords)
+            max_temp = get_prism(prism, day, variable='max_temp', coords=coords)
+
+            dynamics = [get_kcb(ndvi, day, coords=coords),
+                        get_penman(penman, day, variable='rg', coords=coords),
+                        get_penman(penman, day, variable='etrs', coords=coords),
+                        min_temp,
+                        max_temp,
+                        (min_temp+max_temp) / 2.,
+                        get_prism(prism, day, variable='precip', coords=coords)]
 
             df.loc[day] = dynamics
 

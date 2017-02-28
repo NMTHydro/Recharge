@@ -27,8 +27,6 @@ def save_master_tracker(tracker, raster_out_root):
     print 'this should be your master tracker csv: {}'.format(csv_path_filename)
     tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
-    return None
-
 
 if __name__ == '__main__':
     pass

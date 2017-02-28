@@ -24,13 +24,43 @@ dgketchum 24 JUL 2016
 
 import os
 from numpy import where, isnan
+from osgeo import gdal
 
 from recharge.raster_tools import convert_raster_to_array, apply_mask
-from recharge.point_extract_utility import get_inputs_at_point
+
+# from recharge.point_extract_utility import get_inputs_at_point
 
 NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
         225, 241, 257, 273, 289, 305, 321, 337, 353)
 PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
+
+
+def get_inputs_at_point(coords, full_path):
+    """
+    Finds the point value for any coordinate in a raster object.
+
+    :param coords: Coordinates in format '999999 0000000' UTM
+    :type coords: str
+    :param full_path: Path to raster.
+    :type full_path: str
+    :return: Point value of a raster, float
+    """
+    if type(coords) == str:
+        mx, my = coords.split(' ')
+        mx, my = int(mx), int(my)
+    else:
+        mx, my = coords
+    # print 'coords: {}, {}'.format(mx, my)
+    dataset = gdal.Open(full_path)
+    gt = dataset.GetGeoTransform()
+
+    # print "This here is the full path: {}".format(full_path) # For testing
+    band = dataset.GetRasterBand(1)
+    px = abs(int((mx - gt[0]) / gt[1]))
+    py = int((my - gt[3]) / gt[5])
+    obj = band.ReadAsArray(px, py, 1, 1)
+
+    return obj[0][0]
 
 
 def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
@@ -86,7 +116,7 @@ def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
             pass
         else:
             kcb = where(isnan(kcb) is True, previous_kcb, kcb)
-            kcb = where(abs(kcb) > 100., previous_kcb, kcb)
+            kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
 
         return kcb
 

@@ -25,8 +25,7 @@ from datetime import datetime
 import os
 
 
-def convert_raster_to_array(input_raster_path, raster,
-                            band=1):
+def convert_raster_to_array(input_raster_path, raster, band=1):
     """
     Convert .tif raster into a numpy numerical array.
 
@@ -40,16 +39,18 @@ def convert_raster_to_array(input_raster_path, raster,
     return ras
 
 
-def get_raster_geo_attributes(statics_path):
+def get_raster_geo_attributes(root):
     """
     Creates a dict of geographic attributes from any of the pre-processed standardized rasters.
 
-    :param statics_path: Path to a folder with pre-processed standardized rasters.
+    :param root: Path to a folder with pre-processed standardized rasters.
     :return: dict of geographic attributes.
     """
-    statics = [filename for filename in os.listdir(statics_path) if filename.endswith('.tif')]
-    file_name = statics[0]
-    dataset = gdal.Open(os.path.join(statics_path, file_name))
+    # statics = [filename for filename in os.listdir(statics_path) if filename.endswith('.tif')]
+    # file_name = statics[0]
+    file_name = next((fn for fn in os.listdir(root) if fn.endswith('.tif')), None)
+    dataset = gdal.Open(os.path.join(root, file_name))
+
     band = dataset.GetRasterBand(1)
     raster_geo_dict = {'cols': dataset.RasterXSize, 'rows': dataset.RasterYSize, 'bands': dataset.RasterCount,
                        'data_type': band.DataType, 'projection': dataset.GetProjection(),
@@ -81,6 +82,34 @@ def remake_array(mask_path, arr):
     return out
 
 def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+
+    year = day.strftime('%Y')
+    this_month = day.strftime('%m')
+    month_day = day.strftime('%d')
+    print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
+    for a, b, c, d, e, f, g, h, i in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+        with open(filename, "a") as wfile:
+            wfile.write('{},{},{},{},{},{},{},{},{},{},{},{} \n'.format(year, this_month, month_day, a, b, c, d, e, f, g, h, i))
+
+
+# def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+#     year = day.strftime('%Y')
+#     this_month = day.strftime('%m')
+#     month_day = day.strftime('%d')
+#     for datum in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+#         with open(filename, "a") as wfile:
+#             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
+
+
+def save_daily_pts(wfile, day, data):
+    print('Saving daily NDVI data for {}'.format(day.strftime('%Y-%m-%d')))
+
+    datestr = day.strftime('%Y,%m,%d')
+    for datum in data:
+        wfile.write('{},{}\n'.format(datestr, ','.join(datum)))
+
+
+def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
 
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
