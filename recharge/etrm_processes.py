@@ -257,16 +257,12 @@ class Processes(object):
         # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
         # TEW is zero at lakes.
         tew = maximum(s['tew'], 0.001)
-        print 'tew = {}'.format(tew)
-        print 'pde = {}'.format(m['pde'])
         kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
-        print 'kr = {}'.format(kr)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
 
 
         kr = maximum(kr, 0.01)
-        print 'kr_limit = {}'.format(kr)
         m['kr'] = kr
 
         ####
@@ -282,7 +278,6 @@ class Processes(object):
         # ke evaporation efficency; Allen 2011, Eq 13a
         ke_init = (st_1_dur + (st_2_dur * kr)) * (kc_max - (ks * kcb))
         m['ke_init'] = ke_init
-        print 'ke_init = {}'.format(ke_init)
 
         ke = (kc_max - (ks * kcb))
         ke = minimum(ke, few * kc_max)
@@ -292,9 +287,7 @@ class Processes(object):
 
         # Ketchum Thesis eq 36, 37
         m['evap_1'] = e1 = st_1_dur * ke * etrs
-        print 'evap_1 = {}'.format(m['evap_1'])
         m['evap_2'] = e2 = st_2_dur * kr * ke * etrs
-        print 'evap_2 = {}'.format(m['evap_2'])
         m['evap'] = e1 + e2
 
     def _do_snow(self, m, c):
@@ -390,7 +383,6 @@ class Processes(object):
         wrew = s['rew'] - pdrew
         evap_1 = where(evap_1 > wrew, wrew, evap_1)
         evap_1[evap_1 < 0] = 0
-        print 'evap_1 = {}'.format(evap_1)
 
         evap_2 = m['evap_2']
         wtew = s['tew'] - pde
@@ -406,11 +398,8 @@ class Processes(object):
 
         # water balance through skin layer #
         drew = where(water >= pdrew + evap_1, 0, pdrew + evap_1 - water)
-        print 'pdrew = {}'.format(pdrew)
-        print 'evap_1 = {}'.format(evap_1)
 
         water = where(water < pdrew + evap_1, 0, water - pdrew - evap_1)
-        # print 'water through skin layer: {}'.format(mm_af(water))
         m['ro'] = where(water > soil_ksat, water - soil_ksat, 0)
         water = where(water > soil_ksat, soil_ksat, water)
 
@@ -418,10 +407,8 @@ class Processes(object):
         de = where(water >= pde + evap_2, 0, pde + evap_2 - water)
 
         water = where(water < pde + evap_2, 0, water - (pde + evap_2))
-        # print 'water through  de  layer: {}'.format(mm_af(water))
 
         # water balance through the root zone layer #
-        # print 'deep percolation total: {}'.format(mm_af(m['infil']))
         dr = where(water >= pdr + transp, 0, pdr + transp - water)
 
         m['infil'] = where(water >= pdr + transp, water - pdr - transp, 0)
@@ -456,7 +443,6 @@ class Processes(object):
         wrew = rew - pdrew
         evap_1 = where(evap_1 > wrew, wrew, evap_1)
         evap_1[evap_1 < 0] = 0
-        print 'evap_1 = {}'.format(evap_1)
 
         evap_2 = m['evap_2']
         wtew = tew - pde
@@ -479,10 +465,7 @@ class Processes(object):
         dd = m['dry_days']
         dd = where(water < 0.1, dd + 1, 1)
         m['dry_days'] = dd
-        print 'water = {}'.format(water)
-        print 'm[rain] = {}'.format(m['rain'])
-        print 'm[melt] = {}'.format(m['melt'])
-        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
+
         # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
         ##
 
@@ -492,20 +475,14 @@ class Processes(object):
         water_av_taw = ro * ro_local_reinfilt_frac
         ro *= (1 - ro_local_reinfilt_frac)
         m['ro'] = ro
-        print 'ro = {}'.format(ro)
-        print 'water_av_taw = {}'.format(water_av_taw)
         # water balance through the stage 1 evaporation layer #
         # capture efficiency of soil- some water may bypass REW even before it fills
         water_av_rew = water * ceff
-        print 'ceff = {}'.format(ceff)
-        print 'water_av_rew = {}'.format(water_av_rew)
         water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
 
         # fill depletion in REW if possible
         drew = where(water_av_rew >= pdrew + evap_1, 0, pdrew + evap_1 - water_av_rew)
-        print 'drew = {}'.format(drew)
         drew = minimum(drew, rew)
-        print 'drew = {}'.format(drew)
 
         # add excess water to the water available to TEW (Is this coding ok?)
         water_av_tew = where(water_av_rew >= pdrew + evap_1,
@@ -636,26 +613,18 @@ class Processes(object):
         m = self._master
 
         m['kcb'] = get_kcb(self._mask_path, ndvi, date, m['pkcb'])
-        #print 'kcb nan values = {}'.format(count_nonzero(isnan(m['kcb'])))
 
         m['min_temp'] = min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
         m['max_temp'] = max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
 
         m['temp'] = (min_temp + max_temp) / 2
-        # print 'raw temp nan values = {}'.format(count_nonzero(isnan(m['temp'])))
 
         precip = get_prism(self._mask_path, prism, date, variable='precip')
         m['precip'] = where(precip < 0, 0, precip)
-        # print 'raw precip nan values = {}'.format(count_nonzero(isnan(m['precip'])))
-        # print 'precip min {} precip max on day {} is {}'.format(m['precip'].min(), date, m['precip'].max())
-        # print 'total precip et on {}: {:.2e} AF'.format(date, (m['precip'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         etrs = get_penman(self._mask_path, penman, date, variable='etrs')
-        # print 'raw etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
         etrs = where(etrs < 0, 0, etrs)
         m['etrs'] = where(isnan(etrs), 0, etrs)
-        # print 'bounded etrs nan values = {}'.format(count_nonzero(isnan(m['etrs'])))
-        # print 'total ref et on {}: {:.2e} AF'.format(date, (m['etrs'].sum() / 1000) * (250 ** 2) / 1233.48)
 
         m['rg'] = get_penman(self._mask_path, penman, date, variable='rg')
 
@@ -686,15 +655,6 @@ class Processes(object):
                 v = v.median()
             else:
                 v = mm_af(v)
-
-
-            # don't convert kcb, kr, ks, ke, fcov, few,
-            # try:
-            #     v = mm_af(v)
-            # except AttributeError:
-            #     # this is to handle the non-float (e.g. boolean) parameters which can't be converted to AF
-            #     pass
-
             return v
 
         tracker_from_master = [factory(key) for key in sorted(m)]
