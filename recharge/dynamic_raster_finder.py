@@ -64,7 +64,6 @@ def get_inputs_at_point(coords, full_path):
 
 
 def get_individ_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
-
     year = date_object.year
     tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.timetuple().tm_mon, date_object.timetuple().tm_mday)
 
@@ -81,6 +80,7 @@ def get_individ_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=N
         kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
 
     return kcb
+
 
 def get_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
     """
