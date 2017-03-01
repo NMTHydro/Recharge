@@ -18,25 +18,12 @@ import os
 import time
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 from dateutil import rrule
+
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
-
 from recharge.raster_manager import RasterManager
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb as get_kcb
-from tools import millimeter_to_acreft as mm_af
-
-
-def add_extension(p, ext='.txt'):
-    if not p.endswith(ext):
-        p = '{}{}'.format(p, ext)
-    return p
-
-
-def time_it(func, *args, **kw):
-    st = time.time()
-    ret = func(*args, **kw)
-    print '######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time() - st)
-    return ret
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb
+from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
 
 
 class Processes(object):
@@ -95,7 +82,7 @@ class Processes(object):
     def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
 
         start, end = self._start_date, self._end_date
-        self._info('Simulation period: start={}, end={}'.format(start, end))
+        self._info('Run started. Simulation period: start={}, end={}'.format(start, end))
 
         c = self._constants
         m = self._master
@@ -147,13 +134,14 @@ class Processes(object):
 
             m['first_day'] = False
 
+        self._info('saving tabulated data')
         time_it(rm.save_csv)
 
-        self._info('saving tabulated data')
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
     def initialize(self):
+        self._info('Initialize initial model state')
         m = self._master
 
         m['first_day'] = True
@@ -190,17 +178,15 @@ class Processes(object):
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
     def save_tracker(self, path=None):
+        self._info('Saving tracker')
+
         base = 'etrm_master_tracker'
         if path is None:
             path = add_extension(os.path.join(self._output_root, base), '.csv')
 
         if os.path.isfile(path):
-            cnt = 0
-            while 1:
-                path = os.path.join(self._output_root, '{}-{:04n}.csv'.format(base, cnt))
-                if not os.path.isfile(path):
-                    break
-                cnt += 1
+
+            path = unique_path(self._output_root, base, '.csv')
 
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
@@ -220,8 +206,8 @@ class Processes(object):
         # Cover Fraction- ASCE pg 199, Eq 9.27
         t = 0.001
         plant_exponent = s['plant_height'] * 0.5 + 1  # h varaible, derived from ??
-        numerator_term = maximum(kcb-kc_min, t)
-        denominator_term = maximum(kc_max-kc_min, t)
+        numerator_term = maximum(kcb - kc_min, t)
+        denominator_term = maximum(kc_max - kc_min, t)
 
         cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
         cover_fraction_upper_bound = minimum(cover_fraction_unbound, 1)
@@ -260,7 +246,6 @@ class Processes(object):
         kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
-
 
         kr = maximum(kr, 0.01)
         m['kr'] = kr
@@ -428,7 +413,6 @@ class Processes(object):
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
-
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
@@ -488,7 +472,6 @@ class Processes(object):
         water_av_tew = where(water_av_rew >= pdrew + evap_1,
                              water_av_tew + water_av_rew - (pdrew + evap_1),
                              water_av_tew)
-
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
@@ -612,7 +595,7 @@ class Processes(object):
         ndvi, prism, penman = self._ndvi_path, self._prism_path, self._penman_path
         m = self._master
 
-        m['kcb'] = get_kcb(self._mask_path, ndvi, date, m['pkcb'])
+        m['kcb'] = get_individ_kcb(self._mask_path, ndvi, date, m['pkcb'])
 
         m['min_temp'] = min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
         m['max_temp'] = max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
@@ -648,8 +631,8 @@ class Processes(object):
         def factory(k):
             v = m[k]
 
-            if k in ('dry_days','kcb','kr','ks','ke','fcov','few','albedo',
-                     'max_temp','min_temp','rg','st_1_dur','st_2_dur',):
+            if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
+                     'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
                 v = v.mean()
             elif k in ('first_day', 'transp_adj'):
                 v = median(v)

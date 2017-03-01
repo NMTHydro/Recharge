@@ -15,6 +15,13 @@
 # ===============================================================================
 
 import os
+import time
+
+
+def add_extension(p, ext='.txt'):
+    if not p.endswith(ext):
+        p = '{}{}'.format(p, ext)
+    return p
 
 
 def millimeter_to_acreft(param):
@@ -28,7 +35,31 @@ def save_master_tracker(tracker, raster_out_root):
     tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
 
-if __name__ == '__main__':
-    pass
+def unique_path(root, base, extension):
+    """
+    simple function for getting a unique path in a given directory
+
+    very simplistic should not be heavily relied upon without modification
+
+    :param root:
+    :param base:
+    :param extension:
+    :return:
+    """
+    cnt = 0
+    while 1:
+        path = os.path.join(root, '{}-{:04n}{}'.format(base, cnt, extension))
+        if not os.path.isfile(path):
+            return path
+        cnt += 1
+
+
+def time_it(func, *args, **kw):
+    print '######### {:<30s} STARTED'.format(func.func_name)
+    st = time.time()
+    ret = func(*args, **kw)
+    print '######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time() - st)
+    return ret
+
 
 # =================================== EOF =========================
