@@ -651,7 +651,7 @@ class Processes(object):
             if k in ('dry_days','kcb','kr','ks','ke','fcov','few','albedo',
                      'max_temp','min_temp','rg','st_1_dur','st_2_dur',):
                 v = v.mean()
-            elif ('first_day', 'transp_adj'):
+            elif k in ('first_day', 'transp_adj'):
                 v = median(v)
             else:
                 v = mm_af(v)
