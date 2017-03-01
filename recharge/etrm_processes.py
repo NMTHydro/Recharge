@@ -22,7 +22,7 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
     set_constants, initialize_master_tracker
 
 from recharge.raster_manager import RasterManager
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_kcb
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb as get_kcb
 from tools import millimeter_to_acreft as mm_af
 
 
@@ -85,7 +85,7 @@ class Processes(object):
         self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root,
                                              write_freq)  # self._outputs
 
-        self._ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+        self._ndvi_path = os.path.join(input_root, 'NDVI_individ')
         self._prism_path = os.path.join(input_root, 'PRISM')
         self._penman_path = os.path.join(input_root, 'PM_RAD')
         self._start_date, self._end_date = date_range
@@ -652,7 +652,7 @@ class Processes(object):
                      'max_temp','min_temp','rg','st_1_dur','st_2_dur',):
                 v = v.mean()
             elif ('first_day', 'transp_adj'):
-                v = v.median()
+                v = median(v)
             else:
                 v = mm_af(v)
             return v

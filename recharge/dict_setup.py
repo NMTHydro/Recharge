@@ -66,6 +66,7 @@ def initialize_master_dict(shape=None):
         # master['pkcb'] = zeros(shape)
         master['infil'] = zeros(shape)
         master['kcb'] = zeros(shape)
+        master['tot_kcb'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
         master['tot_rain'] = zeros(shape)
         master['tot_melt'] = zeros(shape)

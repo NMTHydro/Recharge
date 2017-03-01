@@ -156,7 +156,7 @@ if __name__ == '__main__':
     map_for_reference = os.path.join(penman_path, '2000', penman_example)
     resX, resY, cols, rows, x, y, data, prj, FillVal = readMap(map_for_reference,'Gtiff')
 
-    print('ndvi_path',ndvi_path)
+    # print('ndvi_path',ndvi_path)
 
     start = datetime.datetime(2000,1,1,0)
     end = datetime.datetime(2001,12,31,0)
