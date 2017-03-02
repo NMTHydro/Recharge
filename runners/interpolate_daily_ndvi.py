@@ -100,12 +100,13 @@ def writeMap(fileName, fileFormat, x, y, data,  prj, FillVal):
         print 'Writing to ' + fileName + ' is done!'
 
 
-def time_interpolation(day, Lat, Lon):
+def time_interpolation(day, Lat, Lon, finalyear):
 
     NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
             225, 241, 257, 273, 289, 305, 321, 337, 353)
 
     numsize = len(NUMS)
+    year = day.year
 
     base_dir = 'F:\\ETRM_Inputs\\NDVI_individ\\'
     output = 'F:\\ETRM_Inputs\\NDVI_spline\\'
@@ -127,6 +128,11 @@ def time_interpolation(day, Lat, Lon):
             # print(NUMS[i + 1])
             first_date = NUMS[i]
             next_date = NUMS[i+1]
+        elif (cnt >= 353) & (year == finalyear):
+            first_date = NUMS[numsize-1]
+            # print('first_date: ', first_date)
+            next_date = first_date
+            # print('next_date: ', next_date)
         elif (cnt >= 353):
             first_date = NUMS[numsize-1]
             # print('first_date: ', first_date)
@@ -138,12 +144,14 @@ def time_interpolation(day, Lat, Lon):
 
     print('-----------------------------------------------------------------------------')
     print('DOY:', cnt)
-    year = day.year
     # print(year)
     raster_first_date = datetime.datetime(year, 1, 1) + datetime.timedelta(first_date-1)
     print('raster first date: ', raster_first_date)
 
-    if cnt >= 353:
+    if (cnt >= 353) & (year == finalyear):
+        newyear = year
+        raster_next_date = datetime.datetime(newyear, 1, 1) + datetime.timedelta(next_date - 1)
+    elif cnt >= 353:
         newyear =  year + 1
         # print(year)
         raster_next_date = datetime.datetime(newyear, 1, 1) + datetime.timedelta(next_date - 1)
@@ -182,8 +190,6 @@ def time_interpolation(day, Lat, Lon):
     # print('Y',Y)
     # print(Y.shape)
 
-#        a = np.linspace(15, 365, num=12)
-
     #Setup time variables for interpolation
     days_dif = raster_next_date - day
     days_dif = float(days_dif.days)
@@ -194,7 +200,11 @@ def time_interpolation(day, Lat, Lon):
     print('day', day)
     print('days difference from next ndvi raster', days_dif)
     print('out of max days difference', max_days_diff)
-    interp = 1 - (days_dif / max_days_diff) #1 = weight completely next month values, 0 = previous month
+
+    if (cnt >= 353) & (year == finalyear):
+        interp = 0.0 #Set to 0 otherwise will divide by zero and give error
+    else:
+        interp = 1 - (days_dif / max_days_diff) #1 = weight completely next month values, 0 = previous month
     print('interp ratio between monthly images', interp)
 
     # 0.5 corresponds to half way between arr1 and arr2
@@ -203,7 +213,7 @@ def time_interpolation(day, Lat, Lon):
     #print('coordinates',coordinates)
     #print(coordones.shape)
 
-    # given arr interpolate at coordinates
+    # given arrays, interpolate at coordinates (could be any subset but in this case using full arrays)
     newarr = ndimage.map_coordinates(arr, coordinates, order=2)
 
     return newarr
@@ -225,8 +235,9 @@ def main():
     base_dir = 'F:\\ETRM_Inputs\\NDVI_individ\\'
     output = 'F:\\ETRM_Inputs\\NDVI_spline\\'
 
-    startday = datetime.datetime(2002,1,1,0)
+    startday = datetime.datetime(2013,12,17,0)
     endday = datetime.datetime(2013,12,31,0)
+    finalyear = 2013
 
     year = '2000'
     ref_map = os.path.join(base_dir, year, 'NDVI2000_01_01.tif')
@@ -239,7 +250,7 @@ def main():
         nr = day.strftime('%j')
         year = day.strftime('%Y')
 
-        ndvi_daily = time_interpolation(day, Lat, Lon)
+        ndvi_daily = time_interpolation(day, Lat, Lon, finalyear)
 
         #Write daily values to new daily rasters
         daily_doy = 'ndvi{}_{}.tif'.format(year, nr)

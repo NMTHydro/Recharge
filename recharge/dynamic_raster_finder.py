@@ -63,6 +63,26 @@ def get_inputs_at_point(coords, full_path):
     return obj[0][0]
 
 
+def get_spline_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
+    year = date_object.year
+
+    tail = '{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
+
+    raster = os.path.join('{}'.format(year), 'ndvi{}'.format(tail))
+
+    ndvi = apply_mask(mask_path, convert_raster_to_array(in_path, raster))
+
+    kcb = ndvi * 1.25
+
+    if previous_kcb is None:
+        pass
+    else:
+        kcb = where(isnan(kcb) is True, previous_kcb, kcb)
+        kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
+
+    return kcb
+
+
 def get_individ_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=None):
     year = date_object.year
     tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.timetuple().tm_mon, date_object.timetuple().tm_mday)

@@ -106,7 +106,7 @@ def initialize_static_dict(inputs_root, mask_path):
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return minimum(r, 20)
+        return maximum(minimum(r, 20),0.1)
 
     def initial_tew(r):
         return maximum(minimum(r, 10),0.001)
