@@ -15,9 +15,10 @@
 
 from datetime import datetime
 from dateutil import rrule
+from numpy import array, where
 import os
-from dynamic_raster_finder import get_kcb, get_penman, get_prism
-from raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_spline_kcb as get_kcb
+from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
 import time
 
 
@@ -28,24 +29,32 @@ def run(root):
     mask_path = os.path.join(root, 'Mask')
 
     statics_to_save = os.path.join(root, 'NDVI_statics')
-    ndvi = os.path.join(root, 'NDVI', 'NDVI_std_all')
+    ndvi = os.path.join(root, 'NDVI_spline',)
     prism = os.path.join(root, 'PRISM')
     penman = os.path.join(root, 'PM_RAD')
     nlcd_name = 'nlcd_nm_utm13.tif'
     dem_name = 'NMbuffer_DEM_UTM13_250m.tif'
     aspect_name = 'NMbuffer_DEMAspect_UTM13_250m.tif'
     slope_name = 'NMbuffer_DEMSlope_UTM13_250m.tif'
-    filename = os.path.join(root, 'NDVI_pts_out', 'NDVI_2000_2013.csv')
+    x_name = 'NDVI_1300ptsX.tif'
+    y_name = 'NDVI_1300ptsY.tif'
+    filename = os.path.join(root, 'NDVI_pts_out', 'NDVI_Spline_2000_2013.csv')
 
     nlcd = apply_mask(mask_path, convert_raster_to_array(statics_to_save, nlcd_name, 1))
     dem = apply_mask(mask_path, convert_raster_to_array(statics_to_save, dem_name, 1))
     slope = apply_mask(mask_path, convert_raster_to_array(statics_to_save, slope_name, 1))
     aspect = apply_mask(mask_path, convert_raster_to_array(statics_to_save, aspect_name, 1))
-    keys = ('Year', 'Month', 'Day', 'NDVI', 'Tavg', 'Precip', 'ETr',
+    x_cord = apply_mask(mask_path, convert_raster_to_array(statics_to_save, x_name, 1))
+    y_cord = apply_mask(mask_path, convert_raster_to_array(statics_to_save, y_name, 1))
+    keys = ('Year', 'Month', 'Day', 'X', 'Y', 'NDVI', 'Tavg', 'Precip', 'ETr',
             'PminusEtr', 'NLCD_class', 'Elev', 'Slope', 'Aspect')
 
     with open(filename, 'a') as wfile:
         wfile.write('{}\n'.format(','.join(keys)))
+
+    slope = where(slope < 0.0, 0, slope)
+    aspect = where(aspect < 0.0, 0, aspect)
+    aspect = where(aspect > 360.0, 0, aspect)
 
     st_begin = time.time()
 
@@ -60,7 +69,10 @@ def run(root):
         etrs_data = get_penman(mask_path, penman, day, variable="etrs")
         p_minus_etr = precip_data - etrs_data
 
-        save_daily_pts(filename, day, ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, dem, slope, aspect)
+        # data = array([x_cord, y_cord, ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, dem, slope, aspect]).T
+        # save_daily_pts2(wfile, day, data)
+
+        save_daily_pts(filename, day, x_cord, y_cord, ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, dem, slope, aspect)
 
         runtime = time.time() - st
 
@@ -73,5 +85,3 @@ def run(root):
 
 if __name__ == '__main__':
     run('F:\\ETRM_Inputs')
-
-# ============= EOF =============================================
