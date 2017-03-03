@@ -22,31 +22,30 @@ from datetime import datetime
 from recharge.point_extract_utility import get_dynamic_inputs_from_shape
 
 
-def extract_etrm_point_inputs(shapefile, ndvi, prism, penman, simulation_period, out_location):
+def extract_etrm_point_inputs(input_root, output_root, simulation_period):
+    ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+    prism_path = os.path.join(input_root, 'PRISM')
+    penman_path = os.path.join(input_root, 'PM_RAD')
+    # statics = os.path.join(input_root, 'statics')
+    # sa_path = os.path.join(input_root, 'shapefiles')  # (input_root, 'shapefiles')
+    # sb_path is where the outputs are going. sa_path used to be for sensitivity analysis.
+    # sb_path = os.path.join(input_root, 'ameriflux_ex_sac')  # ameriflux_sites
+    # save_path = sb_path  # os.path.join(sa_path, 'AMF_extracts')
+    # save_path = sb_path  # os.path.join(sa_path, 'AMF_extracts')
 
-    get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location)
+    shapefile = os.path.join('/Users', 'Gabe', 'Desktop', 'QGIS_Ameriflux', 'coords_attempt3.shp')
+    # shape = os.path.join(sa_path, 'amf_sites_UTM.shp')
 
+    print("Here is the save path {}".format(output_root))
+    get_dynamic_inputs_from_shape(shapefile, ndvi_path, prism_path, penman_path, simulation_period, output_root)
 
 
 if __name__ == '__main__':
-    home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
-    root = os.path.join(home)
-    inputs = os.path.join('/Volumes','Seagate Expansion Drive', 'ETRM_Inputs')
-    ndvi_path = os.path.join(inputs, 'NDVI', 'NDVI_std_all')
-    prism_path = os.path.join(inputs, 'PRISM')
-    penman_path = os.path.join(inputs, 'PM_RAD')
-    statics = os.path.join(inputs, 'statics')
-    sa_path = os.path.join(inputs, 'shapefiles') # (inputs, 'shapefiles')
-    # sb_path is where the outputs are going. sa_path used to be for sensitivity analysis.
-    sb_path = os.path.join(inputs, 'ameriflux_ex_sac') # ameriflux_sites
-    save_path = sb_path  # os.path.join(sa_path, 'AMF_extracts')
-    #save_path = sb_path  # os.path.join(sa_path, 'AMF_extracts')
-    shape = os.path.join('/Users', 'Gabe', 'Desktop', 'QGIS_Ameriflux', 'coords_attempt3.shp')
-    #shape = os.path.join(sa_path, 'amf_sites_UTM.shp')
-    period = datetime(2000, 1, 1), datetime(2013, 12, 31)
-    print("Here is the save path {}".format(save_path))
-    extract_etrm_point_inputs(shape, ndvi_path, prism_path, penman_path, period, save_path)
+    input_root = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
+    output_root = os.path.join(input_root, 'ameriflux_ex_sac')
+    simulation_period = datetime(2000, 1, 1), datetime(2013, 12, 31)
+
+    extract_etrm_point_inputs(input_root, output_root, simulation_period)
 
 
 # ==========================  EOF  ==============================================
