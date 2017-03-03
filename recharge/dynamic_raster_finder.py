@@ -26,13 +26,8 @@ import os
 from numpy import where, isnan
 from osgeo import gdal
 
+from recharge import NUMS, PRISM_YEARS
 from recharge.raster_tools import convert_raster_to_array, apply_mask
-
-# from recharge.point_extract_utility import get_inputs_at_point
-
-NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209,
-        225, 241, 257, 273, 289, 305, 321, 337, 353)
-PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 
 
 def get_inputs_at_point(coords, full_path):
@@ -74,9 +69,7 @@ def get_spline_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=No
 
     kcb = ndvi * 1.25
 
-    if previous_kcb is None:
-        pass
-    else:
+    if previous_kcb is not None:
         kcb = where(isnan(kcb) is True, previous_kcb, kcb)
         kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
 
@@ -93,9 +86,7 @@ def get_individ_kcb(mask_path, in_path, date_object, previous_kcb=None, coords=N
 
     kcb = ndvi * 1.25
 
-    if previous_kcb is None:
-        pass
-    else:
+    if previous_kcb is not None:
         kcb = where(isnan(kcb) is True, previous_kcb, kcb)
         kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
 

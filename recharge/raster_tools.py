@@ -81,43 +81,37 @@ def remake_array(mask_path, arr):
 
     return out
 
-def save_daily_pts(filename, day, x_cord, y_cord, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
+
+def save_daily_pts(wfile, day, data):
+    """
+        data =x_cord, y_cord, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect
+    """
 
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
     month_day = day.strftime('%d')
     print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
-    for a, b, c, d, e, f, g, h, i, j, k in zip(x_cord, y_cord, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
-        with open(filename, "a") as wfile:
-            wfile.write('{},{},{},{},{},{},{},{},{},{},{},{},{},{} \n'.format(year, this_month, month_day, a, b, c, d, e, f, g, h, i, j, k))
+    for row in data:
+        timestamp = '{},{},{}'.format(year, this_month, month_day)
+        # use map(str, row) to convert each element from a float to a str
+        row = ','.join(map(str, row))
+        wfile.write('{},{}\n'.format(timestamp, row))
 
-
-# def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
-#     year = day.strftime('%Y')
-#     this_month = day.strftime('%m')
-#     month_day = day.strftime('%d')
-#     for datum in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
-#         with open(filename, "a") as wfile:
-#             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
-
-
-def save_daily_pts2(wfile, day, data):
-    print('Saving daily NDVI data for {}'.format(day.strftime('%Y-%m-%d')))
-
-    datestr = day.strftime('%Y,%m,%d')
-    for datum in data:
-        wfile.write('{},{}\n'.format(datestr, ','.join(datum)))
+    # in case you are worried about data not getting written to file if the script crashes mid-execution
+    wfile.flush()
+    # comment this out if you are not worried. The only reason i thought you might be is because of the use of 'a' to
+    # open a file
 
 
 def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
-
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
     month_day = day.strftime('%d')
     print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
     for a, b, c, d, e, f, g, h, i in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
         with open(filename, "a") as wfile:
-            wfile.write('{},{},{},{},{},{},{},{},{},{},{},{} \n'.format(year, this_month, month_day, a, b, c, d, e, f, g, h, i))
+            wfile.write(
+                '{},{},{},{},{},{},{},{},{},{},{},{} \n'.format(year, this_month, month_day, a, b, c, d, e, f, g, h, i))
 
 
 # def save_daily_pts(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
