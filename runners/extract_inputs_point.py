@@ -20,12 +20,16 @@ import os
 from datetime import datetime
 
 from recharge.point_extract_utility import get_dynamic_inputs_from_shape
+from runners.paths import paths
 
 
 def extract_etrm_point_inputs(input_root, output_root, simulation_period):
-    ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
-    prism_path = os.path.join(input_root, 'PRISM')
-    penman_path = os.path.join(input_root, 'PM_RAD')
+    # ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+    # prism_path = os.path.join(input_root, 'PRISM')
+    # penman_path = os.path.join(input_root, 'PM_RAD')
+
+    paths.build(input_root)
+
     # statics = os.path.join(input_root, 'statics')
     # sa_path = os.path.join(input_root, 'shapefiles')  # (input_root, 'shapefiles')
     # sb_path is where the outputs are going. sa_path used to be for sensitivity analysis.
@@ -37,11 +41,11 @@ def extract_etrm_point_inputs(input_root, output_root, simulation_period):
     # shape = os.path.join(sa_path, 'amf_sites_UTM.shp')
 
     print("Here is the save path {}".format(output_root))
-    get_dynamic_inputs_from_shape(shapefile, ndvi_path, prism_path, penman_path, simulation_period, output_root)
+    get_dynamic_inputs_from_shape(shapefile, simulation_period, output_root)
 
 
 if __name__ == '__main__':
-    input_root = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
+    input_root = os.path.join('/Volumes', 'Seagate Expansion Drive')
     output_root = os.path.join(input_root, 'ameriflux_ex_sac')
     simulation_period = datetime(2000, 1, 1), datetime(2013, 12, 31)
 

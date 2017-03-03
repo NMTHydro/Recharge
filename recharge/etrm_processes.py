@@ -24,6 +24,7 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.raster_manager import RasterManager
 from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
+from runners.paths import paths
 
 
 class Processes(object):
@@ -48,9 +49,9 @@ class Processes(object):
                  polygons='Blank_Geo',
                  write_freq=None):
 
-        self._mask_path = os.path.join(input_root, mask)
-        self._polygons_path = os.path.join(input_root, polygons)
-        self._output_root = output_root
+        paths.build(input_root, output_root)
+        paths.set_polygons_path(polygons)
+        paths.set_mask_path(mask)
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
@@ -60,21 +61,14 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
-        static_inputs = os.path.join(input_root, 'statics')
-        initial_inputs = os.path.join(input_root, 'initialize')
-
-        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
+        self._static = time_it(initialize_static_dict)
         self._shape = self._static['taw'].shape
-        self._initial = time_it(initialize_initial_conditions_dict, initial_inputs, self._mask_path)
+        self._initial = time_it(initialize_initial_conditions_dict)
         self._master = time_it(initialize_master_dict, self._shape)
 
         # self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root,
-                                             write_freq)  # self._outputs
+        self._raster_manager = RasterManager(date_range, write_freq)  # self._outputs
 
-        self._ndvi_path = os.path.join(input_root, 'NDVI_individ')
-        self._prism_path = os.path.join(input_root, 'PRISM')
-        self._penman_path = os.path.join(input_root, 'PM_RAD')
         self._start_date, self._end_date = date_range
 
         time_it(self.initialize)
@@ -129,7 +123,7 @@ class Processes(object):
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            time_it(rm.update_raster_obj, m, self._mask_path, day)
+            time_it(rm.update_raster_obj, m, day)
             time_it(self._update_master_tracker, m, day)
 
             m['first_day'] = False
@@ -182,11 +176,11 @@ class Processes(object):
 
         base = 'etrm_master_tracker'
         if path is None:
-            path = add_extension(os.path.join(self._output_root, base), '.csv')
+            path = add_extension(os.path.join(paths.etrm_output_root, base), '.csv')
 
         if os.path.isfile(path):
 
-            path = unique_path(self._output_root, base, '.csv')
+            path = unique_path(paths.etrm_output_root, base, '.csv')
 
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
@@ -592,7 +586,8 @@ class Processes(object):
         param date: datetime.day object
         :return: None
         """
-        ndvi, prism, penman = self._ndvi_path, self._prism_path, self._penman_path
+        # ndvi, prism, penman = self._ndvi_path, self._prism_path, self._penman_path
+        ndvi, prism, penman = paths.ndvi_individ, paths.prism, paths.penman
         m = self._master
 
         m['kcb'] = get_individ_kcb(self._mask_path, ndvi, date, m['pkcb'])

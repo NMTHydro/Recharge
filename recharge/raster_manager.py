@@ -33,16 +33,17 @@ import os
 from recharge.raster_tools import make_results_dir, apply_mask, remake_array
 from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
+from runners.paths import paths
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb')
 DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip')
 
+
 class RasterManager(object):
-    def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
+    def __init__(self, simulation_period,
                  write_frequency=None):
 
         self._write_freq = write_frequency
-        self._polygons = polygons
         self._simulation_period = simulation_period
 
         # _outputs are flux totals, monthly and annual are found with _update_raster_tracker()
@@ -54,12 +55,12 @@ class RasterManager(object):
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
             print 'your daily outputs will be from: {}'.format(DAILY_OUTPUTS)
 
-        self._geo = get_geo(path_to_representative_raster)
+        self._geo = get_geo(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker(OUTPUTS, (self._geo['rows'], self._geo['cols']))
-        self._results_dir = make_results_dir(output_root, polygons)
-        self._tabular_dict = initialize_tabular_dict(polygons, OUTPUTS, simulation_period, write_frequency)
+        self._results_dir = make_results_dir(paths.etrm_output_root, os.path.basename(paths.polygons))
+        self._tabular_dict = initialize_tabular_dict(OUTPUTS, simulation_period, write_frequency)
 
-    def update_raster_obj(self, master, mask_path, date_object, save_specific_dates=None):
+    def update_raster_obj(self, master, date_object, save_specific_dates=None):
         """
         Checks if the date is specified for writing output and calls the write and tabulation methods.
 
@@ -81,7 +82,7 @@ class RasterManager(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
         if self._write_freq == 'daily':
             for element in DAILY_OUTPUTS:
-                arr = remake_array(mask_path, master[element])
+                arr = remake_array(paths.mask, master[element])
                 self._sum_raster_by_shape(element, date_object, arr)
 
         # save monthly data
@@ -90,7 +91,7 @@ class RasterManager(object):
             print ''
             print 'saving monthly data for {}'.format(date_object)
             for element in OUTPUTS:
-                arr = remake_array(mask_path, master[element])
+                arr = remake_array(paths.mask, master[element])
                 self._update_raster_tracker(arr, element, period='monthly')
                 self._write_raster(element, date_object, period='monthly')
                 if not self._write_freq:
@@ -99,14 +100,14 @@ class RasterManager(object):
         # save annual data
         if date_object.month == 12 and date_object.day == 31:
             for element in OUTPUTS:
-                arr = remake_array(mask_path, master[element])
+                arr = remake_array(paths.mask, master[element])
                 self._update_raster_tracker(arr, element, period='annual')
                 self._write_raster(element, date_object, period='annual')
 
     def save_csv(self):
         print 'tab dict: \n{}'.format(self._tabular_dict)
         print 'saving the simulation master tracker'
-        self._save_tabulated_results_to_csv(self._results_dir, self._polygons)
+        self._save_tabulated_results_to_csv(self._results_dir, 'polygons')
 
     def _update_raster_tracker(self, vv, var, period):
         """ Updates the cumulative rasters each period as indicated.
@@ -137,7 +138,7 @@ class RasterManager(object):
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
 
         rd = self._results_dir
-        #root = rd['root'] # results directory doesn't have a root; all
+        # root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
         if period == 'annual':
             file_ = '{}_{}.tif'.format(key, date.year)
@@ -184,20 +185,20 @@ class RasterManager(object):
         :param data_arr:
         :return:
         """
-        region_folders = os.listdir(self._polygons)
+        region_folders = os.listdir(paths.polygons)
         # print 'processing parameter: {}'.format(parameter)
         current_month = self._output_tracker['current_month']
 
         for region_folder in region_folders:
             # print 'input geo shapes region: {}'.format(region_folder)
             region_type = os.path.basename(region_folder).replace('_Polygons', '')
-            all_geo_files = os.listdir(os.path.join(self._polygons, region_folder))
+            all_geo_files = os.listdir(os.path.join(paths.polygons, region_folder))
             shape_files = [shapefile for shapefile in all_geo_files if shapefile.endswith('.shp')]
             # print 'files in region {}:\n{}'.format(region_type, all_geo_files)
             # print ''
             for geometry in shape_files:
                 sub_region, _ = os.path.splitext(geometry)
-                shp_name = os.path.join(self._polygons, region_folder, geometry)
+                shp_name = os.path.join(paths.polygons, region_folder, geometry)
                 polygon = ogr.Open(shp_name)
                 layer = polygon.GetLayer()
                 driver = gdal.GetDriverByName('GTiff')
@@ -300,6 +301,5 @@ class RasterManager(object):
                     for df, location in zip(dfs, locations):
                         print 'this should be your location csv: {}'.format(location)
                         df.to_csv(location, na_rep='nan', index_label='Date')
-
 
 # ============= EOF =============================================

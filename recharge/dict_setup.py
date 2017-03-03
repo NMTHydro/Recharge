@@ -29,6 +29,7 @@ from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
 from recharge.raster_tools import convert_raster_to_array, apply_mask
+from runners.paths import paths
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
@@ -97,7 +98,8 @@ def initialize_master_dict(shape=None):
     return master
 
 
-def initialize_static_dict(inputs_root, mask_path):
+def initialize_static_dict():
+
     def initial_plant_height(r):
         # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
         return r * 0.3048
@@ -114,6 +116,7 @@ def initialize_static_dict(inputs_root, mask_path):
     def initial_rew(r):
         return maximum(r,0.001)
 
+    inputs_root = paths.static_inputs
     print 'static inputs path: {}'.format(inputs_root)
 
     # statics = sorted((fn for fn in os.listdir(inputs_root) if fn.endswith('.tif')))
@@ -123,7 +126,7 @@ def initialize_static_dict(inputs_root, mask_path):
     # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
     keys = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
     for k, fn in zip(keys, statics):
-        arr = apply_mask(mask_path, convert_raster_to_array(inputs_root, fn))
+        arr = apply_mask(paths.mask, convert_raster_to_array(inputs_root, fn))
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)
@@ -179,15 +182,15 @@ def tiff_list(root, sort=True):
     return fs
 
 
-def initialize_initial_conditions_dict(inputs_root, mask_path):
+def initialize_initial_conditions_dict():
     # read in initial soil moisture conditions from spin up, put in dict
-
+    inputs_root = paths.initial_inputs
     fs = tiff_list(inputs_root)
 
     d = {}
     for k, fn in zip(('de', 'dr', 'drew'), fs):
         raster = convert_raster_to_array(inputs_root, fn)
-        data = apply_mask(mask_path, raster)
+        data = apply_mask(paths.mask, raster)
         d[k] = data
 
         print '{} has {} nan values'.format(k, count_nonzero(isnan(data)))
@@ -202,7 +205,7 @@ def initialize_raster_tracker(tracked_outputs, shape):
     return d
 
 
-def initialize_tabular_dict(input_root, outputs, date_range_, write_freq):
+def initialize_tabular_dict(outputs, date_range_, write_freq):
     units = ('AF', 'CBM')
 
     outputs_arr = [o for output in outputs for o in (output, output)]
@@ -217,6 +220,8 @@ def initialize_tabular_dict(input_root, outputs, date_range_, write_freq):
     ind = date_range(date_range_[0], date_range_[1], freq='D')
 
     tab_dict = {}
+
+    input_root = paths.polygons
     print 'polygon folder: {}'.format(input_root)
     for f in os.listdir(input_root):
         print 'folder: {}'.format(f)

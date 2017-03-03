@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     run((datetime(start_year, start_month, start_day),
          datetime(end_year, end_month, end_day)),
-        'F:\\ETRM_Inputs',
-        'F:\\ETRM_Results')
+        'F:',
+        'F:')
 
 # ============= EOF =============================================

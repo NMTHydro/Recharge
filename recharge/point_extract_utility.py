@@ -21,21 +21,23 @@ from dateutil import rrule
 from pandas import DataFrame, date_range
 from numpy import nan
 from recharge.dynamic_raster_finder import get_kcb, get_penman, get_prism
+from runners.paths import paths
 
 
-def get_dynamic_inputs_from_shape(shapefile, ndvi, prism, penman, simulation_period, out_location):
+def get_dynamic_inputs_from_shape(shapefile,  simulation_period, out_location):
     """
     Runs over a simulation period and extracts data from rasters and saves point data to csv.
 
     :param shapefile: Full path to a .shp file containing points within given rasters.
-    :param ndvi: Path to NDVI .tif images.
-    :param prism: Path to PORISM .tif images.
-    :param penman: Path to PENMAN refET .tif images.
     :param simulation_period: Datetime object (start, end)
     :type simulation_period: tuple
     :param out_location: Save location (folder)
     :return: None
     """
+
+    ndvi = paths.ndvi_std_all
+    prism = paths.prism
+    penman = paths.penman
 
     dynamic_keys = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 
