@@ -28,6 +28,7 @@ class Paths:
     ndvi = None
     ndvi_std_all = None
     ndvi_individ = None
+    ndvi_spline = None
     static_inputs = None
     initial_inputs = None
     polygons = None
@@ -52,6 +53,8 @@ class Paths:
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
         self.ndvi_std_all = os.path.join(self.ndvi, 'NDVI_std_all')
         self.ndvi_individ = os.path.join(self.ndvi, 'NDVI_individ')
+        self.ndvi_spline = os.path.join(self.ndvi, 'NDVI_spline')
+
         self.penman = os.path.join(etrm_input_root, 'PM_RAD')
         self.static_inputs = os.path.join(etrm_input_root, 'statics')
         self.initial_inputs = os.path.join(etrm_input_root, 'initial')

@@ -22,6 +22,7 @@ import scipy.ndimage as ndimage
 
 from recharge import NUMS, NUMSIZE
 from recharge.tools import write_map, read_map
+from runners.paths import paths
 
 C = 2272
 R = 2525
@@ -160,16 +161,18 @@ def time_interpolation(base_dir, day, finalyear):
 
 
 def main():
-    base_dir = os.path.join('F:', 'ETRM_Inputs', 'NDVI_individ')
-    output = os.path.join('F:', 'ETRM_Inputs', 'NDVI_spline')
+    paths.build('F:')
 
     startday = datetime(2013, 12, 17, 0)
     endday = datetime(2013, 12, 31, 0)
     finalyear = 2013
 
+    base_dir = paths.ndvi_individ
+    output = paths.ndvi_spline
+
     year = '2000'
     ref_map = os.path.join(base_dir, year, 'NDVI2000_01_01.tif')
-    res_x, res_y, cols, rows, lon, lat, linke, prj, fill_val = read_map(ref_map, 'Gtiff')
+    _, _, _, _, lon, lat, linke, prj, fill_val = read_map(ref_map, 'Gtiff')
 
     srs = osr.SpatialReference(prj)
     sr_wkt = srs.ExportToWkt()

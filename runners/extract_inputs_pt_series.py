@@ -21,6 +21,8 @@ from recharge.dynamic_raster_finder import get_penman, get_prism, get_spline_kcb
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
 import time
 
+from runners.paths import paths
+
 
 def run(root, output_path):
 
@@ -94,7 +96,7 @@ def run(root, output_path):
 
 
 if __name__ == '__main__':
-    root = 'F:\\ETRM_Inputs'
-    output_path = os.path.join(root, 'NDVI_pts_out', 'NDVI_Spline_2000_2013.csv')
-    run(root, output_path)
+    paths.build('F:')
+    output_path = os.path.join(paths.etrm_input_root, 'NDVI_pts_out', 'NDVI_Spline_2000_2013.csv')
+    run(output_path)
 # =================================== EOF =========================

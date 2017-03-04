@@ -20,6 +20,7 @@ from dateutil import rrule
 from recharge import NUMS
 from recharge.raster_tools import convert_raster_to_array
 from recharge.tools import write_map, read_map
+from runners.paths import paths
 
 
 def get_kcb(in_path, date_object):
@@ -66,18 +67,12 @@ def get_kcb(in_path, date_object):
     return ndvi
 
 
-if __name__ == '__main__':
-    input_root = 'F:\\ETRM_Inputs'
-    # mask = 'Mask'
-    # mask_path = os.path.join(input_root, mask)
-    ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
+def run():
+    paths.build('F:')
 
-    penman_path = os.path.join(input_root, 'PM_RAD')
     penman_example = 'PM_NM_2000_001.tif'
-    map_for_reference = os.path.join(penman_path, '2000', penman_example)
+    map_for_reference = os.path.join(paths.penman, '2000', penman_example)
     _, _, _, _, x, y, _, prj, fill_val = read_map(map_for_reference, 'Gtiff')
-
-    # print('ndvi_path',ndvi_path)
 
     start = datetime.datetime(2000, 1, 1, 0)
     end = datetime.datetime(2001, 12, 31, 0)
@@ -89,24 +84,28 @@ if __name__ == '__main__':
         month = day.strftime('%m')
         day_mth = day.strftime('%d')
 
-        new_dir = 'NDVI_individ'
         # yearstr = str(year)
-        output_dir = os.path.join(input_root, new_dir, year)
+        # output = os.path.join(output_dir, new_dir, year)
         # print(output_dir)
 
-        ndvi = get_kcb(ndvi_path, day)
+        ndvi = get_kcb(paths.ndvi_std_all, day)
 
         # kcb = remake_array(mask_path, kcb)
         ndvi[ndvi == fill_val] = 0
         # print(ndvi, ndvi.shape)
 
         new_ndvi = 'NDVI{}_{}_{}.tif'.format(year, month, day_mth)
+
+        output_dir = os.path.join(paths.etrm_input_root, 'NDVI_individ', str(year))
         ndvi_out = os.path.join(output_dir, new_ndvi)
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
 
-        write_map(ndvi_out, 'Gtiff', x, y, ndvi, prj, fill_val)
         print('Saving New NDVI file as {}'.format(ndvi_out))
+        write_map(ndvi_out, 'Gtiff', x, y, ndvi, prj, fill_val)
+
+if __name__ == '__main__':
+   run()
 
 # ============= EOF =============================================

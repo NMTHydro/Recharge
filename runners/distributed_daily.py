@@ -18,8 +18,8 @@ from datetime import datetime
 from recharge.etrm_processes import Processes
 
 
-def run(date_range, input_root, output_root):
-    etrm = Processes(date_range, input_root, output_root)
+def run(date_range, input_root):
+    etrm = Processes(date_range, input_root)
     etrm.run()
 
 
@@ -34,7 +34,6 @@ if __name__ == '__main__':
 
     run((datetime(start_year, start_month, start_day),
          datetime(end_year, end_month, end_day)),
-        'F:',
         'F:')
 
 # ============= EOF =============================================
