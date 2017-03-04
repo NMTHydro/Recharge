@@ -19,6 +19,8 @@ from pandas import DataFrame, notnull, to_numeric, concat
 from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
+from runners.paths import paths
+
 
 def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
     """
@@ -82,7 +84,7 @@ def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
     return None
 
 
-def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days_only=False,
+def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=False,
                         close_threshold=0.20, return_low_err=False):
     """ Analyze, clean and return dict of AmeriFlux sites and relevant data.
 
@@ -104,6 +106,7 @@ def amf_obs_time_series(dict_, path, save_cleaned_data_path=False, complete_days
     # RGL  = incoming longwave
     # RGLout = outgoing longwave
     """
+    path = paths.etrm_input_root
 
     def day_fraction_to_hr_min(fractional_day, year):
         dec = str(fractional_day)

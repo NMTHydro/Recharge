@@ -43,13 +43,15 @@ class Processes(object):
 
     def __init__(self,
                  date_range,
-                 input_root,
-                 output_root,
+                 input_root=None,
+                 output_root=None,
                  mask='Mask',
                  polygons='Blank_Geo',
                  write_freq=None):
 
-        paths.build(input_root, output_root)
+        if input_root:
+            paths.build(input_root, output_root)
+
         paths.set_polygons_path(polygons)
         paths.set_mask_path(mask)
 

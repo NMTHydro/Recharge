@@ -32,6 +32,14 @@ class Paths:
     initial_inputs = None
     polygons = None
     mask = None
+    amf_sites = None
+    amf_extract = None
+    amf_output_root = None
+    amf_combo_root = None
+    amf_ex_sac = None
+    amf_ex_sac_extract = None
+    amf_ex_sac_output_root = None
+    amf_ex_sac_trackers = None
 
     def build(self, input_root, output_root=None):
         self.etrm_input_root = etrm_input_root = os.path.join(input_root,
@@ -47,6 +55,15 @@ class Paths:
         self.penman = os.path.join(etrm_input_root, 'PM_RAD')
         self.static_inputs = os.path.join(etrm_input_root, 'statics')
         self.initial_inputs = os.path.join(etrm_input_root, 'initial')
+
+        self.amf_sites = amf_path = os.path.join(etrm_input_root, 'ameriflux_sites')  # OK
+        self.amf_extract = os.path.join(amf_path, 'AMF_extracts')
+        self.amf_output_root = os.path.join(amf_path, 'AMF_ETRM_output')
+        self.amf_combo_root = os.path.join(amf_path, 'AMF_results_combo')
+
+        self.amf_ex_sac = ex_sac = os.path.join(etrm_input_root, 'ameriflux_ex_sac')
+        self.amf_ex_sac_output_root = ex_sac_out = os.path.join(ex_sac, 'AMF_ETRM_output')
+        self.amf_ex_sac_extract = os.path.join(ex_sac, 'AMF_extracts')
 
     def set_mask_path(self, path):
         self.mask = self.input_path(path)

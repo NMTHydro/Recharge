@@ -32,42 +32,47 @@ from recharge.time_series_manager import get_etrm_time_series
 
 
 # I need to replace the BASE_AMF_DICT with a different dict which I must make from GDAL somehow.
+from runners.paths import paths
+
 
 def run(input_root, coords_path):
+
+    paths.build(input_root)
 
     # a function that takes uses GDAL to get the coordinates of points.
     point_dict = get_point_dict(coords_path)
 
-    amf_path = os.path.join(input_root, 'ameriflux_ex_sac')  # OK
-
-    amf_extract = os.path.join(amf_path, 'AMF_extracts')  # OK
-    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers')  # OK
-    initial_conditions_path = os.path.join(input_root, 'initialize')
-    static_inputs_path = os.path.join(input_root, 'statics')
-
     simulation_period = datetime(2007, 1, 1), datetime(2013, 12, 29)
 
-    get_etrm_time_series(amf_extract, dict_=point_dict)
+    get_etrm_time_series(paths.amf_ex_sac_extract, dict_=point_dict)
 
     print 'amf dict w/ etrm input time series: \n{}'.format(point_dict)  # fix this so it appends to all sites
 
+    output = os.path.join(paths.amf_ex_sac_output_root, 'trackers')
     for key, val in point_dict.iteritems():
+
+        # TODO: use of point dicts no longer supported by Processes. need to update accordingly to use masks.
+        # =================================================================
         # instantiate for each item to get a clean master dict
-        etrm = Processes(simulation_period, amf_trackers, static_inputs=static_inputs_path, point_dict=point_dict,
-                         initial_inputs=initial_conditions_path)
+        etrm = Processes(simulation_period,
+                         paths.amf_trackers,
+                         point_dict=point_dict)
 
         print 'point dict, pre-etrm run {}'.format(point_dict)  # for testing
         print 'key : {}'.format(key)
-
+        # =================================================================
+        # TODO: `run` does not return anything. need different way to access tracker.
+        # probably not even necessary as tracker results are saved at the end of `run`
         tracker = etrm.run(simulation_period, point_dict=point_dict, point_dict_key=key, modify_soils=True,
                            ro_reinf_frac=0.7, allen_ceff=0.8)
 
         # print 'tracker after etrm run: \n {}'.format(tracker)
-        csv_path_filename = os.path.join(amf_trackers, '{}.csv'.format(val['Name']))
+        csv_path_filename = os.path.join(output, '{}.csv'.format(val['Name']))
         print 'this should be your csv: {}'.format(csv_path_filename)
 
         # saves the model results to the tracker. Keep this part.
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
+        # =================================================================
 
 
 def get_point_dict(coords_path):
@@ -110,7 +115,7 @@ if __name__ == '__main__':
     # get to the shapefile we need to extract coords.
     home = os.path.expanduser('~')
     coords_path = os.path.join(home, 'Desktop', 'QGIS_Ameriflux', 'coords_no_nulls.shp')
-    ir = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
+    ir = os.path.join('/Volumes', 'Seagate Expansion Drive')
 
     run(ir, coords_path)
 
