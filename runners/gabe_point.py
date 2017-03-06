@@ -60,7 +60,7 @@ def run(input_root, coords_path):
         print 'key : {}'.format(key)
 
         tracker = etrm.run(simulation_period, point_dict=point_dict, point_dict_key=key, modify_soils=True,
-                           apply_rofrac=0.7, allen_ceff=0.8)
+                           ro_reinf_frac=0.7, allen_ceff=0.8)
 
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(amf_trackers, '{}.csv'.format(val['Name']))
@@ -108,9 +108,10 @@ location in the dict."""
 
 if __name__ == '__main__':
     # get to the shapefile we need to extract coords.
-    coords_path = os.path.join('/', 'Users', 'Gabe', 'Desktop', 'QGIS_Ameriflux', 'coords_no_nulls.shp')  # how to
-
-    # how to get to the shapefile we need to extract coords.
+    home = os.path.expanduser('~')
+    coords_path = os.path.join(home, 'Desktop', 'QGIS_Ameriflux', 'coords_no_nulls.shp')
     ir = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
 
     run(ir, coords_path)
+
+# ============= EOF =============================================
