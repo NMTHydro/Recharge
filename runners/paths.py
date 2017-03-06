@@ -42,6 +42,9 @@ class Paths:
     amf_ex_sac_output_root = None
     amf_ex_sac_trackers = None
 
+    def __init__(self):
+        self.config = os.path.join(os.path.expanduser('~'), 'ETRM_CONFIG.yml')
+
     def build(self, input_root, output_root=None):
         self.etrm_input_root = etrm_input_root = os.path.join(input_root,
                                                               'ETRM_Inputs')

@@ -41,13 +41,20 @@ class Processes(object):
     tracker = None
     _initial_depletions = None
 
-    def __init__(self,
-                 date_range,
-                 input_root=None,
-                 output_root=None,
-                 mask='Mask',
-                 polygons='Blank_Geo',
-                 write_freq=None):
+    def __init__(self, cfg):
+        # date_range,
+        # input_root=None,
+        # output_root=None,
+        # mask='Mask',
+        # polygons='Blank_Geo',
+        # write_freq=None):
+
+        date_range = cfg.date_range
+        input_root = cfg.input_root
+        output_root = cfg.output_root
+        mask = cfg.mask
+        polygons = cfg.polygons
+        write_freq = cfg.write_freq
 
         if input_root:
             paths.build(input_root, output_root)
@@ -181,7 +188,6 @@ class Processes(object):
             path = add_extension(os.path.join(paths.etrm_output_root, base), '.csv')
 
         if os.path.isfile(path):
-
             path = unique_path(paths.etrm_output_root, base, '.csv')
 
         path = add_extension(path, '.csv')

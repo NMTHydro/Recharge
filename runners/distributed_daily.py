@@ -16,24 +16,17 @@
 
 from datetime import datetime
 from recharge.etrm_processes import Processes
+from runners.config import Config
 
 
-def run(date_range, input_root):
-    etrm = Processes(date_range, input_root)
+def run():
+    cfg = Config()
+    etrm = Processes(cfg)
     etrm.run()
 
 
 if __name__ == '__main__':
-    start_year = 2013
-    start_month = 12
-    start_day = 29
+    run()
 
-    end_year = 2013
-    end_month = 12
-    end_day = 31
-
-    run((datetime(start_year, start_month, start_day),
-         datetime(end_year, end_month, end_day)),
-        'F:')
 
 # ============= EOF =============================================
