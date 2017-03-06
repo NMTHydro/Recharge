@@ -28,6 +28,7 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
+from recharge import OUTPUTS, DAILY_OUTPUTS, STATIC_KEYS
 from recharge.raster_tools import convert_raster_to_array, apply_mask
 from runners.paths import paths
 
@@ -99,7 +100,6 @@ def initialize_master_dict(shape=None):
 
 
 def initialize_static_dict():
-
     def initial_plant_height(r):
         # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
         return r * 0.3048
@@ -108,13 +108,13 @@ def initialize_static_dict():
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return maximum(minimum(r, 20),0.1)
+        return maximum(minimum(r, 20), 0.1)
 
     def initial_tew(r):
-        return maximum(minimum(r, 10),0.001)
+        return maximum(minimum(r, 10), 0.001)
 
     def initial_rew(r):
-        return maximum(r,0.001)
+        return maximum(r, 0.001)
 
     inputs_root = paths.static_inputs
     print 'static inputs path: {}'.format(inputs_root)
@@ -124,8 +124,8 @@ def initialize_static_dict():
 
     d = {}
     # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
-    keys = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
-    for k, fn in zip(keys, statics):
+
+    for k, fn in zip(STATIC_KEYS, statics):
         arr = apply_mask(paths.mask, convert_raster_to_array(inputs_root, fn))
 
         if k == 'plant_height':
@@ -199,20 +199,25 @@ def initialize_initial_conditions_dict():
     return d
 
 
-def initialize_raster_tracker(tracked_outputs, shape):
+def initialize_raster_tracker(shape):
     keys = ('current_year', 'current_month', 'current_day', 'last_mo', 'last_yr', 'yesterday')
-    d = {k: {tk: zeros(shape) for tk in tracked_outputs} for k in keys}
+    d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in keys}
     return d
 
 
-def initialize_tabular_dict(outputs, date_range_, write_freq):
+def initialize_tabular_dict(date_range_, write_frequency):
     units = ('AF', 'CBM')
+
+    if write_frequency == 'daily':
+        outputs = DAILY_OUTPUTS
+    else:
+        outputs = OUTPUTS
 
     outputs_arr = [o for output in outputs for o in (output, output)]
 
     # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'
-    if write_freq == 'daily':
-        outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
+    # if write_freq == 'daily':
+    #     outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
 
     units_arr = units * len(outputs)
 

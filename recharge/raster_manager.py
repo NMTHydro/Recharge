@@ -30,13 +30,11 @@ from numpy import array, where, zeros
 from calendar import monthrange
 import os
 
+from recharge import DAILY_OUTPUTS, OUTPUTS
 from recharge.raster_tools import make_results_dir, apply_mask, remake_array
 from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from runners.paths import paths
-
-OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb')
-DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip')
 
 
 class RasterManager(object):
@@ -56,9 +54,9 @@ class RasterManager(object):
             print 'your daily outputs will be from: {}'.format(DAILY_OUTPUTS)
 
         self._geo = get_geo(paths.static_inputs)
-        self._output_tracker = initialize_raster_tracker(OUTPUTS, (self._geo['rows'], self._geo['cols']))
+        self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
         self._results_dir = make_results_dir(paths.etrm_output_root, os.path.basename(paths.polygons))
-        self._tabular_dict = initialize_tabular_dict(OUTPUTS, simulation_period, write_frequency)
+        self._tabular_dict = initialize_tabular_dict(simulation_period, write_frequency)
 
     def update_raster_obj(self, master, date_object, save_specific_dates=None):
         """
