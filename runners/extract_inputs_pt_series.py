@@ -31,7 +31,7 @@ def run(root, output, start, end):
     ndvi = os.path.join(root, 'NDVI', 'NDVI_std_all')
     prism = os.path.join(root, 'PRISM')
     penman = os.path.join(root, 'PM_RAD')
-
+    ### test test
     nlcd_name = 'nlcd_nm_utm13.tif'
     #dem_name = 'NMbuffer_DEM_UTM13_250m.tif'
     #aspect_name = 'NMbuffer_DEMAspect_UTM13_250m.tif'
