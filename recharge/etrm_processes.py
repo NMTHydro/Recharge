@@ -156,13 +156,15 @@ class Processes(object):
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
-    def modify_taw(self, taw_modification):
+    def modify_taw(self, taw_modification, return_taw=False):
 
         s = self._static
         taw = s['taw']
         taw = taw * taw_modification
         s['taw'] = taw
 
+        if return_taw:
+            return taw
 
     def initialize(self):
         m = self._master

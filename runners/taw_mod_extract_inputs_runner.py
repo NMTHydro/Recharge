@@ -21,101 +21,201 @@ import os
 
 from datetime import datetime
 from recharge.etrm_processes import Processes
-
-from dateutil import rrule
 import os
-import time
-from numpy import array
-
-from recharge.dynamic_raster_finder import get_kcb, get_penman, get_prism
-from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts2
+from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts, remake_array, get_mask
 
 
-def run_model(date_range, input_root, output_root, taw_modification):
-    etrm = Processes(date_range, input_root, output_root)
-    etrm.modify_taw(taw_modification)
-    etrm.run()
-
-
-
-def run_extractor(root, output, start, end):
+def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
+    """Goal here is to plot the original masked taw and two modified versions of taw
+    to a csv for each pixel in masked domain"""
 
     mask_path = os.path.join(root, 'Mask')
+    mask_arr = get_mask(mask_path)
 
-    statics_to_save = os.path.join (root,'NDVI_statics')
-    ndvi = os.path.join(root, 'NDVI', 'NDVI_std_all')
-    prism = os.path.join(root, 'PRISM')
-    penman = os.path.join(root, 'PM_RAD')
+    # modified taw taken from function in processes class...
+    etrm_new = Processes(date_range, input_root, output_root)
+    taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
+    taw_new = remake_array(mask_path, taw_new)
 
-    nlcd_name = 'nlcd_nm_utm13.tif'
-    dem_name = 'NMbuffer_DEM_UTM13_250m.tif'
-    aspect_name = 'NMbuffer_DEMAspect_UTM13_250m.tif'
-    slope_name = 'NMbuffer_DEMSlope_UTM13_250m.tif'
+    # original taw (taw) and modified mask taw (taw_new_masked)
+    taw_name = 'taw_mod_4_21_10_0.tif'
+    statics_to_save = os.path.join(root, 'statics')
+    taw = convert_raster_to_array(statics_to_save, taw_name, 1)
+    taw_new_masked = taw * taw_modification
 
-    nlcd = apply_mask(mask_path, convert_raster_to_array(statics_to_save, nlcd_name, 1))
-    dem = apply_mask(mask_path, convert_raster_to_array(statics_to_save, dem_name, 1))
-    slope = apply_mask(mask_path, convert_raster_to_array(statics_to_save, slope_name, 1))
-    aspect = apply_mask(mask_path, convert_raster_to_array(statics_to_save, aspect_name, 1))
+    print 'taw shape', taw.shape
+    print 'taw_new shape', taw_new.shape
+    print 'taw_new_masked shape', taw_new_masked.shape
 
-    st_begin = time.time()
-    keys = 'Year', 'Month', 'Day', 'NDVI', 'Tavg', 'Precip', 'ETr', 'PminusEtr', 'NLCD_class', 'Elev', 'Slope', 'Aspect'
+
+    keys = ('x', 'y', 'taw', 'taw_new_masked', 'taw_new')
     with open(output, 'w') as wfile:
         wfile.write('{}\n'.format(','.join(keys)))
 
-        for day in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
 
-            st = time.time()
 
-            ndvi_data = get_kcb(mask_path, ndvi, day)
-            precip_data = get_prism(mask_path, prism, day, variable="precip")
-            tmin_data = get_prism(mask_path, prism, day, variable="min_temp")
-            tmax_data = get_prism(mask_path, prism, day, variable="max_temp")
-            tavg = tmin_data + tmax_data / 2
-            etrs_data = get_penman(mask_path, penman, day, variable="etrs")
-            p_minus_etr = precip_data - etrs_data
-
-            data = array(ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, dem, slope, aspect).T
-            save_daily_pts2(wfile, day, data)
-
-            runtime = time.time() - st
-
-            print('Time for day = {}'.format(runtime))
-
-        runtime_full = time.time() - st_begin
-
-    print('Time to save entire period = {}'.format(runtime_full))
+        nrows, ncols = taw.shape
+        for ri in xrange(nrows):
+            for ci in xrange(ncols):
+                mask_values = mask_arr[ri, ci]
+                if mask_values:
+                    #print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
+                    items = ('{}'.format(ri), '{}'.format(ci), '{}'.format(taw[ri,ci]), '{}'.format(taw_new_masked[ri,ci]), '{}'.format(taw_new[ri,ci]))
+                    wfile.write('{}\n'.format(','.join(items)))
 
 
 if __name__ == '__main__':
 
-    ##### TAW runner #####
-
     start_year = 2013
     start_month = 12
-    start_day = 1
+    start_day = 30
 
     end_year = 2013
     end_month = 12
     end_day = 31
 
-    taw_modification = .6
+    taw_modification = 2
 
-    hard_drive_path = os.path.join('/Volumes','Seagate Expansion Drive')
+    hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
     outputs_path = os.path.join(hard_drive_path, 'ETRM_Results')
 
-    run_model((datetime(start_year, start_month, start_day),
-         datetime(end_year, end_month, end_day)),
-        inputs_path,
-        outputs_path, taw_modification)
-
-
-    ##### Extract ######
-    start = datetime(2000, 1, 1)
-    end = datetime(2013, 12, 31)
+    start = datetime(start_year, start_month, start_day)
+    end = datetime(end_year, end_month, end_day)
 
     root = inputs_path
-    output = os.path.join(root, 'TAW_pts_out', 'TAW_12_2013.csv')
+    output = os.path.join(root, 'TAW_pts_out', 'TAW_xmas_test_2013.csv')
 
-    run_extractor(root, output, start, end)
+    # Run model and extractor...
+    run((start, end), inputs_path, outputs_path, taw_modification,
+        root, output, start, end)
+    # for results use the output tiff and base it on the path.
 
+    #=====================================================
+
+    # v...Scratch work that is still relevant...v
+
+    #=====================================================
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
+    #     """Approach here is to just cut out the taw array from the file and multiply that array by whatever
+    #     the taw modification is and write that into the file."""
+    #
+    #     taw_name = 'taw_mod_4_21_10_0.tif'
+    #     statics_to_save = os.path.join(root, 'statics')
+    #
+    #     mask_path = os.path.join(root, 'Mask')
+    #
+    #     taw_new_masked = convert_raster_to_array(statics_to_save, taw_name, 1)
+    #
+    #
+    #     print "New masked TAW", taw_new_masked
+    #
+    #     print "New masked TAW shape", taw_new_masked.shape
+    #
+    #     taw_new_masked = taw_new_masked * taw_modification
+    #
+    #     print "TAW array multiplied by taw_modification", taw_new_masked
+    #
+    #     mask_arr = get_mask(mask_path)
+    #
+    #     keys = ('x', 'y', 'taw_new_masked')
+    #
+    #     with open(output, 'w') as wfile:
+    #         wfile.write('{}\n'.format(','.join(keys)))
+    #
+    #         nrows, ncols = taw_new_masked.shape
+    #         for ri in xrange(nrows):
+    #             for ci in xrange(ncols):
+    #                 mask_value = mask_arr[ri, ci]
+    #                 if mask_value:
+    #                     print ri, ci, taw_new_masked[ri, ci]
+    #                     items = ('{}'.format(ri), '{}'.format(ci), '{}'.format(taw_new_masked[ri,ci]))
+    #                     wfile.write('{}\n'.format(','.join(items)))
+    #
+    #     return
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    # def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
+    #     """This plotted an updated taw by taking the modified taw array from processes and remaking the array."""
+    #     etrm_new = Processes(date_range, input_root,output_root)
+    #     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
+    #
+    #     mask_path = os.path.join(root, 'Mask')
+    #     print "New TAW", taw_new
+    #
+    #     print "New TAW shape", taw_new.shape
+    #
+    #     taw_new = remake_array(mask_path, taw_new)
+    #
+    #     print "Remade TAW shape", taw_new.shape
+    #
+    #     mask_arr = get_mask(mask_path)
+    #
+    #     keys = ('x', 'y', 'taw_new')
+    #
+    #     with open(output, 'w') as wfile:
+    #         wfile.write('{}\n'.format(','.join(keys)))
+    #
+    #         nrows, ncols = taw_new.shape
+    #         for ri in xrange(nrows):
+    #             for ci in xrange(ncols):
+    #                 mask_value = mask_arr[ri, ci]
+    #                 if mask_value:
+    #                     print ri, ci, taw_new[ri, ci]
+    #                     items =  ('{}'.format(ri), '{}'.format(ci), '{}'.format(taw_new[ri,ci]))
+    #                     wfile.write('{}\n'.format(','.join(items)))
+    #
+    #     return
+    # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
+    #    """This plotted the taw from the original tiff"""
+    #
+    #     taw_name = 'taw_mod_4_21_10_0.tif'
+    #     statics_to_save = os.path.join(root, 'statics')
+    #
+    #     mask_path = os.path.join(root, 'Mask')
+    #     taw = convert_raster_to_array(statics_to_save, taw_name, 1)
+    #
+    #     print "This is the original taw shape {}".format(taw.shape)  # 2525, 2272
+    #
+    #     # returns a boolean array. (True, False)
+    #     mask_arr = get_mask(mask_path)
+    #
+    #     print 'mask arr', mask_arr, mask_arr.shape
+    #     print 'taw', taw, taw.shape
+    #
+    #     print "This is the new taw shape {}".format(taw.shape)  # 2525, 2272
+    #
+    #
+    #     keys = ('x', 'y', 'taw')
+    #     with open(output, 'w') as wfile:
+    #         print "your file is at this path: {}".format(output)
+    #         print taw.shape
+    #
+    #         wfile.write('{}\n'.format(','.join(keys)))
+    #
+    #         nrows, ncols = taw.shape
+    #         for ri in xrange(nrows):
+    #             for ci in xrange(ncols):
+    #                 # idx = ri*ncols + ci
+    #                 mask_value = mask_arr[ri, ci]
+    #                 # print 'rrrrr', mask_value
+    #                 if mask_value:
+    #                     #print ri, ci, taw[ri, ci]
+    #                     wfile.write('{},{},{}\n'.format(ri, ci, taw[ri,ci]))
+    #
+    #                     # for row, item in enumerate(taw):
+    #                     #
+    #                     #     for col, value in enumerate(item):
+    #                     #         print row, col, value
+    #                     #         wfile.write('{}\n'.format(row, col, value))
+    #                     # remake array()
+    #
+    #                     # currently 1-d
+
+
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

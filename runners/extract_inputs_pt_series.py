@@ -20,7 +20,7 @@ import time
 from numpy import array
 
 from recharge.dynamic_raster_finder import get_kcb, get_penman, get_prism
-from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts2
+from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
 
 
 def run(root, output, start, end):
@@ -42,8 +42,8 @@ def run(root, output, start, end):
     # apply_mask is done on the same array.
     nlcd = apply_mask(mask_path, convert_raster_to_array(statics_to_save, nlcd_name, 1))
     #dem = apply_mask(mask_path, convert_raster_to_array(statics_to_save, dem_name, 1))
-    slope = apply_mask(mask_path, convert_raster_to_array(statics_to_save, slope_name, 1))
-    aspect = apply_mask(mask_path, convert_raster_to_array(statics_to_save, aspect_name, 1))
+    #slope = apply_mask(mask_path, convert_raster_to_array(statics_to_save, slope_name, 1))
+    #aspect = apply_mask(mask_path, convert_raster_to_array(statics_to_save, aspect_name, 1))
     # I added this one to test. GP
     taw = apply_mask(mask_path, convert_raster_to_array(statics_to_save, taw_name, 1))
 
@@ -62,12 +62,13 @@ def run(root, output, start, end):
             tmin_data = get_prism(mask_path, prism, day, variable="min_temp")
             tmax_data = get_prism(mask_path, prism, day, variable="max_temp")
             tavg = tmin_data + tmax_data / 2
+            # Finds the penman image.
             etrs_data = get_penman(mask_path, penman, day, variable="etrs")
             p_minus_etr = precip_data - etrs_data
 
             # modified here, too. took out dem, slope, aspect... added taw
-            data = array(ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, taw).T
-            save_daily_pts2(wfile, day, data) # save_daily_pts2 is missing. We have save_daily_pts_old
+            data = array((ndvi_data, tavg, precip_data, etrs_data, p_minus_etr, nlcd, taw)).T
+            save_daily_pts(wfile, day, data) # save_daily_pts2 is missing. We have save_daily_pts_old and save_daily_pts
 
             runtime = time.time() - st
 
@@ -79,11 +80,11 @@ def run(root, output, start, end):
 
 
 if __name__ == '__main__':
-    start = datetime(2000, 1, 1)
+    start = datetime(2013, 12, 1)
     end = datetime(2013, 12, 31)
 
     root = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
-    output = os.path.join(root, 'NDVI_pts_out', 'NDVI_2000_2013.csv')
+    output = os.path.join(root, 'NDVI_pts_out', 'NDVI_2013_dec_mo.csv')
 
     run(root, output, start, end)
 
