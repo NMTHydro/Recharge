@@ -23,19 +23,28 @@ from datetime import datetime
 from recharge.etrm_processes import Processes
 import os
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts, remake_array, get_mask
-
+from recharge.pixel_coord_finder import coord_getter
 
 def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
     """Goal here is to plot the original masked taw and two modified versions of taw
     to a csv for each pixel in masked domain"""
 
+
+
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
+
+    easting, northing = coord_getter(os.path.join(mask_path, 'zuni_1.tif'))
 
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)
     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
     taw_new = remake_array(mask_path, taw_new)
+
+    # unmodified taw taken from function in Processes class...
+    etrm_unmod = Processes(date_range, input_root, output_root)
+    taw_unmod = etrm_unmod.get_taw()
+    taw_unmod = remake_array(mask_path, taw_unmod)
 
     # original taw (taw) and modified mask taw (taw_new_masked)
     taw_name = 'taw_mod_4_21_10_0.tif'
@@ -43,12 +52,14 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
     taw = convert_raster_to_array(statics_to_save, taw_name, 1)
     taw_new_masked = taw * taw_modification
 
+    # all the taw shapes are correct...
     print 'taw shape', taw.shape
     print 'taw_new shape', taw_new.shape
     print 'taw_new_masked shape', taw_new_masked.shape
+    print 'taw unmodified from processes', taw_unmod.shape
 
 
-    keys = ('x', 'y', 'taw', 'taw_new_masked', 'taw_new')
+    keys = ('x', 'y', 'taw', 'taw_new_masked','taw_unmodified', 'taw_new')
     with open(output, 'w') as wfile:
         wfile.write('{}\n'.format(','.join(keys)))
 
@@ -60,8 +71,9 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
                 mask_values = mask_arr[ri, ci]
                 if mask_values:
                     #print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
-                    items = ('{}'.format(ri), '{}'.format(ci), '{}'.format(taw[ri,ci]), '{}'.format(taw_new_masked[ri,ci]), '{}'.format(taw_new[ri,ci]))
+                    items = ('{}'.format(easting[ri,ci]), '{}'.format(northing[ri,ci]), '{}'.format(taw[ri,ci]), '{}'.format(taw_new_masked[ri,ci]),'{}'.format(taw_unmod[ri,ci]), '{}'.format(taw_new[ri,ci]))
                     wfile.write('{}\n'.format(','.join(items)))
+
 
 
 if __name__ == '__main__':
@@ -74,7 +86,7 @@ if __name__ == '__main__':
     end_month = 12
     end_day = 31
 
-    taw_modification = 2
+    taw_modification = 1.15
 
     hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')

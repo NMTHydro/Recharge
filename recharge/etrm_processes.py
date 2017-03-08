@@ -157,6 +157,8 @@ class Processes(object):
         self._info('Execution time: {}'.format(time.time() - st))
 
     def modify_taw(self, taw_modification, return_taw=False):
+        """Gets the taw array, modifies it by a constant scalar value
+         (taw_modification) and returns the resulting array"""
 
         s = self._static
         taw = s['taw']
@@ -164,7 +166,16 @@ class Processes(object):
         s['taw'] = taw
 
         if return_taw:
+            print taw
             return taw
+
+    def get_taw(self):
+        """Gets the TAW array and returns it """
+
+        s = self._static
+        taw = s['taw']
+
+        return taw
 
     def initialize(self):
         m = self._master
