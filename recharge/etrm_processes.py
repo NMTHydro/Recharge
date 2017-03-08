@@ -527,22 +527,11 @@ class Processes(object):
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
-        print 'today infil: {}, etrs: {}, eta: {}, ' \
-              'precip: {}, ro: {}, swe: {}, stor {}'.format(mm_af(m['infil']),
-                                                            mm_af(m['etrs']),
-                                                            mm_af(m['eta']),
-                                                            mm_af(m['precip']),
-                                                            mm_af(m['ro']),
-                                                            mm_af(m['swe']),
-                                                            mm_af(m['soil_storage']))
+        ms = [mm_af(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
+        print 'today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(*ms)
 
-        print 'total infil: {}, etrs: {}, eta: {}, ' \
-              'precip: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
-                                                   mm_af(m['tot_etrs']),
-                                                   mm_af(m['tot_eta']),
-                                                   mm_af(m['tot_precip']),
-                                                   mm_af(m['tot_ro']),
-                                                   mm_af(m['tot_swe']))
+        ms = [mm_af(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
+        print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
