@@ -25,6 +25,7 @@ import os
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts, remake_array, get_mask
 from recharge.pixel_coord_finder import coord_getter
 
+
 def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
     """Goal here is to plot the original masked taw and two modified versions of taw
     to a csv for each pixel in masked domain"""
@@ -38,6 +39,7 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
 
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)
+
     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
     taw_new = remake_array(mask_path, taw_new)
 

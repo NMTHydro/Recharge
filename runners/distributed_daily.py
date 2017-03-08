@@ -18,15 +18,16 @@ from datetime import datetime
 from recharge.etrm_processes import Processes
 
 
-def run(date_range, input_root, output_root):
+def run(time_tuple, date_range, input_root, output_root):
     etrm = Processes(date_range, input_root, output_root)
+    etrm._do_daily_raster_load(time_tuple)
     etrm.run()
 
 
 if __name__ == '__main__':
     start_year = 2013
     start_month = 12
-    start_day = 1
+    start_day = 28
 
     end_year = 2013
     end_month = 12
@@ -35,8 +36,8 @@ if __name__ == '__main__':
     hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
     outputs_path = os.path.join(hard_drive_path, 'ETRM_Results')
-
-    run((datetime(start_year, start_month, start_day),
+    datetime_date = datetime(start_year, start_month, start_day).date()
+    run(datetime_date, (datetime(start_year, start_month, start_day),
          datetime(end_year, end_month, end_day)),
         inputs_path,
         outputs_path)

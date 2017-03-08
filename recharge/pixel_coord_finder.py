@@ -25,6 +25,7 @@ from datetime import datetime
 
 import rasterio
 import numpy as np
+from numpy import meshgrid, arange
 from affine import Affine
 from pyproj import Proj, transform
 
@@ -43,13 +44,24 @@ def coord_getter(tiff_path):
 
     # Get affine transform for pixel centres
     T1 = T0 * Affine.translation(0.5, 0.5)
+    print "T1",T1
     # Function to convert pixel row/column index (from 0) to easting/northing at centre
     rc2en = lambda r, c: (c, r) * T1
 
     # All eastings and northings (there is probably a faster way to do this)
-    eastings, northings = np.vectorize(rc2en, otypes=[np.float, np.float])(rows, cols)
-    print 'eastings', eastings
+    northings, eastings = np.vectorize(rc2en, otypes=[np.float, np.float])(rows, cols)
+
+    # suggested Jake Edits. Talk to him soon.
+    #mesh = meshgrid(arange(cols.shape[1]), arange(rows.shape[0]))
+
+    #print 'mesh', mesh
+
+    #northings, eastings = [(c,r)* T1 for c, r in mesh.T]
+
+    #northings, eastings = (p1*mesh.T).T
+
     print 'northings', northings
+    print 'eastings', eastings
 
     # Project all longitudes, latitudes
     p2 = Proj(proj='latlong',datum='WGS84')
