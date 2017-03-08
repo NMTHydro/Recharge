@@ -22,7 +22,6 @@ this module provides (1) class -- class Rasters(object):
 dgketchum 24 JUL 2016
 """
 
-# from osgeo import gdal, ogr
 import gdal
 import ogr
 
@@ -31,8 +30,8 @@ from calendar import monthrange
 import os
 
 from recharge import DAILY_OUTPUTS, OUTPUTS
-from recharge.raster_tools import make_results_dir, apply_mask, remake_array
-from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
+from recharge.raster_tools import make_results_dir, remake_array, convert_array_to_raster
+from recharge.raster_tools import get_raster_geo_attributes as get_geo
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from runners.paths import paths
 
@@ -163,16 +162,8 @@ class RasterManager(object):
             array_to_save = None
             filename = None
 
-        driver = gdal.GetDriverByName('GTiff')
-        geo = self._geo
-        out_data_set = driver.Create(filename, geo['cols'], geo['rows'],
-                                     geo['bands'], geo['data_type'])
-        out_data_set.SetGeoTransform(geo['geotransform'])
-        out_data_set.SetProjection(geo['projection'])
-        output_band = out_data_set.GetRasterBand(1)
-        output_band.WriteArray(array_to_save, 0, 0)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
-        del out_data_set, output_band
+        convert_array_to_raster(filename, array_to_save, self._geo)
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
         """
