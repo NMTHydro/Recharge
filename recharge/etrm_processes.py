@@ -177,6 +177,24 @@ class Processes(object):
 
         return taw
 
+    def raster_managers_manager(self, date_range, input_root, dates=None, write_freq=None, save_specific_dates=False):
+        """Allows you to specify daily rasters be written or to specify specific dates
+        :param dates: datetime date object (or list of datetime objects???)
+        TODO: Figure out, wether a list of datetime objects or tuple of datetime objects would work here.
+        """
+
+        static_inputs = os.path.join(input_root, 'statics')
+        output_root = self._output_root
+        self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root, write_freq)
+
+        # here we allow for specific dates if the user wants rasters for a specific day.
+        if save_specific_dates:
+            master = self._master
+            mask_path = self._mask_path
+            user_defined_dates = dates
+            self._raster_manager.update_raster_obj(master=master,mask_path=mask_path, date_object=user_defined_dates, save_specific_dates=True)
+
+
     def initialize(self):
         m = self._master
 

@@ -35,7 +35,7 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
 
-    easting, northing = coord_getter(os.path.join(mask_path, 'zuni_1.tif'))
+    northing, easting = coord_getter(os.path.join(mask_path, 'zuni_1.tif'))
 
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)

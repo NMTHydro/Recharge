@@ -35,7 +35,7 @@ from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'kcb')
-DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip')
+DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip') #'Dr', 'De', 'Drew'
 
 class RasterManager(object):
     def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
@@ -71,10 +71,16 @@ class RasterManager(object):
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save data for a certain day
+        # Modified on Wed March 8 2012 GP
+        # if save_specific_dates:
+        #     if date_object in save_specific_dates:
+        #         for element in DAILY_OUTPUTS:
+        #             self._write_raster(element, date_object, period='single_day', master=master)
+
         if save_specific_dates:
             if date_object in save_specific_dates:
-                for element in DAILY_OUTPUTS:
-                    self._write_raster(element, date_object, period='single_day', master=master)
+                    for element in DAILY_OUTPUTS:
+                        self._write_raster(element, date_object, period='single_day', master=master)
 
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals

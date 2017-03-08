@@ -20,14 +20,14 @@ from recharge.etrm_processes import Processes
 
 def run(time_tuple, date_range, input_root, output_root):
     etrm = Processes(date_range, input_root, output_root)
-    etrm._do_daily_raster_load(time_tuple)
+    etrm.raster_managers_manager(date_range, input_root, time_tuple, save_specific_dates=True)
     etrm.run()
 
 
 if __name__ == '__main__':
     start_year = 2013
     start_month = 12
-    start_day = 28
+    start_day = 30
 
     end_year = 2013
     end_month = 12
