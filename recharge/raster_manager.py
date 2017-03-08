@@ -37,7 +37,11 @@ from recharge.dict_setup import initialize_tabular_dict, initialize_raster_track
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'kcb')
 DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip') #'Dr', 'De', 'Drew'
 
+
 class RasterManager(object):
+
+    _save_dates = None
+
     def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
                  write_frequency=None):
 
@@ -59,13 +63,15 @@ class RasterManager(object):
         self._results_dir = make_results_dir(output_root, polygons)
         self._tabular_dict = initialize_tabular_dict(polygons, OUTPUTS, simulation_period, write_frequency)
 
-    def update_raster_obj(self, master, mask_path, date_object, save_specific_dates=None):
+    def set_save_dates(self, dates):
+        self._save_dates = dates
+
+    def update_raster_obj(self, master, mask_path, date_object):
         """
         Checks if the date is specified for writing output and calls the write and tabulation methods.
 
         :param master: master dict object from etrm.Processes
         :param date_object: datetime date object
-        :param save_specific_dates: list of datetime objects for which output is written
         :return: None
         """
         mo_date = monthrange(date_object.year, date_object.month)
@@ -77,8 +83,8 @@ class RasterManager(object):
         #         for element in DAILY_OUTPUTS:
         #             self._write_raster(element, date_object, period='single_day', master=master)
 
-        if save_specific_dates:
-            if date_object in save_specific_dates:
+        if self._save_dates:
+            if date_object in self._save_dates:
                     for element in DAILY_OUTPUTS:
                         self._write_raster(element, date_object, period='single_day', master=master)
 

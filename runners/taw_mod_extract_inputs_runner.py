@@ -26,11 +26,9 @@ from recharge.raster_tools import convert_raster_to_array, apply_mask, save_dail
 from recharge.pixel_coord_finder import coord_getter
 
 
-def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
+def run(date_range, save_dates, input_root, output_root, taw_modification, root, output, start, end):
     """Goal here is to plot the original masked taw and two modified versions of taw
     to a csv for each pixel in masked domain"""
-
-
 
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
@@ -39,6 +37,7 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
 
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)
+    etrm_new.set_save_dates(save_dates)
 
     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
     taw_new = remake_array(mask_path, taw_new)
@@ -59,7 +58,6 @@ def run(date_range, input_root, output_root, taw_modification, root, output, sta
     print 'taw_new shape', taw_new.shape
     print 'taw_new_masked shape', taw_new_masked.shape
     print 'taw unmodified from processes', taw_unmod.shape
-
 
     keys = ('x', 'y', 'taw', 'taw_new_masked','taw_unmodified', 'taw_new')
     with open(output, 'w') as wfile:
