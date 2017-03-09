@@ -83,11 +83,7 @@ class RasterManager(object):
         #         for element in DAILY_OUTPUTS:
         #             self._write_raster(element, date_object, period='single_day', master=master)
 
-        if self._save_dates:
-            for date_object in self._save_dates: #if
-                    for element in DAILY_OUTPUTS:
-                        print "element", element
-                        self._write_raster(element, date_object, mask_path, period='single_day', master=master)
+
 
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals
@@ -96,6 +92,14 @@ class RasterManager(object):
             for element in DAILY_OUTPUTS:
                 arr = remake_array(mask_path, master[element])
                 self._sum_raster_by_shape(element, date_object, arr)
+
+        if self._save_dates:
+            if date_object in self._save_dates:
+                for element in DAILY_OUTPUTS:
+                    print "element", element
+                    arr = remake_array(mask_path, master[element])
+                    self._update_raster_tracker(arr, element, period='daily')
+                    self._write_raster(element, date_object, mask_path, period='daily', master=master)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
@@ -134,6 +138,9 @@ class RasterManager(object):
         if period == 'annual':
             self._output_tracker['current_year'][var] = vv - self._output_tracker['last_yr'][var]
             self._output_tracker['last_yr'][var] = vv
+        elif period == 'daily':
+            self._output_tracker['current_day'][var] = vv - self._output_tracker['yesterday'][var]
+            self._output_tracker['yesterday'][var] = vv
         elif period == 'monthly':
 
             self._output_tracker['current_month'][var] = vv - self._output_tracker['last_mo'][var]
@@ -164,11 +171,11 @@ class RasterManager(object):
             array_to_save = tracker['current_month'][key]
             print 'saving {}, mean: {}'.format(key, tracker['current_month'][key].mean())
 
-        elif period == 'single_day':
+        elif period == 'daily':
             file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], file_)
             print 'masterkey', master[key]
-            print 'masterkey size', master[key].size
+            print 'masterkey shape', master[key].shape
             array_to_save = master[key]
 
         elif period == 'simulation':
