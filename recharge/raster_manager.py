@@ -191,27 +191,9 @@ class RasterManager(object):
         geo = self._geo
         out_data_set = driver.Create(filename, geo['cols'], geo['rows'],
                                      geo['bands'], geo['data_type'])
-        print 'out_data_set', out_data_set
         out_data_set.SetGeoTransform(geo['geotransform'])
         out_data_set.SetProjection(geo['projection'])
         output_band = out_data_set.GetRasterBand(1)
-
-        mask_arr = get_mask(mask_path)
-        # print "shape of the inside *^&^", mask_arr[mask_arr].shape
-        #
-        # print "mask array ->", mask_arr.shape
-
-
-        print 'output band!!!', output_band
-        #print output_band.shape
-        #print 'array_to_save shape - {}'.format(array_to_save.shape) # (32787,)
-
-        #array_to_save = remake_array(mask_path, array_to_save)
-
-        #array_to_save = reshape(array_to_save, (10929, 3))
-        # print "new array_to_save", array_to_save
-        print 'array to save shape', array_to_save.shape
-        array_to_save.reshape(5270, 3250)
         output_band.WriteArray(array_to_save, 0, 0)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
         del out_data_set, output_band
