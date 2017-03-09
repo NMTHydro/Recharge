@@ -174,9 +174,10 @@ class RasterManager(object):
         elif period == 'daily':
             file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], file_)
-            print 'masterkey', master[key]
-            print 'masterkey shape', master[key].shape
-            array_to_save = master[key]
+            array_to_save = tracker['current_day'][key]
+            # print 'masterkey', master[key]
+            # print 'masterkey shape', master[key].shape
+            # array_to_save = master[key]
 
         elif period == 'simulation':
             file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
