@@ -57,15 +57,20 @@ class Processes(object):
                  date_range,
                  input_root,
                  output_root,
+                 mod_output_root=None,
                  mask='Mask',
                  polygons='Blank_Geo',
-                 write_freq=None):
+                 write_freq=None,
+                 taw_mod_switch = None):
 
         #TAW MOD CHANGE
         #self.taw_mod = taw_modification
         self._mask_path = os.path.join(input_root, mask)
         self._polygons_path = os.path.join(input_root, polygons)
-        self._output_root = output_root
+        if taw_mod_switch == True:
+            self._output_root = mod_output_root
+        else:
+            self._output_root = output_root
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered

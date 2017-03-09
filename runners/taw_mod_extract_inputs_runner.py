@@ -25,11 +25,34 @@ import os
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts, remake_array, get_mask
 from recharge.pixel_coord_finder import coord_getter
 
+def daily_tifmaker(taw_modification, date_range, dates, inputs_path, outputs_path, modified_taw_root):
+    """Takes taw from model, modifies one taw, leaves one control taw, runs model twice and produces two sets of daily
+    tifs. One set is perhaps key_day_month_year.tif(*x) the other key_day_month_year_mod.tif(*x).
+    """
+
+    etrm = Processes(date_range, inputs_path, outputs_path, write_freq='daily')
+    etrm.set_save_dates(dates)
+    etrm.run()
+
+    etrm_mod = Processes(date_range, inputs_path, outputs_path, mod_output_root=modified_taw_root, write_freq='daily', taw_mod_switch=True)
+    etrm_mod.modify_taw(taw_modification, return_taw=True)
+    etrm_mod.set_save_dates(dates)
+    etrm_mod.run()
+
+
+
+def tif_retreival():
+    """Based on the datetime_list goes and gets the filenames of the tifs that were generated in daily_tifmaker"""
 
 # save dates is new.
-def run(date_range, save_dates, input_root, output_root, taw_modification, root, output, start, end):
+def taw_writer(tif, date_range, save_dates, input_root, output_root, taw_modification, root, output, start, end):
     """Goal here is to plot the original masked taw and two modified versions of taw
-    to a csv for each pixel in masked domain"""
+    to a csv for each pixel in masked domain
+
+    Additionally this will take in the tiffs from tiff_retreival and put in the values for each pixel to the
+    right of the corresponding taw value.
+
+    """
 
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
@@ -39,7 +62,7 @@ def run(date_range, save_dates, input_root, output_root, taw_modification, root,
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)
     # set_save_dates_function in processes calls set_save_dates in Raster_Manager() which takes the dates you want printed.
-    #etrm_new.set_save_dates(save_dates)
+    etrm_new.set_save_dates(save_dates)
     #etrm_new.run()
 
     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
@@ -53,17 +76,22 @@ def run(date_range, save_dates, input_root, output_root, taw_modification, root,
 
     # original taw (taw) and modified mask taw (taw_new_masked)
     taw_name = 'taw_mod_4_21_10_0.tif'
-
     statics_to_save = os.path.join(root, 'statics')
     taw = convert_raster_to_array(statics_to_save, taw_name, 1)
     print taw.shape
     taw_new_masked = taw * taw_modification
+
+    # pull out tif from today's folder (might want to change that.)
+    todays_date = datetime.today().strftime("%Y_%m_%d")
+    tif_path = os.path.join(outputs_path, 'ETRM_Results_{}'.format(todays_date))
+    tif_array = convert_raster_to_array(tif_path, tif)
 
     # all the taw shapes are correct...
     print 'taw shape', taw.shape
     print 'taw_new shape', taw_new.shape
     print 'taw_new_masked shape', taw_new_masked.shape
     print 'taw unmodified from processes', taw_unmod.shape
+    print 'tif array shape->', tif_array.shp
 
     keys = ('x', 'y', 'taw', 'taw_new_masked','taw_unmodified', 'taw_new')
     with open(output, 'w') as wfile:
@@ -97,17 +125,29 @@ if __name__ == '__main__':
     hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
     outputs_path = os.path.join(hard_drive_path, 'ETRM_Results')
+    modified_taw_path = os.path.join(hard_drive_path, 'ETRM_Results', 'TAW_mod_results')
 
     start = datetime(start_year, start_month, start_day)
     end = datetime(end_year, end_month, end_day)
 
     root = inputs_path
+    # TODO need to get rid of a hardcoded output path.
     output = os.path.join(root, 'TAW_pts_out', 'TAW_xmas_test_2013.csv')
 
     save_dates = [datetime(2013, 12, 30), datetime(2013, 12, 31)]
-    # Run model and extractor...
-    run((start, end), save_dates, inputs_path, outputs_path, taw_modification,
-        root, output, start, end)
+    date_range = (start, end)
+
+    # generate the dailies.
+    daily_tifmaker(taw_modification, date_range, save_dates, inputs_path, outputs_path, modified_taw_path)
+
+    # tifs should be a list or tuple.
+    tifs = tif_retreival()
+
+    # writes the big ol csv for each tif...
+    # pause on this one do the first two for now...
+    for tif in tifs:
+        taw_writer(tif, (start, end), save_dates, inputs_path, outputs_path, taw_modification,
+            root, output, start, end)
     # for results use the output tiff and base it on the path.
 
     #=====================================================
