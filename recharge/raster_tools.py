@@ -94,8 +94,13 @@ def remake_array(mask_path, arr):
     if file_name is not None:
         mask_array = convert_raster_to_array(mask_path, file_name)
         masked_arr = masked_where(mask_array == 0, mask_array)
+        print masked_arr
+        print '!~~', masked_arr[~masked_arr.mask]
+        print arr.shape
+        print masked_arr[~masked_arr.mask].shape
         masked_arr[~masked_arr.mask] = arr.ravel()
         masked_arr.mask = nomask
+
         arr = masked_arr.filled(0)
         out = arr
 

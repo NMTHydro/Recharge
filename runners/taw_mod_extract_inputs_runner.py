@@ -26,6 +26,7 @@ from recharge.raster_tools import convert_raster_to_array, apply_mask, save_dail
 from recharge.pixel_coord_finder import coord_getter
 
 
+# save dates is new.
 def run(date_range, save_dates, input_root, output_root, taw_modification, root, output, start, end):
     """Goal here is to plot the original masked taw and two modified versions of taw
     to a csv for each pixel in masked domain"""
@@ -37,20 +38,25 @@ def run(date_range, save_dates, input_root, output_root, taw_modification, root,
 
     # modified taw taken from function in processes class...
     etrm_new = Processes(date_range, input_root, output_root)
-    etrm_new.set_save_dates(save_dates)
+    # set_save_dates_function in processes calls set_save_dates in Raster_Manager() which takes the dates you want printed.
+    #etrm_new.set_save_dates(save_dates)
+    #etrm_new.run()
 
     taw_new = etrm_new.modify_taw(taw_modification, return_taw=True)
     taw_new = remake_array(mask_path, taw_new)
 
     # unmodified taw taken from function in Processes class...
     etrm_unmod = Processes(date_range, input_root, output_root)
+    print "etrm taw shape ---->>> ", etrm_unmod.get_taw().shape
     taw_unmod = etrm_unmod.get_taw()
     taw_unmod = remake_array(mask_path, taw_unmod)
 
     # original taw (taw) and modified mask taw (taw_new_masked)
     taw_name = 'taw_mod_4_21_10_0.tif'
+
     statics_to_save = os.path.join(root, 'statics')
     taw = convert_raster_to_array(statics_to_save, taw_name, 1)
+    print taw.shape
     taw_new_masked = taw * taw_modification
 
     # all the taw shapes are correct...
@@ -98,8 +104,9 @@ if __name__ == '__main__':
     root = inputs_path
     output = os.path.join(root, 'TAW_pts_out', 'TAW_xmas_test_2013.csv')
 
+    save_dates = [datetime(2013, 12, 30), datetime(2013, 12, 31)]
     # Run model and extractor...
-    run((start, end), inputs_path, outputs_path, taw_modification,
+    run((start, end), save_dates, inputs_path, outputs_path, taw_modification,
         root, output, start, end)
     # for results use the output tiff and base it on the path.
 

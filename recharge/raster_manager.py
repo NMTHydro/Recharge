@@ -26,16 +26,16 @@ dgketchum 24 JUL 2016
 import gdal
 import ogr
 
-from numpy import array, where, zeros
+from numpy import array, where, zeros, reshape
 from calendar import monthrange
 import os
 
-from recharge.raster_tools import make_results_dir, apply_mask, remake_array
+from recharge.raster_tools import make_results_dir, apply_mask, remake_array, get_mask
 from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_raster_to_array as to_array
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'kcb')
-DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip') #'Dr', 'De', 'Drew'
+DAILY_OUTPUTS = ('etrs', 'eta', 'precip') # 'infil','Dr', 'De', 'Drew'
 
 
 class RasterManager(object):
@@ -84,9 +84,10 @@ class RasterManager(object):
         #             self._write_raster(element, date_object, period='single_day', master=master)
 
         if self._save_dates:
-            if date_object in self._save_dates:
+            for date_object in self._save_dates: #if
                     for element in DAILY_OUTPUTS:
-                        self._write_raster(element, date_object, period='single_day', master=master)
+                        print "element", element
+                        self._write_raster(element, date_object, mask_path, period='single_day', master=master)
 
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals
@@ -104,7 +105,7 @@ class RasterManager(object):
             for element in OUTPUTS:
                 arr = remake_array(mask_path, master[element])
                 self._update_raster_tracker(arr, element, period='monthly')
-                self._write_raster(element, date_object, period='monthly')
+                self._write_raster(element, date_object, mask_path, period='monthly')
                 if not self._write_freq:
                     self._sum_raster_by_shape(element, date_object)
 
@@ -113,7 +114,7 @@ class RasterManager(object):
             for element in OUTPUTS:
                 arr = remake_array(mask_path, master[element])
                 self._update_raster_tracker(arr, element, period='annual')
-                self._write_raster(element, date_object, period='annual')
+                self._write_raster(element, date_object, mask_path, period='annual')
 
     def save_csv(self):
         print 'tab dict: \n{}'.format(self._tabular_dict)
@@ -143,11 +144,11 @@ class RasterManager(object):
 
             self._output_tracker['last_mo'][var] = vv
 
-    def _write_raster(self, key, date, period=None, master=None):
+    def _write_raster(self, key, date, mask_path, period=None, master=None):
 
         print ''
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
-
+        print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         #root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
@@ -165,6 +166,8 @@ class RasterManager(object):
         elif period == 'single_day':
             file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], file_)
+            print 'masterkey', master[key]
+            print 'masterkey size', master[key].size
             array_to_save = master[key]
 
         elif period == 'simulation':
@@ -180,9 +183,27 @@ class RasterManager(object):
         geo = self._geo
         out_data_set = driver.Create(filename, geo['cols'], geo['rows'],
                                      geo['bands'], geo['data_type'])
+        print 'out_data_set', out_data_set
         out_data_set.SetGeoTransform(geo['geotransform'])
         out_data_set.SetProjection(geo['projection'])
         output_band = out_data_set.GetRasterBand(1)
+
+        mask_arr = get_mask(mask_path)
+        # print "shape of the inside *^&^", mask_arr[mask_arr].shape
+        #
+        # print "mask array ->", mask_arr.shape
+
+
+        print 'output band!!!', output_band
+        #print output_band.shape
+        #print 'array_to_save shape - {}'.format(array_to_save.shape) # (32787,)
+
+        #array_to_save = remake_array(mask_path, array_to_save)
+
+        #array_to_save = reshape(array_to_save, (10929, 3))
+        # print "new array_to_save", array_to_save
+        print 'array to save shape', array_to_save.shape
+        array_to_save.reshape(5270, 3250)
         output_band.WriteArray(array_to_save, 0, 0)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
         del out_data_set, output_band
