@@ -145,6 +145,7 @@ class RasterManager(object):
             self._output_tracker['last_mo'][var] = vv
 
     def _write_raster(self, key, date, mask_path, period=None, master=None):
+        "Writes rasters like no body's business."
 
         print ''
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
