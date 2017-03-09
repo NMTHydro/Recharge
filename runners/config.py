@@ -25,13 +25,13 @@ from datetime import datetime
 from runners.paths import paths
 
 DEFAULT_CFG = '''
-start_day: 2013
+start_day: 1
 start_month: 12
-start_year: 1
+start_year: 2013
 
-end_day: 2013
+end_day: 29
 end_month: 12
-end_year: 29
+end_year: 2013
 
 input_root: /Volumes/Seagate Expansion Drive
 mask: Mask
@@ -58,7 +58,21 @@ class Config:
 
     @property
     def save_dates(self):
-        return self._obj.get('save_dates')
+        sd = self._obj.get('save_dates')
+        if sd:
+            return [datetime.strptime(s, '%m/%d/%Y') for s in sd]
+
+    @property
+    def use_individual_kcb(self):
+        return self._obj.get('use_individual_kcb')
+
+    @property
+    def mask(self):
+        return self._obj.get('mask')
+
+    @property
+    def polygons(self):
+        return self._obj.get('polygons')
 
     @property
     def input_root(self):

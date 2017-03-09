@@ -28,7 +28,9 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
+from recharge import STATIC_KEYS, OUTPUTS
 from recharge.raster_tools import convert_raster_to_array, apply_mask
+from runners.paths import paths
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
@@ -210,16 +212,19 @@ def initialize_raster_tracker(shape):
 def initialize_tabular_dict(date_range_, write_frequency):
     units = ('AF', 'CBM')
 
-    if write_frequency == 'daily':
-        outputs = DAILY_OUTPUTS
-    else:
-        outputs = OUTPUTS
+    # if write_frequency == 'daily':
+    #     outputs = DAILY_OUTPUTS
+    # else:
+    #    # outputs = OUTPUTS
 
+    outputs = OUTPUTS
     outputs_arr = [o for output in outputs for o in (output, output)]
 
     # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'
-    # if write_freq == 'daily':
-    #     outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
+    if write_frequency == 'daily':
+        outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
+
+
 
     units_arr = units * len(outputs)
 

@@ -22,7 +22,7 @@ from dateutil import rrule
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
 from recharge.raster_manager import RasterManager
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb, get_kcb
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
 from runners.paths import paths
 
@@ -55,6 +55,7 @@ class Processes(object):
         mask = cfg.mask
         polygons = cfg.polygons
         write_freq = cfg.write_freq
+        self._use_individual_kcb = cfg.use_individual_kcb
 
         if input_root:
             paths.build(input_root, output_root)
@@ -180,7 +181,7 @@ class Processes(object):
     #     # here we allow for specific dates if the user wants rasters for a specific day.
     #     if save_specific_dates:
     #         master = self._master
-    #         mask_path = self._mask_path
+    #         mask_path = paths.mask
     #         user_defined_dates = dates
     #         self._raster_manager.update_raster_obj(master=master,mask_path=mask_path, date_object=user_defined_dates, save_specific_dates=True)
 
@@ -626,24 +627,28 @@ class Processes(object):
         :return: None
         """
         # ndvi, prism, penman = self._ndvi_path, self._prism_path, self._penman_path
-        ndvi, prism, penman = paths.ndvi_individ, paths.prism, paths.penman
+        ndvi, prism, penman = paths.ndvi_std_all, paths.prism, paths.penman
         m = self._master
 
-        m['kcb'] = get_individ_kcb(self._mask_path, ndvi, date, m['pkcb'])
+        if self._use_individual_kcb:
+            m['kcb'] = get_individ_kcb(paths.mask, ndvi, date, m['pkcb']) #paths.mask
 
-        m['min_temp'] = min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
-        m['max_temp'] = max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
+        else:
+            m['kcb'] = get_kcb(paths.mask, ndvi, date, m['pkcb'])
+
+        m['min_temp'] = min_temp = get_prism(paths.mask, prism, date, variable='min_temp')
+        m['max_temp'] = max_temp = get_prism(paths.mask, prism, date, variable='max_temp')
 
         m['temp'] = (min_temp + max_temp) / 2
 
-        precip = get_prism(self._mask_path, prism, date, variable='precip')
+        precip = get_prism(paths.mask, prism, date, variable='precip')
         m['precip'] = where(precip < 0, 0, precip)
 
-        etrs = get_penman(self._mask_path, penman, date, variable='etrs')
+        etrs = get_penman(paths.mask, penman, date, variable='etrs')
         etrs = where(etrs < 0, 0, etrs)
         m['etrs'] = where(isnan(etrs), 0, etrs)
 
-        m['rg'] = get_penman(self._mask_path, penman, date, variable='rg')
+        m['rg'] = get_penman(paths.mask, penman, date, variable='rg')
 
         m['pkcb'] = m['kcb']
 
@@ -780,7 +785,7 @@ class Processes(object):
 #
 #     start_date, end_date = self._date_range
 #     print 'simulation period: {}'.format((start_date, end_date))
-#     start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
+#     start_monsoon, end_monsoon = c['s_mon'], c['e_mon]
 #     start_time = datetime.now()
 #     print 'start time :{}'.format(start_time)
 #     for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):

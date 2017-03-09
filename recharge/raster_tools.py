@@ -47,7 +47,15 @@ def convert_raster_to_array(input_raster_path, raster, band=1):
     :param band: Band of raster sought.
     :return: Numpy array.
     """
-    raster_open = gdal.Open(os.path.join(input_raster_path, raster))
+    # print "input raster path", input_raster_path
+    # print "raster", raster
+    p = os.path.join(input_raster_path, raster)
+    # print "filepath", os.path.isfile(p)
+    # print p
+    if not os.path.isfile(p):
+        print 'Not a valid file: {}'.format(p)
+
+    raster_open = gdal.Open(p)
     ras = array(raster_open.GetRasterBand(band).ReadAsArray(), dtype=float)
     return ras
 
@@ -94,10 +102,10 @@ def remake_array(mask_path, arr):
     if file_name is not None:
         mask_array = convert_raster_to_array(mask_path, file_name)
         masked_arr = masked_where(mask_array == 0, mask_array)
-        print masked_arr
-        print '!~~', masked_arr[~masked_arr.mask]
-        print arr.shape
-        print masked_arr[~masked_arr.mask].shape
+        # print masked_arr
+        # print '!~~', masked_arr[~masked_arr.mask]
+        # print arr.shape
+        # print masked_arr[~masked_arr.mask].shape
         masked_arr[~masked_arr.mask] = arr.ravel()
         masked_arr.mask = nomask
 

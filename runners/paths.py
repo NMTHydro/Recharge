@@ -55,12 +55,12 @@ class Paths:
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
         self.ndvi_std_all = os.path.join(self.ndvi, 'NDVI_std_all')
-        self.ndvi_individ = os.path.join(self.ndvi, 'NDVI_individ')
+        self.ndvi_individ = os.path.join(self.ndvi, 'NDVI')
         self.ndvi_spline = os.path.join(self.ndvi, 'NDVI_spline')
 
         self.penman = os.path.join(etrm_input_root, 'PM_RAD')
         self.static_inputs = os.path.join(etrm_input_root, 'statics')
-        self.initial_inputs = os.path.join(etrm_input_root, 'initial')
+        self.initial_inputs = os.path.join(etrm_input_root, 'initialize')
 
         self.amf_sites = amf_path = os.path.join(etrm_input_root, 'ameriflux_sites')  # OK
         self.amf_extract = os.path.join(amf_path, 'AMF_extracts')

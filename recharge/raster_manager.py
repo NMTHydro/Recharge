@@ -39,8 +39,7 @@ from runners.paths import paths
 class RasterManager(object):
     _save_dates = None
 
-    def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,
-                 write_frequency=None):
+    def __init__(self, simulation_period, write_frequency=None):
 
         self._write_freq = write_frequency
         self._simulation_period = simulation_period
@@ -56,13 +55,13 @@ class RasterManager(object):
 
         self._geo = get_geo(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
-        self._results_dir = make_results_dir(paths.etrm_output_root, os.path.basename(paths.polygons))
+        self._results_dir = make_results_dir(paths.etrm_output_root, paths.polygons)
         self._tabular_dict = initialize_tabular_dict(simulation_period, write_frequency)
 
     def set_save_dates(self, dates):
         self._save_dates = dates
 
-    def update_raster_obj(self, master, mask_path, date_object):
+    def update_raster_obj(self, master, date_object):
         """
         Checks if the date is specified for writing output and calls the write and tabulation methods.
 
@@ -90,7 +89,10 @@ class RasterManager(object):
                 arr = remake_array(paths.mask, master[element])
                 self._sum_raster_by_shape(element, date_object, arr)
 
+        print "Heres the save dates", self._save_dates
+        mask_path = paths.mask
         if self._save_dates:
+            print 'Date objeect {}. {}'.format(date_object, date_object in self._save_dates)
             if date_object in self._save_dates:
                 for element in DAILY_OUTPUTS:
                     print "element", element
@@ -120,7 +122,7 @@ class RasterManager(object):
     def save_csv(self):
         print 'tab dict: \n{}'.format(self._tabular_dict)
         print 'saving the simulation master tracker'
-        self._save_tabulated_results_to_csv(self._results_dir, 'polygons')
+        self._save_tabulated_results_to_csv(self._results_dir, paths.polygons)
 
     def _update_raster_tracker(self, vv, var, period):
         """ Updates the cumulative rasters each period as indicated.
@@ -172,6 +174,7 @@ class RasterManager(object):
             file_ = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], file_)
             array_to_save = tracker['current_day'][key]
+
             # print 'masterkey', master[key]
             # print 'masterkey shape', master[key].shape
             # array_to_save = master[key]
