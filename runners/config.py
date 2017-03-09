@@ -56,6 +56,9 @@ class Config:
         with open(p, 'r') as rfile:
             self._obj = yaml.load(rfile)
 
+    @property
+    def save_dates(self):
+        return self._obj.get('save_dates')
 
     @property
     def input_root(self):
