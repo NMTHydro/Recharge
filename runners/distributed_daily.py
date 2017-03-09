@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-
+import os
 from datetime import datetime
 from recharge.etrm_processes import Processes
 from runners.config import Config
@@ -22,6 +22,7 @@ from runners.config import Config
 def run():
     cfg = Config()
     etrm = Processes(cfg)
+    etrm.set_save_dates(cfg.save_dates)
     etrm.run()
 
 

@@ -46,6 +46,8 @@ def run(root, output_path):
     x_name = 'NDVI_1300ptsX.tif'
     y_name = 'NDVI_1300ptsY.tif'
 
+    # Gets the arrays using function convert_raster_to_array() in raster_tools.py
+    # apply_mask is done on the same array.
     nlcd = apply_mask(mask_path, convert_raster_to_array(statics_to_save, nlcd_name, 1))
     dem = apply_mask(mask_path, convert_raster_to_array(statics_to_save, dem_name, 1))
     slope = apply_mask(mask_path, convert_raster_to_array(statics_to_save, slope_name, 1))
@@ -75,6 +77,7 @@ def run(root, output_path):
             tmin_data = get_prism(mask_path, prism, day, variable="min_temp")
             tmax_data = get_prism(mask_path, prism, day, variable="max_temp")
             tavg = tmin_data + tmax_data / 2
+            # Finds the penman image.
             etrs_data = get_penman(mask_path, penman, day, variable="etrs")
             p_minus_etr = precip_data - etrs_data
 

@@ -28,9 +28,7 @@ from datetime import datetime
 from pandas import DataFrame, date_range, MultiIndex
 from osgeo import ogr
 
-from recharge import OUTPUTS, DAILY_OUTPUTS, STATIC_KEYS
 from recharge.raster_tools import convert_raster_to_array, apply_mask
-from runners.paths import paths
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
@@ -67,7 +65,6 @@ def initialize_master_dict(shape=None):
     if shape:  # distributed
         # master['pkcb'] = zeros(shape)
         master['infil'] = zeros(shape)
-        master['kcb'] = zeros(shape)
         master['tot_kcb'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
         master['tot_rain'] = zeros(shape)
@@ -165,6 +162,11 @@ def initialize_static_dict():
     print 'taw has {} cells below the minimum'.format(non_zero, min_val)
     print 'taw median: {}, mean {}, max {}, min {}'.format(median(taw), taw.mean(), taw.max(), taw.min())
     d['taw'] = taw
+
+    # #TAW MOD CHANGE
+    # if taw_mod:
+    #
+    #     d['taw'] = taw_mod * taw
 
     # apply tew adjustment
     tew = where(land_cover == 41, tew * 0.25, tew)

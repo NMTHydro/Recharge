@@ -73,12 +73,19 @@ def get_raster_geo_attributes(root):
 
 def apply_mask(mask_path, arr):
     out = None
-    file_name = next((fn for fn in os.listdir(mask_path) if fn.endswith('.tif')), None)
-    if file_name is not None:
-        mask = convert_raster_to_array(mask_path, file_name)
-        idxs = asarray(mask, dtype=bool)
+    idxs = get_mask(mask_path)
+    if idxs is not None:
         out = arr[idxs].flatten()
     return out
+
+
+def get_mask(path):
+    idxs = None
+    file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
+    if file_name is not None:
+        mask = convert_raster_to_array(path, file_name)
+        idxs = asarray(mask, dtype=bool)
+    return idxs
 
 
 def remake_array(mask_path, arr):
@@ -87,8 +94,13 @@ def remake_array(mask_path, arr):
     if file_name is not None:
         mask_array = convert_raster_to_array(mask_path, file_name)
         masked_arr = masked_where(mask_array == 0, mask_array)
+        print masked_arr
+        print '!~~', masked_arr[~masked_arr.mask]
+        print arr.shape
+        print masked_arr[~masked_arr.mask].shape
         masked_arr[~masked_arr.mask] = arr.ravel()
         masked_arr.mask = nomask
+
         arr = masked_arr.filled(0)
         out = arr
 
