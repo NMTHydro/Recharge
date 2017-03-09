@@ -35,7 +35,7 @@ from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'kcb')
-DAILY_OUTPUTS = ('etrs', 'eta', 'precip') # 'infil','Dr', 'De', 'Drew'
+DAILY_OUTPUTS = ('tot_etrs', 'tot_eta', 'tot_precip') # 'infil','Dr', 'De', 'Drew'
 
 
 class RasterManager(object):
@@ -88,6 +88,7 @@ class RasterManager(object):
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals
         # just use the normal daily fluxes from master, aka _daily_outputs
+
         if self._write_freq == 'daily':
             for element in DAILY_OUTPUTS:
                 arr = remake_array(mask_path, master[element])
@@ -172,7 +173,7 @@ class RasterManager(object):
             print 'saving {}, mean: {}'.format(key, tracker['current_month'][key].mean())
 
         elif period == 'daily':
-            file_ = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.year)
+            file_ = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], file_)
             array_to_save = tracker['current_day'][key]
             # print 'masterkey', master[key]

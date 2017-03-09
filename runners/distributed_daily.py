@@ -19,7 +19,7 @@ from recharge.etrm_processes import Processes
 
 
 def run(date_range, dates, input_root, output_root):
-    etrm = Processes(date_range, input_root, output_root)
+    etrm = Processes(date_range, input_root, output_root, write_freq='daily')
     etrm.set_save_dates(dates)
     etrm.run()
 
