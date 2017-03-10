@@ -24,7 +24,6 @@ PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 STATIC_KEYS = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb')
-DAILY_OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb')
 
 # ============= EOF =============================================
 

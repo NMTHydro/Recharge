@@ -18,25 +18,32 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 import os
+from datetime import datetime
 
 import yaml
-from datetime import datetime
 
 from runners.paths import paths
 
 DEFAULT_CFG = '''
-start_day: 1
-start_month: 12
-start_year: 2013
-
-end_day: 29
-end_month: 12
-end_year: 2013
-
 input_root: /Volumes/Seagate Expansion Drive
+
+start_date = 12/1/2013
+end_date = 12/32/2013
+
 mask: Mask
 polygons: Blank_Geo
+
+save_dates: []
+
+daily_outputs:
+ - tot_infil
+ - tot_etrs
+ - tot_eta
+ - tot_precip
+ - tot_kcb
+
 '''
+
 DATETIME_FMT = '%m/%d/%Y'
 
 
@@ -108,4 +115,7 @@ class Config:
     def use_verify_paths(self):
         return self._obj.get('use_verify_paths')
 
+    @property
+    def daily_outputs(self):
+        return self._obj.get('daily_outputs', [])
 # ============= EOF =============================================

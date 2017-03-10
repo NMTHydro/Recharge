@@ -16,13 +16,14 @@
 
 import os
 import time
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
+
 from dateutil import rrule
+from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
-from recharge.raster_manager import RasterManager
 from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb, get_kcb
+from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
 from runners.paths import paths
 
@@ -80,7 +81,7 @@ class Processes(object):
         self._master = time_it(initialize_master_dict, self._shape)
 
         # self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster_manager = RasterManager(date_range, write_freq)  # self._outputs
+        self._raster_manager = RasterManager(cfg)  # self._outputs
 
         self._start_date, self._end_date = date_range
 

@@ -29,7 +29,7 @@ import gdal
 import ogr
 from numpy import array, where, zeros
 
-from recharge import DAILY_OUTPUTS, OUTPUTS
+from recharge import OUTPUTS
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from recharge.raster import Raster
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
@@ -40,24 +40,24 @@ from runners.paths import paths
 class RasterManager(object):
     _save_dates = None
 
-    def __init__(self, simulation_period, write_frequency=None):
-
-        self._write_freq = write_frequency
-        self._simulation_period = simulation_period
+    def __init__(self, cfg):
+        self._cfg = cfg
+        self._write_freq = write_freq = cfg.write_freq
+        self._simulation_period = simulation_period = cfg.date_range
 
         # _outputs are flux totals, monthly and annual are found with _update_raster_tracker()
         # daily totals only need master values (i.e., 'infil' rather than 'tot_infil'
         # and thus we assign a list of daily outputs
         # TODO: Hardcoded tot_infil vs invil, tot_etrs vs etrs etc.
         # self._outputs = ('infil', 'etrs', 'eta', 'precip', 'kcb')  # infil change to tot_infil
-        if write_frequency == 'daily':
+        if write_freq == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
-            print 'your daily outputs will be from: {}'.format(DAILY_OUTPUTS)
+            print 'your daily outputs will be from: {}'.format(cfg.daily_outputs)
 
         self._geo = get_geo(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
         self._results_dir = make_results_dir(paths.etrm_output_root, paths.polygons)
-        self._tabular_dict = initialize_tabular_dict(simulation_period, write_frequency)
+        self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq)
 
     def set_save_dates(self, dates):
         self._save_dates = dates
@@ -77,7 +77,7 @@ class RasterManager(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
 
         if self._write_freq == 'daily':
-            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in DAILY_OUTPUTS]
+            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
