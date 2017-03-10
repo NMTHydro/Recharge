@@ -289,8 +289,8 @@ class Processes(object):
         a_min = c['a_min']
         a_max = c['a_max']
 
-        sf = where(temp < 0.0, precip, 0)
-        rain = where(temp >= 0.0, precip, 0)
+        sf = where(temp < 4.0, precip, 0)
+        rain = where(temp >= 4.0, precip, 0)
         # alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
         # alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
         # alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)

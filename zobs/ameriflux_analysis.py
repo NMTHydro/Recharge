@@ -73,11 +73,11 @@ if __name__ == '__main__':
     home = os.path.expanduser('~')
     print 'home: {}'.format(home)
     root = os.path.join(home)
-    inputs = os.path.join('/Volumes/Seagate Backup Plus Drive') # 'F:\\', 'ETRM_Inputs'
+    inputs = os.path.join( 'H:\\', 'ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
     amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
     amf_obs_root = os.path.join(amf_path, 'AMF_Data') # OK
     amf_extract = os.path.join(amf_path, 'AMF_extracts') # OK
-    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers') # OK
+    amf_trackers = os.path.join(amf_path, 'AMF_ETRM_output', 'trackers') # 7OK
     initial_conditions_path = os.path.join(inputs, 'initialize')
     static_inputs_path = os.path.join(inputs, 'statics')
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output') # OK
