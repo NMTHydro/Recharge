@@ -104,4 +104,8 @@ class Config:
     def write_freq(self):
         return self._obj.get('write_freq')
 
+    @property
+    def use_verify_paths(self):
+        return self._obj.get('use_verify_paths')
+
 # ============= EOF =============================================

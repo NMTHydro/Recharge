@@ -18,6 +18,7 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 import os
+import sys
 
 
 class Paths:
@@ -79,6 +80,28 @@ class Paths:
 
     def set_polygons_path(self, p):
         self.polygons = self.input_path(p)
+
+    def verify(self):
+        attrs = ('etrm_input_root',
+                 'etrm_output_root',
+                 'prism',
+                 'ndvi',
+                 'ndvi_std_all',
+                 'ndvi_individ',
+                 'ndvi_spline',
+                 'penman',
+                 'static_inputs',
+                 'initial_inputs')
+
+        nonfound = []
+        for attr in attrs:
+            v = getattr(self, attr)
+            if not os.path.exists(v):
+                print 'NOT FOUND {}: {}'.format(attr, v)
+                nonfound.append((attr, v))
+
+        if nonfound:
+            sys.exit(1)
 
 
 paths = Paths()

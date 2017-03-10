@@ -63,6 +63,9 @@ class Processes(object):
         paths.set_polygons_path(polygons)
         paths.set_mask_path(mask)
 
+        if cfg.use_verify_paths:
+            paths.verify()
+
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
         self._constants = time_it(set_constants)
