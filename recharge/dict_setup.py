@@ -22,14 +22,15 @@ returns dict with all rasters under keys of etrm variable names
 dgketchum 24 JUL 2016
 """
 
-from numpy import zeros, isnan, count_nonzero, where, ones, median, minimum, maximum
 import os
 from datetime import datetime
-from pandas import DataFrame, date_range, MultiIndex
+
+from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum
 from osgeo import ogr
+from pandas import DataFrame, date_range, MultiIndex
 
 from recharge import STATIC_KEYS, OUTPUTS
-from recharge.raster_tools import convert_raster_to_array, apply_mask
+from recharge.raster import Raster
 from runners.paths import paths
 
 """
@@ -125,7 +126,9 @@ def initialize_static_dict():
     # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
 
     for k, fn in zip(STATIC_KEYS, statics):
-        arr = apply_mask(paths.mask, convert_raster_to_array(inputs_root, fn))
+        # arr = apply_mask(paths.mask, convert_raster_to_array(inputs_root, fn))
+        raster = Raster(fn, root=inputs_root)
+        arr = raster.masked()
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)
@@ -193,8 +196,10 @@ def initialize_initial_conditions_dict():
 
     d = {}
     for k, fn in zip(('de', 'dr', 'drew'), fs):
-        raster = convert_raster_to_array(inputs_root, fn)
-        data = apply_mask(paths.mask, raster)
+        # raster = convert_raster_to_array(inputs_root, fn)
+        # data = apply_mask(paths.mask, raster)
+        raster = Raster(fn, root=inputs_root)
+        data = raster.masked()
         d[k] = data
 
         print '{} has {} nan values'.format(k, count_nonzero(isnan(data)))
@@ -212,19 +217,12 @@ def initialize_raster_tracker(shape):
 def initialize_tabular_dict(date_range_, write_frequency):
     units = ('AF', 'CBM')
 
-    # if write_frequency == 'daily':
-    #     outputs = DAILY_OUTPUTS
-    # else:
-    #    # outputs = OUTPUTS
-
     outputs = OUTPUTS
     outputs_arr = [o for output in outputs for o in (output, output)]
 
     # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'
     if write_frequency == 'daily':
         outputs_arr = [out.replace('tot_', '') for out in outputs_arr]
-
-
 
     units_arr = units * len(outputs)
 

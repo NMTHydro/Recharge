@@ -22,17 +22,18 @@ this module provides (1) class -- class Rasters(object):
 dgketchum 24 JUL 2016
 """
 
+import os
+from calendar import monthrange
+
 import gdal
 import ogr
-
-from numpy import array, where, zeros, reshape
-from calendar import monthrange
-import os
+from numpy import array, where, zeros
 
 from recharge import DAILY_OUTPUTS, OUTPUTS
-from recharge.raster_tools import make_results_dir, remake_array, convert_array_to_raster
-from recharge.raster_tools import get_raster_geo_attributes as get_geo
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
+from recharge.raster import Raster
+from recharge.raster_tools import get_raster_geo_attributes as get_geo
+from recharge.raster_tools import make_results_dir, convert_array_to_raster
 from runners.paths import paths
 
 
@@ -71,53 +72,39 @@ class RasterManager(object):
         """
         mo_date = monthrange(date_object.year, date_object.month)
 
-        # save data for a certain day
-        # Modified on Wed March 8 2012 GP
-        # if save_specific_dates:
-        #     if date_object in save_specific_dates:
-        #         for element in DAILY_OUTPUTS:
-        #             self._write_raster(element, date_object, period='single_day', master=master)
-
-
-
         # save daily data (this will take a long time)
         # don't use 'tot_parameter' or you will sum totals
         # just use the normal daily fluxes from master, aka _daily_outputs
 
         if self._write_freq == 'daily':
-            for element in DAILY_OUTPUTS:
-                arr = remake_array(paths.mask, master[element])
+            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in DAILY_OUTPUTS]
+            for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
-        print "Heres the save dates", self._save_dates
-        mask_path = paths.mask
-        if self._save_dates:
-            print 'Date objeect {}. {}'.format(date_object, date_object in self._save_dates)
-            if date_object in self._save_dates:
-                for element in DAILY_OUTPUTS:
-                    print "element", element
-                    arr = remake_array(mask_path, master[element])
-                    self._update_raster_tracker(arr, element, period='daily')
-                    self._write_raster(element, date_object, mask_path, period='daily', master=master)
+            print "Heres the save dates", self._save_dates
+            if self._save_dates:
+                print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
+                if date_object in self._save_dates:
+                    self._set_outputs(dailys, date_object, 'daily')
 
+        outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
         if date_object.day == mo_date[1]:
-            print ''
             print 'saving monthly data for {}'.format(date_object)
-            for element in OUTPUTS:
-                arr = remake_array(paths.mask, master[element])
-                self._update_raster_tracker(arr, element, period='monthly')
-                self._write_raster(element, date_object, mask_path, period='monthly')
-                if not self._write_freq:
-                    self._sum_raster_by_shape(element, date_object)
+            self._set_outputs(outputs, date_object, 'monthly')
 
         # save annual data
         if date_object.month == 12 and date_object.day == 31:
-            for element in OUTPUTS:
-                arr = remake_array(paths.mask, master[element])
-                self._update_raster_tracker(arr, element, period='annual')
-                self._write_raster(element, date_object, mask_path, period='annual')
+            self._set_outputs(outputs, date_object, 'annual')
+
+    def _set_outputs(self, outputs, date_object, period):
+        for element, arr in outputs:
+            self._update_raster_tracker(arr, element, period=period)
+            self._write_raster(element, date_object, period=period)
+
+            if not self._write_freq and period=='monthly':
+                self._sum_raster_by_shape(element, date_object)
 
     def save_csv(self):
         print 'tab dict: \n{}'.format(self._tabular_dict)
@@ -133,29 +120,33 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
+        periods = ('annual','daily','monthly')
 
+        if period not in periods:
+            print 'invalid period "{}" cannot update tracker. period most be one of {}'.format(period, periods)
+            return
+
+        tracker = self._output_tracker
         if period == 'annual':
-            self._output_tracker['current_year'][var] = vv - self._output_tracker['last_yr'][var]
-            self._output_tracker['last_yr'][var] = vv
+            ckey, lkey = 'current_year', 'last_yr'
         elif period == 'daily':
-            self._output_tracker['current_day'][var] = vv - self._output_tracker['yesterday'][var]
-            self._output_tracker['yesterday'][var] = vv
+            ckey, lkey = 'current_day', 'yesterday'
         elif period == 'monthly':
+            ckey, lkey = 'current_month', 'last_month'
 
-            self._output_tracker['current_month'][var] = vv - self._output_tracker['last_mo'][var]
+        print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
+        print 'mean value master {} today: {}'.format(var, vv.mean())
+        print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
+        print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-            print 'mean value master {} today: {}'.format(var, vv.mean())
-            print 'mean value output tracker today: {}'.format(self._output_tracker['current_month'][var].mean())
-            print 'mean value output tracker yesterday: {}'.format(self._output_tracker['last_mo'][var].mean())
+        tracker[ckey][var] = vv - tracker[lkey][var]
+        tracker[lkey][var] = vv
 
-            self._output_tracker['last_mo'][var] = vv
-
-    def _write_raster(self, key, date, mask_path, period=None, master=None):
+    def _write_raster(self, key, date, period=None, master=None):
         "Writes rasters like no body's business."
 
-        print ''
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
-        print "mask path -> {}".format(mask_path)
+        # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         # root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
@@ -188,6 +179,7 @@ class RasterManager(object):
             array_to_save = None
             filename = None
 
+        print 'saving {} raster to {}'.format(key, filename)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
         convert_array_to_raster(filename, array_to_save, self._geo)
 

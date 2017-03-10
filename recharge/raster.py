@@ -1,0 +1,100 @@
+# ===============================================================================
+# Copyright 2017 ross
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ===============================================================================
+
+# ============= enthought library imports =======================
+# ============= standard library imports ========================
+# ============= local library imports  ==========================
+import os
+
+from numpy import array, asarray
+from numpy.ma import masked_where, nomask
+from osgeo import gdal
+
+from runners.paths import paths
+
+
+class Raster:
+    _band = 1
+    _path = None
+    _arr = None
+    _geo = None
+
+    def __init__(self, path=None, root=None, band=1):
+        if path is not None:
+            if root is not None:
+                path = os.path.join(root, path)
+            self.open(path, band)
+
+    @classmethod
+    def fromarray(cls, arr):
+        r = cls()
+        r._arr = arr
+        return r
+
+    def unmasked(self):
+        idxs = self._get_masked_indices()
+        masked_arr = masked_where(idxs == 0, idxs)
+
+        masked_arr[~masked_arr.mask] = self._arr.ravel()
+        masked_arr.mask = nomask
+
+        return masked_arr.filled(0)
+
+    def masked(self):
+        idxs = self._get_mask_indices()
+        return self._arr[idxs].flatten()
+
+    def open(self, path, band=1):
+        if not os.path.isfile(path):
+            print 'Not a valid file: {}'.format(path)
+            return
+
+        self._path = path
+        self._band = band
+        raster = gdal.Open(self._path)
+        rband = raster.GetRasterBand(band)
+        self._arr = array(rband.ReadAsArray(), dtype=float)
+        self._geo = {'cols': raster.RasterXSize, 'rows': raster.RasterYSize, 'bands': raster.RasterCount,
+                     'data_type': rband.DataType, 'projection': raster.GetProjection(),
+                     'geotransform': raster.GetGeoTransform(), 'resolution': raster.GetGeoTransform()[1]}
+
+    def save(self, arr=None, geo=None, band=None):
+        op = 'fff'
+        if arr is None:
+            arr = self._arr
+        if geo is None:
+            geo = self._geo
+        if band is None:
+            band = self._band
+        self._save(op, arr, geo, band)
+
+    def _get_masked_indices(self):
+        mask = Raster(paths.mask)
+        idxs = asarray(mask, dtype=bool)
+        return idxs
+
+    def _save(self, path, arr, geo, band):
+        driver = gdal.GetDriverByName('GTiff')
+        out_data_set = driver.Create(path, geo['cols'], geo['rows'],
+                                     geo['bands'], geo['data_type'])
+        out_data_set.SetGeoTransform(geo['geotransform'])
+        out_data_set.SetProjection(geo['projection'])
+
+        output_band = out_data_set.GetRasterBand(band)
+        output_band.WriteArray(arr, 0, 0)
+        del out_data_set, output_band
+
+# ============= EOF =============================================
