@@ -31,6 +31,7 @@ class Raster:
     _path = None
     _arr = None
     _geo = None
+    _masked_arr = None
 
     def __init__(self, path=None, root=None, band=1):
         if path is not None:
@@ -43,6 +44,43 @@ class Raster:
         r = cls()
         r._arr = arr
         return r
+
+    def array(self):
+        return self._masked_arr if self._masked_arr is not None else self._arr
+
+    def apply_mask(self):
+        self._masked_arr = self.masked()
+
+    def filter_greater(self, fvalue, value):
+        """
+        where arr is greater than fvalue set arr to value
+        :param fvalue: float
+        :param value: float
+        :return:
+        """
+        if self._masked_arr:
+            arr = self._masked_arr
+        else:
+            arr = self._arr
+
+        arr[arr > fvalue] = value
+
+    def filter_less(self, fvalue, value):
+        """
+                where arr is greater than fvalue set arr to value
+                :param fvalue: float
+                :param value: float
+                :return:
+                """
+        if self._masked_arr:
+            arr = self._masked_arr
+        else:
+            arr = self._arr
+
+        arr[arr < fvalue] = value
+
+    def remove_negatives(self):
+        self.filter_less(0, 0)
 
     def unmasked(self):
         idxs = self._get_masked_indices()

@@ -30,6 +30,7 @@ class Paths:
     ndvi_std_all = None
     ndvi_individ = None
     ndvi_spline = None
+    ndvi_statics = None
     static_inputs = None
     initial_inputs = None
     polygons = None
@@ -55,6 +56,7 @@ class Paths:
         self.etrm_output_root = os.path.join(output_root, 'ETRM_Results')
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
+        self.ndvi_statics = os.path.join(etrm_input_root, 'NDVI_statics')
         self.ndvi_std_all = os.path.join(self.ndvi, 'NDVI_std_all')
         self.ndvi_individ = os.path.join(self.ndvi, 'NDVI')
         self.ndvi_spline = os.path.join(self.ndvi, 'NDVI_spline')

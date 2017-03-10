@@ -49,49 +49,51 @@ DATETIME_FMT = '%m/%d/%Y'
 
 class Config:
     _obj = None
+    nlcd_name = None
+    dem_name = None
+    aspect_name = None
+    slope_name = None
+    x_cord_name = None
+    y_cord_name = None
+    mask = None
+    polygons = None
+    input_root = None
+    output_root = None
+    output_path = None
+    write_freq = None
+    use_verify_paths = None
 
-    def __init__(self):
-        self.load()
+    def __init__(self, path=None):
+        self.load(path=path)
 
-    def load(self):
-        p = paths.config
-        if not os.path.isfile(p):
-            print '***** The config file {} does not exist. A default one will be written'.format(p)
+    def load(self, path=None):
+        if path is None:
+            path = paths.config
 
-            with open(p, 'w') as wfile:
+        if not os.path.isfile(path):
+            print '***** The config file {} does not exist. A default one will be written'.format(path)
+
+            with open(path, 'w') as wfile:
                 print '-------------- DEFAULT CONFIG -----------------'
                 print DEFAULT_CFG
                 print '-----------------------------------------------'
                 wfile.write(DEFAULT_CFG)
 
-        with open(p, 'r') as rfile:
+        with open(path, 'r') as rfile:
             self._obj = yaml.load(rfile)
+
+            attrs = ('mask', 'polygons', 'use_individual_kcb',
+                     'input_root', 'output_root', 'output_path', 'write_freq', 'use_verify_paths',
+                     'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
+                     'y_cord_name')
+            for attr in attrs:
+                setattr(self, attr, self._obj.get(attr))
 
     @property
     def save_dates(self):
         sd = self._obj.get('save_dates')
         if sd:
             return [datetime.strptime(s, DATETIME_FMT) for s in sd]
-
-    @property
-    def use_individual_kcb(self):
-        return self._obj.get('use_individual_kcb')
-
-    @property
-    def mask(self):
-        return self._obj.get('mask')
-
-    @property
-    def polygons(self):
-        return self._obj.get('polygons')
-
-    @property
-    def input_root(self):
-        return self._obj.get('input_root')
-
-    @property
-    def output_root(self):
-        return self._obj.get('output_root')
 
     @property
     def date_range(self):
@@ -108,14 +110,7 @@ class Config:
                     datetime.strptime(obj['end_date'], DATETIME_FMT))
 
     @property
-    def write_freq(self):
-        return self._obj.get('write_freq')
-
-    @property
-    def use_verify_paths(self):
-        return self._obj.get('use_verify_paths')
-
-    @property
     def daily_outputs(self):
         return self._obj.get('daily_outputs', [])
+
 # ============= EOF =============================================
