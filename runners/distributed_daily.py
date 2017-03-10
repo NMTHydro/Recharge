@@ -21,7 +21,6 @@ from runners.config import Config
 
 def run():
     cfg = Config()
-    cfg.load()
     etrm = Processes(cfg)
     etrm.set_save_dates(cfg.save_dates)
     etrm.run()

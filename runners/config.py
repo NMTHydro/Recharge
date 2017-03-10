@@ -37,10 +37,14 @@ input_root: /Volumes/Seagate Expansion Drive
 mask: Mask
 polygons: Blank_Geo
 '''
+DATETIME_FMT = '%m/%d/%Y'
 
 
 class Config:
     _obj = None
+
+    def __init__(self):
+        self.load()
 
     def load(self):
         p = paths.config
@@ -60,7 +64,7 @@ class Config:
     def save_dates(self):
         sd = self._obj.get('save_dates')
         if sd:
-            return [datetime.strptime(s, '%m/%d/%Y') for s in sd]
+            return [datetime.strptime(s, DATETIME_FMT) for s in sd]
 
     @property
     def use_individual_kcb(self):
@@ -85,13 +89,19 @@ class Config:
     @property
     def date_range(self):
         obj = self._obj
-        return (datetime(obj['start_year'],
-                         obj['start_month'],
-                         obj['start_day']),
-                datetime(obj['end_year'],
-                         obj['end_month'],
-                         obj['end_day']))
+        if 'start_year' in obj:
+            return (datetime(obj['start_year'],
+                             obj['start_month'],
+                             obj['start_day']),
+                    datetime(obj['end_year'],
+                             obj['end_month'],
+                             obj['end_day']))
+        else:
+            return (datetime.strptime(obj['start_date'], DATETIME_FMT),
+                    datetime.strptime(obj['end_date'], DATETIME_FMT))
+
     @property
     def write_freq(self):
         return self._obj.get('write_freq')
+
 # ============= EOF =============================================
