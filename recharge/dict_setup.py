@@ -25,7 +25,7 @@ dgketchum 24 JUL 2016
 import os
 from datetime import datetime
 
-from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum
+from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum, ones
 from osgeo import ogr
 from pandas import DataFrame, date_range, MultiIndex
 
@@ -64,10 +64,10 @@ def initialize_master_dict(shape=None):
     :param shape: shape of the model domain, (1, 1) or raster.shape
     """
 
-    master = dict(pkcb=None)
+    master = dict(pkcb=None, first_day=True)
     if shape:  # distributed
         # master['pkcb'] = zeros(shape)
-        master['infil'] = zeros(shape)
+        master['tot_infil'] = zeros(shape)
         master['tot_kcb'] = zeros(shape)
         master['tot_snow'] = zeros(shape)
         master['tot_rain'] = zeros(shape)
@@ -79,6 +79,13 @@ def initialize_master_dict(shape=None):
         master['tot_precip'] = zeros(shape)
         master['tot_ro'] = zeros(shape)
         master['tot_swe'] = zeros(shape)
+
+        master['first_day'] = True
+        master['albedo'] = ones(shape) * 0.45
+        master['swe'] = zeros(shape)  # this should be initialized correctly using simulation results
+        # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
+        # by method of Ritchie et al (1989), rew derived from percent sand/clay
+        master['dry_days'] = zeros(shape)
 
     else:
         # master['pkcb'] = 0.0

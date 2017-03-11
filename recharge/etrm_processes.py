@@ -43,19 +43,12 @@ class Processes(object):
     _initial_depletions = None
 
     def __init__(self, cfg):
-        # date_range,
-        # input_root=None,
-        # output_root=None,
-        # mask='Mask',
-        # polygons='Blank_Geo',
-        # write_freq=None):
 
         date_range = cfg.date_range
         input_root = cfg.input_root
         output_root = cfg.output_root
         mask = cfg.mask
         polygons = cfg.polygons
-        write_freq = cfg.write_freq
         self._use_individual_kcb = cfg.use_individual_kcb
 
         if input_root:
@@ -98,7 +91,7 @@ class Processes(object):
         rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
-
+        self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
         st = time.time()
         for day in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
             tm_yday = day.timetuple().tm_yday
@@ -193,13 +186,6 @@ class Processes(object):
     def initialize(self):
         self._info('Initialize initial model state')
         m = self._master
-
-        m['first_day'] = True
-        m['albedo'] = ones(self._shape) * 0.45
-        m['swe'] = zeros(self._shape)  # this should be initialized correctly using simulation results
-        # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
-        # by method of Ritchie et al (1989), rew derived from percent sand/clay
-        m['dry_days'] = zeros(self._shape)
 
         m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
         m['pde'], m['de'] = self._initial['de'], self._initial['de']
