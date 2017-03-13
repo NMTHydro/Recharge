@@ -19,7 +19,7 @@ from recharge.etrm_processes import Processes
 from runners.config import Config
 
 
-def run():
+def dist_daily_run():
     cfg = Config()
     cfg.load()
     etrm = Processes(cfg)
@@ -28,9 +28,6 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
-
-    #test
-
+    dist_daily_run()
 
 # ============= EOF =============================================
