@@ -22,80 +22,103 @@ import yaml
 from runners.distributed_daily import dist_daily_run, dist_daily_taw_run
 from runners.paths import Paths
 
-def run1(config_dict, config_path):
-    """Modifies ETRM_CONFIG.yml to NOT have taw_mod_output_root then runs dist_daily_run."""
 
-    key_to_remove = 'taw_mod_output_root'
+import os
 
-    if key_to_remove in config_dict:
-        del config_dict[key_to_remove]
+from recharge.etrm_processes import Processes
+from runners.config import Config
 
-    print "run1 dict", config_dict
 
-    print "config path --->{}".format(config_path)
-    with open(config_path, 'w') as wfile:
-        for key, item in config_dict.iteritems():
-            wfile.write('{}: {}\n'.format(key, item))
+def run():
+    home = os.path.expanduser('~')
+    cp1 = os.path.join(home, 'ETRM_CONFIG.yml')
+    cp2 = os.path.join(home, 'ETRM_CONFIG_TAW.yml')
 
-    dist_daily_run()
-    return None
+    for cpath in (cp1, cp2):
+        cfg = Config()
+        cfg.load(cpath)
 
-    #dist_daily_run()
+        etrm = Processes(cfg)
+        etrm.set_save_dates(cfg.save_dates)
+        taw_mod = cfg.taw_modification
+        if taw_mod is not None:
+            etrm.modify_taw(taw_mod)
+        etrm.run()
 
-    # if dict['taw_mod_output_root'] in dict:
-    #
-    #     dict['taw_mod_output_root']
-    #return None
+        # in order to not modify TAW make 'taw_modification: 1' in yml
+
+if __name__ == '__main__':
+    run()
+
+
+#old code i'd like to keep for reference
+# def run1(config_dict, config_path):
+#     """Modifies ETRM_CONFIG.yml to NOT have taw_mod_output_root then runs dist_daily_run."""
 #
-def run2(config_dict, yml_path):
-    """Modifies ETRM_CONFIG.yml to have taw_mod_output_root: /Users/Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output
-     then runs dist_daily_taw_run."""
+#     key_to_remove = 'taw_mod_output_root'
+#
+#     if key_to_remove in config_dict:
+#         del config_dict[key_to_remove]
+#
+#     print "run1 dict", config_dict
+#
+#     print "config path --->{}".format(config_path)
+#     with open(config_path, 'w') as wfile:
+#         for key, item in config_dict.iteritems():
+#             wfile.write('{}: {}\n'.format(key, item))
+#
+#     dist_daily_run()
+#
+#     return None
+#
+# def run2(config_dict, yml_path):
+#     """Modifies ETRM_CONFIG.yml to have taw_mod_output_root: /Users/Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output
+#      then runs dist_daily_taw_run."""
+#
+#     # print config_dict
+#     #
+#     # print yml_path
+#
+#     key_to_add = 'taw_mod_output_root'
+#
+#     if key_to_add not in config_dict:
+#         config_dict[key_to_add] = '/Users/Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output'
+#
+#     print "taw Mod added to dict", config_dict
+#
+#     with open(yml_path, 'w') as wfile:
+#         for key, item in config_dict.iteritems():
+#             wfile.write('{}: {}\n'.format(key, item))
+#
+#     dist_daily_taw_run()
+#
+#     return None
+#
+# def config_format():
+#     """Makes a dict out of items in ETRM config to begin with and returns the dict."""
+#
+#     config_path = Paths()
+#
+#     yml_path = config_path.config
+#
+#     print "yaml_path", yml_path
+#
+#     with open(yml_path, 'r') as rfile:
+#         yaml_thingy = yaml.load(rfile)
+#
+#     #print yaml_thingy
+#
+#     return yaml_thingy, yml_path
+#
+#
+# if __name__ == "__main__":
+#
+#     config_dict, yml_path = config_format()
+#
+#     print "dict -> {} \n path -> {}".format(config_dict, yml_path)
+#
+#     run1(config_dict, yml_path)
+#
+#     run2(config_dict, yml_path)
 
-    # print config_dict
-    #
-    # print yml_path
 
-    key_to_add = 'taw_mod_output_root'
-
-    if key_to_add not in config_dict:
-        config_dict[key_to_add] = '/Users/Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output'
-
-    print "taw Mod added to dict", config_dict
-
-    with open(yml_path, 'w') as wfile:
-        for key, item in config_dict.iteritems():
-            wfile.write('{}: {}\n'.format(key, item))
-
-    dist_daily_taw_run()
-
-    return None
-
-def config_format():
-    """Makes a dict out of items in ETRM config to begin with and returns the dict."""
-
-    config_path = Paths()
-
-    yml_path = config_path.config
-
-    print "yaml_path", yml_path
-
-    with open(yml_path, 'r') as rfile:
-        yaml_thingy = yaml.load(rfile)
-
-    #print yaml_thingy
-
-    return yaml_thingy, yml_path
-
-
-if __name__ == "__main__":
-
-    config_dict, yml_path = config_format()
-
-    print "dict -> {} \n path -> {}".format(config_dict, yml_path)
-
-    run1(config_dict, yml_path)
-
-    run2(config_dict, yml_path)
-
-
-#taw_mod_output_root: /Users_Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output

@@ -42,18 +42,19 @@ polygons: Blank_Geo
 class Config:
     _obj = None
 
-    def load(self):
-        p = paths.config
-        if not os.path.isfile(p):
-            print '***** The config file {} does not exist. A default one will be written'.format(p)
+    def load(self, path=None):
+        if path is None:
+            path = paths.config
+        if not os.path.isfile(path):
+            print '***** The config file {} does not exist. A default one will be written'.format(path)
 
-            with open(p, 'w') as wfile:
+            with open(path, 'w') as wfile:
                 print '-------------- DEFAULT CONFIG -----------------'
                 print DEFAULT_CFG
                 print '-----------------------------------------------'
                 wfile.write(DEFAULT_CFG)
 
-        with open(p, 'r') as rfile:
+        with open(path, 'r') as rfile:
             self._obj = yaml.load(rfile)
 
     @property
