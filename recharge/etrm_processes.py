@@ -80,6 +80,13 @@ class Processes(object):
 
         time_it(self.initialize)
 
+    def configure_run(self, runspec):
+        if runspec.save_dates:
+            self.set_save_dates(runspec.save_dates)
+
+        if runspec.taw_modification is not None:
+            self.modify_taw(runspec.taw_modification)
+
     def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
 
         start, end = self._start_date, self._end_date

@@ -28,9 +28,9 @@ def run():
         paths.build(runspec.input_root, runspec.output_root)
 
         etrm = Processes(runspec)
-        etrm.set_save_dates(runspec.save_dates)
-        if runspec.taw_modification is not None:
-            etrm.modify_taw(runspec.taw_modification)
+
+        etrm.configure_run(runspec)
+
         etrm.run()
 
 
