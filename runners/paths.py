@@ -21,6 +21,11 @@ import os
 import sys
 
 
+class PathsNotSetExecption(BaseException):
+    def __str__(self):
+        return 'paths.build(in_root, out_root) needs to be called before the model will run'
+
+
 class Paths:
     etrm_input_root = None
     etrm_output_root = None
@@ -45,9 +50,11 @@ class Paths:
     amf_ex_sac_trackers = None
 
     def __init__(self):
+        self._is_set = False
         self.config = os.path.join(os.path.expanduser('~'), 'ETRM_CONFIG.yml')
 
     def build(self, input_root, output_root=None):
+        self._is_set = True
         self.etrm_input_root = etrm_input_root = os.path.join(input_root,
                                                               'ETRM_Inputs')
         if output_root is None:
@@ -105,6 +112,10 @@ class Paths:
         if nonfound:
             sys.exit(1)
 
+    def is_set(self):
+        return self._is_set
 
 paths = Paths()
+
+
 # ============= EOF =============================================

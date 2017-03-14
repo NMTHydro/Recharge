@@ -17,6 +17,7 @@
 import os
 import time
 
+import sys
 from dateutil import rrule
 from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
 
@@ -25,7 +26,7 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb, get_kcb
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
-from runners.paths import paths
+from runners.paths import paths, PathsNotSetExecption
 
 
 class Processes(object):
@@ -45,14 +46,13 @@ class Processes(object):
     def __init__(self, cfg):
 
         date_range = cfg.date_range
-        input_root = cfg.input_root
-        output_root = cfg.output_root
+
         mask = cfg.mask
         polygons = cfg.polygons
         self._use_individual_kcb = cfg.use_individual_kcb
 
-        if input_root:
-            paths.build(input_root, output_root)
+        if not paths.is_set():
+            raise PathsNotSetExecption()
 
         paths.set_polygons_path(polygons)
         paths.set_mask_path(mask)
@@ -144,7 +144,7 @@ class Processes(object):
     def set_save_dates(self, dates):
         self._raster_manager.set_save_dates(dates)
 
-    def modify_taw(self, taw_modification, return_taw=False):
+    def modify_taw(self, taw_modification):
         """Gets the taw array, modifies it by a constant scalar value
          (taw_modification) and returns the resulting array"""
 
@@ -152,10 +152,7 @@ class Processes(object):
         taw = s['taw']
         taw = taw * taw_modification
         s['taw'] = taw
-
-        if return_taw:
-            print taw
-            return taw
+        return taw
 
     def get_taw(self):
         """Gets the TAW array and returns it """
