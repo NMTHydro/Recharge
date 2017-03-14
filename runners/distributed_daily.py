@@ -26,8 +26,15 @@ def dist_daily_run():
     etrm.set_save_dates(cfg.save_dates)
     etrm.run()
 
+def dist_daily_taw_run():
+    cfg2 = Config()
+    cfg2.load()
+    etrm2 = Processes(cfg2)
+    etrm2.set_save_dates(cfg2.save_dates)
+    etrm2.modify_taw(cfg2.taw_modification)
+    etrm2.run()
 
 if __name__ == '__main__':
-    dist_daily_run()
+    dist_daily_taw_run()
 
 # ============= EOF =============================================

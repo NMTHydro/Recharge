@@ -113,33 +113,17 @@ def taw_writer(tif, date_range, save_dates, input_root, output_root, taw_modific
 
 if __name__ == '__main__':
 
-    start_year = 2013
-    start_month = 12
-    start_day = 30
 
-    end_year = 2013
-    end_month = 12
-    end_day = 31
 
-    taw_modification = 1.15
 
-    hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
+
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
-    outputs_path = os.path.join(hard_drive_path, 'ETRM_Results')
-    modified_taw_path = os.path.join(hard_drive_path, 'ETRM_Results', 'TAW_mod_results')
-
-    start = datetime(start_year, start_month, start_day)
-    end = datetime(end_year, end_month, end_day)
-
     root = inputs_path
     # TODO need to get rid of a hardcoded output path.
     output = os.path.join(root, 'TAW_pts_out', 'TAW_xmas_test_2013.csv')
 
-    save_dates = [datetime(2013, 12, 30), datetime(2013, 12, 31)]
-    date_range = (start, end)
-
-    # generate the dailies.
-    daily_tifmaker(taw_modification, date_range, save_dates, inputs_path, outputs_path, modified_taw_path)
+    #generate first set of dailies.
+    dist_daily_run()
 
     # tifs should be a list or tuple.
     tifs = tif_retreival()

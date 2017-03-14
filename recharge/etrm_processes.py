@@ -52,6 +52,7 @@ class Processes(object):
         date_range = cfg.date_range
         input_root = cfg.input_root
         output_root = cfg.output_root
+        taw_mod_output_root = cfg.taw_mod_output_root
         mask = cfg.mask
         polygons = cfg.polygons
         write_freq = cfg.write_freq
@@ -59,6 +60,9 @@ class Processes(object):
 
         if input_root:
             paths.build(input_root, output_root)
+
+        if taw_mod_output_root:
+            paths.build(input_root, output_root, taw_mod_output_root)
 
         paths.set_polygons_path(polygons)
         paths.set_mask_path(mask)

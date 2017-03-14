@@ -45,11 +45,15 @@ class Paths:
     def __init__(self):
         self.config = os.path.join(os.path.expanduser('~'), 'ETRM_CONFIG.yml')
 
-    def build(self, input_root, output_root=None):
+    def build(self, input_root, output_root=None, taw_output_root=None):
         self.etrm_input_root = etrm_input_root = os.path.join(input_root,
                                                               'ETRM_Inputs')
         if output_root is None:
             output_root = input_root
+
+        if taw_output_root is not None:
+            output_root = taw_output_root
+
 
         self.etrm_output_root = os.path.join(output_root, 'ETRM_Results')
         self.prism = os.path.join(etrm_input_root, 'PRISM')

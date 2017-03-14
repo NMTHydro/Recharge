@@ -83,6 +83,14 @@ class Config:
         return self._obj.get('output_root')
 
     @property
+    def taw_mod_output_root(self):
+        return self._obj.get('taw_mod_output_root')
+
+    @property
+    def taw_modification(self):
+        return int(self._obj.get('taw_modification'))
+
+    @property
     def date_range(self):
         obj = self._obj
         return (datetime(obj['start_year'],
