@@ -17,9 +17,7 @@
 import os
 import time
 
-import sys
-from dateutil import rrule
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
+from numpy import maximum, minimum, where, isnan, exp, median
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
@@ -46,13 +44,13 @@ class Processes(object):
     def __init__(self, cfg):
 
         self._date_range = cfg.date_range
-
-        mask = cfg.mask
-        polygons = cfg.polygons
         self._use_individual_kcb = cfg.use_individual_kcb
 
         if not paths.is_set():
             raise PathsNotSetExecption()
+
+        mask = cfg.mask
+        polygons = cfg.polygons
 
         paths.set_polygons_path(polygons)
         paths.set_mask_path(mask)
@@ -69,9 +67,10 @@ class Processes(object):
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
         self._static = time_it(initialize_static_dict)
-        self._shape = self._static['taw'].shape
+
+        shape = self._static['taw'].shape
         self._initial = time_it(initialize_initial_conditions_dict)
-        self._master = time_it(initialize_master_dict, self._shape)
+        self._master = time_it(initialize_master_dict, shape)
 
         self._raster_manager = RasterManager(cfg)
 
@@ -84,7 +83,7 @@ class Processes(object):
         if runspec.taw_modification is not None:
             self.modify_taw(runspec.taw_modification)
 
-    def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
+    def run(self, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -111,8 +110,8 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            if sensitivity_matrix_column:
-                time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
+            # if sensitivity_matrix_column:
+            #     time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
 
             time_it(self._do_dual_crop_coefficient, tm_yday, m, s, c)
             time_it(self._do_snow, m, c)
@@ -133,7 +132,7 @@ class Processes(object):
             time_it(rm.update_raster_obj, m, day)
             time_it(self._update_master_tracker, m, day)
 
-            m['first_day'] = False
+            # m['first_day'] = False
 
         self._info('saving tabulated data')
         time_it(rm.save_csv)
@@ -144,6 +143,14 @@ class Processes(object):
     def set_save_dates(self, dates):
         self._raster_manager.set_save_dates(dates)
 
+    def modify_master(self, alpha=1, beta=1, gamma=1, zeta=1, theta=1):
+        m = self._master
+        m['temp'] += alpha
+        m['precip'] *= beta
+        m['etrs'] *= gamma
+        m['kcb'] *= zeta
+        m['soil_ksat'] *= theta
+
     def modify_taw(self, taw_modification):
         """Gets the taw array, modifies it by a constant scalar value
          (taw_modification) and returns the resulting array"""
@@ -152,6 +159,7 @@ class Processes(object):
         taw = s['taw']
         taw = taw * taw_modification
         s['taw'] = taw
+
         return taw
 
     def get_taw(self):
@@ -389,21 +397,24 @@ class Processes(object):
         m['eta'] = transp + evap_1 + evap_2
 
         # water balance through skin layer #
-        drew = where(water >= pdrew + evap_1, 0, pdrew + evap_1 - water)
+        evap__ = pdrew + evap_1
+        drew = where(water >= evap__, 0, evap__ - water)
 
-        water = where(water < pdrew + evap_1, 0, water - pdrew - evap_1)
+        water = where(water < evap__, 0, water - pdrew - evap_1)
         m['ro'] = where(water > soil_ksat, water - soil_ksat, 0)
         water = where(water > soil_ksat, soil_ksat, water)
 
         # water balance through the stage 2 evaporation layer #
-        de = where(water >= pde + evap_2, 0, pde + evap_2 - water)
-
-        water = where(water < pde + evap_2, 0, water - (pde + evap_2))
+        evap2__ = pde + evap_2
+        de = where(water >= evap2__, 0, evap2__ - water)
+        water = where(water < evap2__, 0, water - evap2__)
 
         # water balance through the root zone layer #
-        dr = where(water >= pdr + transp, 0, pdr + transp - water)
+        pdr_transp = pdr + transp
+        dr = where(water >= pdr_transp, 0, pdr_transp - water)
 
-        m['infil'] = where(water >= pdr + transp, water - pdr - transp, 0)
+        m['infil'] = where(water >= pdr_transp, water - pdr - transp, 0)
+
         m['soil_storage'] = ((pdr - dr) + (pde - de) + (pdrew - drew))
         m['dr'] = dr
         m['de'] = de
@@ -472,12 +483,13 @@ class Processes(object):
         water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
 
         # fill depletion in REW if possible
-        drew = where(water_av_rew >= pdrew + evap_1, 0, pdrew + evap_1 - water_av_rew)
+        evap__ = pdrew + evap_1
+        drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
         drew = minimum(drew, rew)
 
         # add excess water to the water available to TEW (Is this coding ok?)
-        water_av_tew = where(water_av_rew >= pdrew + evap_1,
-                             water_av_tew + water_av_rew - (pdrew + evap_1),
+        water_av_tew = where(water_av_rew >= evap__,
+                             water_av_tew + water_av_rew - evap__,
                              water_av_tew)
 
         # water balance through the stage 2 evaporation layer #
@@ -486,12 +498,13 @@ class Processes(object):
         water_av_taw += water_av_tew * (1.0 - ceff)
 
         # fill depletion in TEW if possible
-        de = where(water_av_tew >= pde + evap_2, 0, pde + evap_2 - water_av_tew)
+        evap2__ = pde + evap_2
+        de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
         de = minimum(de, tew)
 
         # add excess water to the water available to TAW (Help coding this more cleanly?)
-        water_av_taw = where(water_av_tew >= pde + evap_2,
-                             water_av_taw + water_av_tew - (pde + evap_2),
+        water_av_taw = where(water_av_tew >= evap2__,
+                             water_av_taw + water_av_tew - evap2__,
                              water_av_taw)
 
         # water balance through the root zone layer #
@@ -499,8 +512,10 @@ class Processes(object):
 
         # fill depletion in TAW if possible
         depletion = pdr + transp
-        m['infil'] = where(water_av_taw >= depletion, water_av_taw - depletion, 0)
-        dr = where(water_av_taw >= depletion, 0, depletion - water_av_taw)
+
+        dd = water_av_taw - depletion
+        m['infil'] = where(water_av_taw >= depletion, dd, 0)
+        dr = where(water_av_taw >= depletion, 0, dd*-1)
 
         m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
@@ -601,19 +616,19 @@ class Processes(object):
 
         m['pkcb'] = m['kcb']
 
-    def _do_parameter_adjustment(self, m, s, adjustment_array):
-
-        alpha, beta, gamma, delta, zeta, theta = adjustment_array
-        if m['first_day']:
-            print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(*adjustment_array)
-            # taw is found once, and should be modified once
-            s['taw'] *= delta
-        # these are found daily, so can be modified daily
-        m['temp'] += alpha
-        m['precip'] *= beta
-        m['etrs'] *= gamma
-        m['kcb'] *= zeta
-        m['soil_ksat'] *= theta
+    # def _do_parameter_adjustment(self, m, s, adjustment_array):
+    #
+    #     alpha, beta, gamma, delta, zeta, theta = adjustment_array
+    #     if m['first_day']:
+    #         print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(*adjustment_array)
+    #         # taw is found once, and should be modified once
+    #         s['taw'] *= delta
+    #     # these are found daily, so can be modified daily
+    #     m['temp'] += alpha
+    #     m['precip'] *= beta
+    #     m['etrs'] *= gamma
+    #     m['kcb'] *= zeta
+    #     m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, m, date):
         def factory(k):
@@ -622,7 +637,7 @@ class Processes(object):
             if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
                      'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
                 v = v.mean()
-            elif k in ('first_day', 'transp_adj'):
+            elif k == 'transp_adj':
                 v = median(v)
             else:
                 v = mm_af(v)
@@ -667,7 +682,6 @@ class Processes(object):
         rswe = tracker['swe'][-1]
         print 'remaining snow on ground (swe) = {}'.format(rswe)
 
-        # input_sum = tracker['swe'][-1] + tracker['melt'].sum() + tracker['rain'].sum()
         input_sum = rswe + ms + rs
 
         print 'total inputs (swe, rain, melt): {}'.format(input_sum)

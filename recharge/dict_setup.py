@@ -41,18 +41,19 @@ et_depletion_factor ASCE pg 226 (0.3 to 0.7 given range) 0.5 common for ag crops
 """
 
 
-def set_constants(soil_evap_depth=40, et_depletion_factor=0.4,
-                  min_basal_crop_coef=0.01,
-                  max_basal_crop_coef=1.05, snow_alpha=0.2, snow_beta=11.0,
-                  max_ke=1.0, min_snow_albedo=0.45, max_snow_albedo=0.90):
-    # monsoon_dates = datetime(1900, 7, 1), datetime(1900, 10, 1)
-    # start_monsoon, end_monsoon = monsoon_dates[0], monsoon_dates[1]
+def set_constants(ze=40, p=0.4,
+                  kc_min=0.01,kc_max=1.05,
+                  snow_alpha=0.2, snow_beta=11.0,
+                  ke_max=1.0,
+                  a_min=0.45, a_max=0.90):
 
-    d = dict(s_mon=datetime(1900, 7, 1), e_mon=datetime(1900, 10, 1), ze=soil_evap_depth,
-             p=et_depletion_factor,
-             kc_min=min_basal_crop_coef,
-             kc_max=max_basal_crop_coef, snow_alpha=snow_alpha, snow_beta=snow_beta,
-             ke_max=max_ke, a_min=min_snow_albedo, a_max=max_snow_albedo)
+    d = dict(s_mon=datetime(1900, 7, 1),
+             e_mon=datetime(1900, 10, 1),
+             ze=ze, p=p,
+             kc_min=kc_min, kc_max=kc_max,
+             snow_alpha=snow_alpha, snow_beta=snow_beta,
+             ke_max=ke_max,
+             a_min=a_min, a_max=a_max)
 
     print 'constants dict: {}'.format(d)
 
@@ -64,7 +65,8 @@ def initialize_master_dict(shape=None):
     :param shape: shape of the model domain, (1, 1) or raster.shape
     """
 
-    master = dict(pkcb=None, first_day=True)
+    # master = dict(pkcb=None, first_day=True)
+    master = dict(pkcb=None)
     if shape:  # distributed
         # master['pkcb'] = zeros(shape)
         master['tot_infil'] = zeros(shape)
@@ -80,7 +82,7 @@ def initialize_master_dict(shape=None):
         master['tot_ro'] = zeros(shape)
         master['tot_swe'] = zeros(shape)
 
-        master['first_day'] = True
+        # master['first_day'] = True
         master['albedo'] = ones(shape) * 0.45
         master['swe'] = zeros(shape)  # this should be initialized correctly using simulation results
         # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced

@@ -103,7 +103,7 @@ class RasterManager(object):
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)
 
-            if not self._write_freq and period=='monthly':
+            if not self._write_freq and period == 'monthly':
                 self._sum_raster_by_shape(element, date_object)
 
     def save_csv(self):
@@ -120,11 +120,13 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
-        periods = ('annual','daily','monthly')
+        periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
-            print 'invalid period "{}" cannot update tracker. period most be one of {}'.format(period, periods)
-            return
+            msg = 'invalid period "{}" cannot update tracker. period most be one of {}'.format(period, periods)
+
+            print msg
+            raise NotImplementedError(msg)
 
         tracker = self._output_tracker
         if period == 'annual':
@@ -265,48 +267,62 @@ class RasterManager(object):
         :param polygons: Folder containing polygon folders of each type of geography (counties, etc.)
         :return: None
         """
-        print 'results directories: {}'.format(results_directories)
+        print 'results directories: "{}"'.format(results_directories)
         folders = os.listdir(polygons)
+
+        print 'polygon directories: "{}"'.format(folders)
+        if not folders:
+            print 'no files/folders in "{}"'.format(polygons)
+            return
+
         for in_fold in folders:
             print 'saving tab data for input region: {}'.format(in_fold)
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
-            files = os.listdir(os.path.join(polygons, os.path.basename(in_fold)))
-            print 'tab data from shapes: {}'.format([infile for infile in files if infile.endswith('.shp')])
+
+            root = os.path.join(polygons, os.path.basename(in_fold))
+            files = os.listdir(root)
+
+            files = [infile for infile in files if infile.endswith('.shp')]
+
+            if not files:
+                print 'no shape files in "{}"'.format(root)
+                continue
+
+            print 'tab data from shapes: {}'.format(files)
             for element in files:
-                if element.endswith('.shp'):
-                    sub_region = element.strip('.shp')
+                sub_region = element.strip('.shp')
 
-                    df = self._tabular_dict[region_type][sub_region]
+                df = self._tabular_dict[region_type][sub_region]
 
-                    if self._write_freq == 'daily':
-                        df_month = df.resample('M').sum()
-                        save_loc_day = os.path.join(results_directories['daily_tabulated'][region_type],
-                                                    '{}.csv'.format(sub_region))
-                    else:
+                if self._write_freq == 'daily':
+                    df_month = df.resample('M').sum()
+                    save_loc_day = os.path.join(results_directories['daily_tabulated'][region_type],
+                                                '{}.csv'.format(sub_region))
+                else:
 
-                        df_month = df.resample('M').sum()
-                        save_loc_day = None
+                    df_month = df.resample('M').sum()
+                    save_loc_day = None
 
-                    df_annual = df_month.resample('A').sum()
+                df_annual = df_month.resample('A').sum()
 
-                    save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
-                                                 '{}.csv'.format(sub_region))
+                save_loc_annu = os.path.join(results_directories['annual_tabulated'][region_type],
+                                             '{}.csv'.format(sub_region))
 
-                    # save_loc_month = os.path.join(results_directories['root'],
-                    # results_directories['monthly_tabulated'][region_type],
-                    # '{}.csv'.format(sub_region))
-                    save_loc_month = os.path.join(results_directories['monthly_tabulated'][region_type],
-                                                  '{}.csv'.format(sub_region))
+                # save_loc_month = os.path.join(results_directories['root'],
+                # results_directories['monthly_tabulated'][region_type],
+                # '{}.csv'.format(sub_region))
+                save_loc_month = os.path.join(results_directories['monthly_tabulated'][region_type],
+                                              '{}.csv'.format(sub_region))
 
-                    if self._write_freq == 'daily':
-                        dfs = [df, df_month, df_annual]
-                        locations = [save_loc_day, save_loc_month, save_loc_annu]
-                    else:
-                        dfs = [df_month, df_annual]
-                        locations = [save_loc_month, save_loc_annu]
+                if self._write_freq == 'daily':
+                    dfs = [df, df_month, df_annual]
+                    locations = [save_loc_day, save_loc_month, save_loc_annu]
+                else:
+                    dfs = [df_month, df_annual]
+                    locations = [save_loc_month, save_loc_annu]
 
-                    for df, location in zip(dfs, locations):
-                        print 'this should be your location csv: {}'.format(location)
-                        df.to_csv(location, na_rep='nan', index_label='Date')
+                for df, location in zip(dfs, locations):
+                    print 'this should be your location csv: {}'.format(location)
+                    df.to_csv(location, na_rep='nan', index_label='Date')
 
 # ============= EOF =============================================
