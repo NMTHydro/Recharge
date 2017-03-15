@@ -326,12 +326,20 @@ class Processes(object):
 
         :return: None
         """
-        # Start Evaporation Energy Balancing
+        m['pdr'] = pdr = m['dr']
+        m['pde'] = pde = m['de']
+        m['pdrew'] = pdrew = m['drew']
+
+        taw = maximum(s['taw'], 0.001)
+        tew = maximum(s['tew'], 0.001)          # TEW is zero at lakes in our data set
+        rew = s['rew']
+
         kcb = m['kcb']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
         ks = m['ks']
         etrs = m['etrs']
 
+        # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
         st_1_dur = minimum(st_1_dur, 0.99)
         m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
@@ -339,9 +347,6 @@ class Processes(object):
 
         # kr- evaporation reduction coefficient Allen 2011 Eq
         # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
-        # TEW is zero at lakes.
-        tew = maximum(s['tew'], 0.001)
-        rew = s['rew']
         tew_rew_diff = maximum(tew - rew, 0.001)
         kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0.001)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
@@ -364,9 +369,11 @@ class Processes(object):
         m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
 
         # Allen 2011
-        m['evap'] = evap = ke * etrs
+        evap = ke * etrs
 
+        # limit evap so it doesn't exceed the amount of soil moisture available after transp occurs
         transp = m['transp']
+        m['evap'] = evap = minimum(evap, (taw - pdr) - transp)
 
         m['eta'] = et_actual = evap + transp
         print 'evap 1 = {}, evap 2 = {}, evap = {}, transp = {}, ET = {}'.format(e1, e2, evap, transp, et_actual)
@@ -383,10 +390,6 @@ class Processes(object):
         dd[water >= 0.1] = 1
         m['dry_days'] = dd
 
-        m['pdr'] = pdr = m['dr']
-        m['pde'] = pde = m['de']
-        m['pdrew'] = pdrew = m['drew']
-
         # Surface runoff (Hortonian- using storm duration modified ksat values)
         ro = where(water > soil_ksat, water - soil_ksat, 0)
         ro *= (1 - ro_local_reinfilt_frac)
@@ -396,7 +399,6 @@ class Processes(object):
         m['infil'] = dp = maximum(water - ro - et_actual - pdr, 0)
 
         # Calculate depletion in TAW, full root zone
-        taw = maximum(s['taw'], 0.001)
         m['dr'] = dr = minimum(maximum(pdr - (water - ro) + et_actual + dp, 0), taw)
 
         # Calculate depletion in TEW, full evaporative layer
@@ -405,11 +407,7 @@ class Processes(object):
         # Calculate depletion in REW, skin layer
         m['drew'] = drew = minimum(maximum(pdrew - (water - ro) + evap/few, 0), rew)
 
-
         m['soil_storage'] = (pdr - dr)
-
-        # need to limit evap when there isn't enough water in TAW
-
 
     def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate all soil water balance at each time step.
