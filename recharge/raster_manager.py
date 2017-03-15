@@ -35,7 +35,7 @@ from recharge.raster_tools import get_raster_geo_attributes as get_geo, convert_
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 
 OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb')
-DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip')
+DAILY_OUTPUTS = ('infil', 'etrs', 'eta', 'precip', 'dr', 'de', 'drew')
 
 class RasterManager(object):
     def __init__(self, path_to_representative_raster, polygons, simulation_period, output_root,

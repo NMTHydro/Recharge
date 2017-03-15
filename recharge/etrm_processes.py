@@ -116,14 +116,15 @@ class Processes(object):
             # self._do_snow()
             # self._do_soil_ksat_adjustment(m, s)
 
-            time_it(self._do_dual_crop_coefficient, tm_yday, m, s, c)
             time_it(self._do_snow, m, c)
             time_it(self._do_soil_ksat_adjustment, m, s)
+            time_it(self._do_dual_crop_transpiration, tm_yday, m, s, c)
+            time_it(self._do_fraction_covered, m, s, c)
 
             if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, ro_reinf_frac)
+                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
             elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, ro_reinf_frac, allen_ceff)
+                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
 
             time_it(self._do_mass_balance, day, swb=swb_mode)
 
@@ -206,88 +207,6 @@ class Processes(object):
         print 'this should be your csv: {}'.format(path)
         self.tracker.to_csv(path, na_rep='nan', index_label='Date')
 
-    # private
-    def _do_dual_crop_coefficient(self, tm_yday, m, s, c):
-        """ Calculate dual crop coefficients, then transpiration, stage one and stage two evaporations.
-
-        """
-
-        kcb = m['kcb']
-        etrs = m['etrs']
-        kc_max = c['kc_max']
-        kc_min = c['kc_min']
-
-        # Cover Fraction- ASCE pg 199, Eq 9.27
-        t = 0.001
-        plant_exponent = s['plant_height'] * 0.5 + 1  # h varaible, derived from ??
-        numerator_term = maximum(kcb - kc_min, t)
-        denominator_term = maximum(kc_max - kc_min, t)
-
-        cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
-        cover_fraction_upper_bound = minimum(cover_fraction_unbound, 1)
-
-        # ASCE pg 198, Eq 9.26
-        m['fcov'] = fcov = maximum(cover_fraction_upper_bound, t)  # covered fraction of ground
-        m['few'] = few = maximum(1 - fcov, t)  # uncovered fraction of ground
-
-        ####
-        # transpiration:
-        # ks- stress coeff- ASCE pg 226, Eq 10.6
-        # TAW could be zero at lakes.
-        taw = maximum(s['taw'], 0.001)
-        ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
-        ks = minimum(1 + 0.001, ks)  # this +0.001 may be unneeded
-        ks = maximum(0, ks)
-        m['ks'] = ks
-
-        # Transpiration from dual crop coefficient
-        transp = ks * kcb * etrs
-
-        m['transp_adj'] = False
-        # enforce winter dormancy of vegetation
-        if 92 > tm_yday or tm_yday > 306:
-            # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
-            # Using 30% DC 2/20/17
-            transp *= 0.3
-            m['transp_adj'] = True
-
-        transp = maximum(0, transp)
-        m['transp'] = transp
-
-        # kr- evaporation reduction coefficient ASCE pg 193, eq 9.21; only non time dependent portion of Eq 9.21
-        # TEW is zero at lakes.
-        tew = maximum(s['tew'], 0.001)
-        kr = minimum((tew - m['pde']) / tew, 1)  # changed denominator
-        # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
-        # kr *= (1 / m['dry_days'] **2)
-
-        kr = maximum(kr, 0.01)
-        m['kr'] = kr
-
-        ####
-        # check for stage 1 evaporation, i.e. drew < rew
-        # this evaporation rate is limited only by available energy, and water in the rew
-
-        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
-        # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
-        st_1_dur = minimum(st_1_dur, 0.99)
-        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
-        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
-
-        # ke evaporation efficency; Allen 2011, Eq 13a
-        ke_init = (st_1_dur + (st_2_dur * kr)) * (kc_max - (ks * kcb))
-        m['ke_init'] = ke_init
-
-        ke = (kc_max - (ks * kcb))
-        ke = minimum(ke, few * kc_max)
-        ke = minimum(ke, 1)
-        ke = maximum(0.01, ke)
-        m['ke'] = ke
-
-        # Ketchum Thesis eq 36, 37
-        m['evap_1'] = e1 = st_1_dur * ke * etrs
-        m['evap_2'] = e2 = st_2_dur * kr * ke * etrs
-        m['evap'] = e1 + e2
 
     def _do_snow(self, m, c):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
@@ -351,13 +270,110 @@ class Processes(object):
 
         m['soil_ksat'] = soil_ksat
 
+
+    def _do_dual_crop_transpiration(self, tm_yday, m, s, c):
+        """ Calculate dual crop coefficients for transpiration only.
+
+        """
+
+        kcb = m['kcb']
+        etrs = m['etrs']
+
+        ####
+        # transpiration:
+        # ks- stress coeff- ASCE pg 226, Eq 10.6
+        # TAW could be zero at lakes.
+        taw = maximum(s['taw'], 0.001)
+        ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
+        ks = minimum(1 + 0.001, ks)  # this +0.001 may be unneeded
+        ks = maximum(0, ks)
+        m['ks'] = ks
+
+        # Transpiration from dual crop coefficient
+        transp = maximum(ks * kcb * etrs, 0.0)
+
+        # enforce winter dormancy of vegetation
+        m['transp_adj'] = False
+        if 92 > tm_yday or tm_yday > 306:
+            # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
+            # Using 30% DC 2/20/17
+            transp *= 0.3
+            m['transp_adj'] = True
+
+        m['transp'] = transp
+
+    def _do_fraction_covered(self, m, s, c):
+        """ Calculate covered fraction and fraction evaporating-wetted.
+
+        """
+        kcb = m['kcb']
+        kc_max = maximum(c['kc_max'], kcb + 0.05)
+        kc_min = c['kc_min']
+
+        # Cover Fraction- ASCE pg 199, Eq 9.27
+        plant_exponent = s['plant_height'] * 0.5 + 1  # h varaible, derived from ??
+        numerator_term = maximum(kcb - kc_min, 0.01)
+        denominator_term = maximum(kc_max - kc_min, 0.01)
+
+        cover_fraction_unbound = (numerator_term / denominator_term) ** plant_exponent
+
+        # ASCE pg 198, Eq 9.26
+        m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
+        m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
+
     # def _do_fao_soil_water_balance(self, ro_local_reinfilt_frac=0.0, ceff=1.0):
-    def _do_fao_soil_water_balance(self, m, s, ro_local_reinfilt_frac=0.0):
-        """ Calculate all soil water balance at each time step.
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+        """ Calculate evap and all soil water balance at each time step.
 
         :return: None
         """
+        kcb = m['kcb']
+        etrs = m['etrs']
+        kc_max = maximum(c['kc_max'], kcb + 0.05)
+        transp = m['transp']
+        ks = m['ks']
+
+        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
+        # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
+        st_1_dur = minimum(st_1_dur, 0.99)
+        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
+        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
+
+        # kr- evaporation reduction coefficient Allen 2011 Eq
+        # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
+        # TEW is zero at lakes.
+        tew = maximum(s['tew'], 0.001)
+        rew = s['rew']
+        tew_rew_diff = maximum(tew - rew, 0.001)
+        kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0.001)
+        # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
+        # kr *= (1 / m['dry_days'] **2)
+
+        m['kr'] = kr
+
+        # Simple version for 3-bucket model
+        ke_init = (kc_max - (ks * kcb))
+        m['ke_init'] = ke_init
+
+        # ke evaporation efficency; Allen 2011, Eq 13a
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
+        ke = maximum(0.01, ke)
+        m['ke'] = ke
+
+        # Ketchum Thesis eq 36, 37
+        m['evap_1'] = e1 = st_1_dur * ke_init * etrs
+        m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
+
+        # Allen 2011
+        # problem: what if evap exceedes water avialable in TEW (i.e. evap > tew-pde
+        m['evap'] = ei = ke * etrs
+        et_total = ei + transp
+        print 'evap 1 = {}, evap 2 = {}, evap = {}, transp = {}, ET = {}'.format(e1, e2, ei, transp, et_total)
+
         water = m['rain'] + m['melt']
+
+        # if snow is melting, set ksat to 24 hour value
+        m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
         # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
         dd = m['dry_days']
@@ -365,35 +381,31 @@ class Processes(object):
         dd[water >= 0.1] = 1
         m['dry_days'] = dd
 
-        # print 'shapes: rain is {}, melt is {}, water is {}'.format(m['rain'].shape, m['melt'].shape, water.shape)
-        # it is difficult to ensure mass balance in the following code: do not touch/change w/o testing #
-        ##
-
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
 
-        # if snow is melting, set ksat to 24 hour value
-        m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
-
         # impose limits on vaporization according to present depletions #
         # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
-        evap_1 = m['evap_1']
-        wrew = s['rew'] - pdrew
-        evap_1 = where(evap_1 > wrew, wrew, evap_1)
-        evap_1[evap_1 < 0] = 0
-
-        evap_2 = m['evap_2']
+        evap = m['evap']
         wtew = s['tew'] - pde
-        evap_2 = where(evap_2 > wtew, wtew, evap_2)
-        evap_2[evap_2 < 0] = 0
+        evap = where(evap > wtew, wtew, evap)
+        evap[evap < 0] = 0
 
         transp = m['transp']
+        et_total = transp + evap
         wr = s['taw'] - m['pdr']
         transp = where(transp > wr, wr, transp)
 
         m['evap'] = evap_1 + evap_2
         m['eta'] = transp + evap_1 + evap_2
+
+        # Surface runoff (Hortonian- using storm duration modified ksat values)
+        ro = where(water > soil_ksat, water - soil_ksat, 0)
+        water = where(water > soil_ksat, soil_ksat, water)
+        water_av_taw = ro * ro_local_reinfilt_frac
+        ro *= (1 - ro_local_reinfilt_frac)
+        m['ro'] = ro
 
         # water balance through skin layer #
         drew = where(water >= pdrew + evap_1, 0, pdrew + evap_1 - water)
@@ -419,11 +431,51 @@ class Processes(object):
         m['evap_2'] = evap_2
         m['soil_ksat'] = soil_ksat
 
-    def _do_vert_soil_water_balance(self, m, s, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate all soil water balance at each time step.
 
         :return: None
         """
+        kcb = m['kcb']
+        etrs = m['etrs']
+        kc_max = maximum(c['kc_max'], kcb + 0.05)
+        ks = m['ks']
+
+        st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
+        # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
+        st_1_dur = minimum(st_1_dur, 0.99)
+        m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
+        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
+
+        # kr- evaporation reduction coefficient Allen 2011 Eq
+        # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
+        # TEW is zero at lakes.
+        tew = maximum(s['tew'], 0.001)
+        # rew = s['rew']
+        # tew_rew_diff = maximum(tew - rew, 0.001)
+        kr = maximum(minimum((tew - m['pde']) / tew, 1), 0.001)
+        # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
+        # kr *= (1 / m['dry_days'] **2)
+
+        m['kr'] = kr
+
+        # Simple version for 3-bucket model
+        ke_init = (kc_max - (ks * kcb))
+        m['ke_init'] = ke_init
+
+        # ke evaporation efficency; Allen 2011, Eq 13a
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
+        ke = maximum(0.01, ke)
+        m['ke'] = ke
+
+        # Ketchum Thesis eq 36, 37
+        m['evap_1'] = e1 = st_1_dur * ke_init * etrs
+        m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
+
+        # Allen 2011
+        # problem: what if evap exceedes water avialable in TEW (i.e. evap > tew-pde
+        m['evap'] = e1 + e2
+
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 

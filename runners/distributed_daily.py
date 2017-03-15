@@ -20,7 +20,7 @@ from recharge.etrm_processes import Processes
 
 def run(date_range, input_root, output_root):
     etrm = Processes(date_range, input_root, output_root)
-    etrm.run()
+    etrm.run(ro_reinf_frac=0.0, allen_ceff=1.0)
 
 
 if __name__ == '__main__':
