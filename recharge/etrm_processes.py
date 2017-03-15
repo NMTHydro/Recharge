@@ -122,7 +122,7 @@ class Processes(object):
             time_it(self._do_fraction_covered, m, s, c)
 
             if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
+                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
             elif swb_mode == 'vertical':
                 time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
 
@@ -321,20 +321,18 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    # def _do_fao_soil_water_balance(self, ro_local_reinfilt_frac=0.0, ceff=1.0):
     def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate evap and all soil water balance at each time step.
 
         :return: None
         """
+        # Start Evaporation Energy Balancing
         kcb = m['kcb']
-        etrs = m['etrs']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
-        transp = m['transp']
         ks = m['ks']
+        etrs = m['etrs']
 
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
-        # st_1_dur = (s['rew'] - m['pdrew']) / ((c['kc_max'] - (m['ks'] * m['kcb'])) * m['etrs'])
         st_1_dur = minimum(st_1_dur, 0.99)
         m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
         m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
@@ -356,6 +354,7 @@ class Processes(object):
         m['ke_init'] = ke_init
 
         # ke evaporation efficency; Allen 2011, Eq 13a
+        few = m['few']
         ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
         ke = maximum(0.01, ke)
         m['ke'] = ke
@@ -365,17 +364,20 @@ class Processes(object):
         m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
 
         # Allen 2011
-        # problem: what if evap exceedes water avialable in TEW (i.e. evap > tew-pde
-        m['evap'] = ei = ke * etrs
-        et_total = ei + transp
-        print 'evap 1 = {}, evap 2 = {}, evap = {}, transp = {}, ET = {}'.format(e1, e2, ei, transp, et_total)
+        m['evap'] = evap = ke * etrs
 
+        transp = m['transp']
+
+        m['eta'] = et_actual = evap + transp
+        print 'evap 1 = {}, evap 2 = {}, evap = {}, transp = {}, ET = {}'.format(e1, e2, evap, transp, et_actual)
+
+        # Start Water Balance
         water = m['rain'] + m['melt']
 
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
-        # m['dry_days'] = where(water < 0.1, m['dry_days'] + self._ones, self._ones)
+        # Only used if Experimental stage 2 reduction is used
         dd = m['dry_days']
         dd[water < 0.1] = dd + 1
         dd[water >= 0.1] = 1
@@ -385,51 +387,29 @@ class Processes(object):
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
 
-        # impose limits on vaporization according to present depletions #
-        # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
-        evap = m['evap']
-        wtew = s['tew'] - pde
-        evap = where(evap > wtew, wtew, evap)
-        evap[evap < 0] = 0
-
-        transp = m['transp']
-        et_total = transp + evap
-        wr = s['taw'] - m['pdr']
-        transp = where(transp > wr, wr, transp)
-
-        m['evap'] = evap_1 + evap_2
-        m['eta'] = transp + evap_1 + evap_2
-
         # Surface runoff (Hortonian- using storm duration modified ksat values)
         ro = where(water > soil_ksat, water - soil_ksat, 0)
-        water = where(water > soil_ksat, soil_ksat, water)
-        water_av_taw = ro * ro_local_reinfilt_frac
         ro *= (1 - ro_local_reinfilt_frac)
         m['ro'] = ro
 
-        # water balance through skin layer #
-        drew = where(water >= pdrew + evap_1, 0, pdrew + evap_1 - water)
+        # Calculate Deep Percolation (recharge or infiltration)
+        m['infil'] = dp = maximum(water - ro - et_actual - pdr, 0)
 
-        water = where(water < pdrew + evap_1, 0, water - pdrew - evap_1)
-        m['ro'] = where(water > soil_ksat, water - soil_ksat, 0)
-        water = where(water > soil_ksat, soil_ksat, water)
+        # Calculate depletion in TAW, full root zone
+        taw = maximum(s['taw'], 0.001)
+        m['dr'] = dr = minimum(maximum(pdr - (water - ro) + et_actual + dp, 0), taw)
 
-        # water balance through the stage 2 evaporation layer #
-        de = where(water >= pde + evap_2, 0, pde + evap_2 - water)
+        # Calculate depletion in TEW, full evaporative layer
+        m['de'] = de = minimum(maximum(pde - (water - ro) + evap/few, 0), tew)
 
-        water = where(water < pde + evap_2, 0, water - (pde + evap_2))
+        # Calculate depletion in REW, skin layer
+        m['drew'] = drew = minimum(maximum(pdrew - (water - ro) + evap/few, 0), rew)
 
-        # water balance through the root zone layer #
-        dr = where(water >= pdr + transp, 0, pdr + transp - water)
 
-        m['infil'] = where(water >= pdr + transp, water - pdr - transp, 0)
-        m['soil_storage'] = ((pdr - dr) + (pde - de) + (pdrew - drew))
-        m['dr'] = dr
-        m['de'] = de
-        m['drew'] = drew
-        m['evap_1'] = evap_1
-        m['evap_2'] = evap_2
-        m['soil_ksat'] = soil_ksat
+        m['soil_storage'] = (pdr - dr)
+
+        # need to limit evap when there isn't enough water in TAW
+
 
     def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate all soil water balance at each time step.
