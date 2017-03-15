@@ -23,36 +23,18 @@ from datetime import datetime
 from recharge.etrm_processes import Processes
 import os
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts, remake_array, get_mask
-from recharge.pixel_coord_finder import coord_getter
+from utils.pixel_coord_finder import coord_getter
 from runners.distributed_daily import dist_daily_run
+import pandas as pd
+from pandas import DataFrame
 
-def daily_tifmaker(taw_modification, date_range, dates, inputs_path, outputs_path, modified_taw_root):
-    """Takes taw from model, modifies one taw, leaves one control taw, runs model twice and produces two sets of daily
-    tifs. One set is perhaps key_day_month_year.tif(*x) the other key_day_month_year_mod.tif(*x).
-    """
-
-    etrm = Processes(date_range, inputs_path, outputs_path, write_freq='daily')
-    etrm.set_save_dates(dates)
-    etrm.run()
-
-    etrm_mod = Processes(date_range, inputs_path, outputs_path, mod_output_root=modified_taw_root, write_freq='daily', taw_mod_switch=True)
-    etrm_mod.modify_taw(taw_modification, return_taw=True)
-    etrm_mod.set_save_dates(dates)
-    etrm_mod.run()
-
-
-
-def tif_retreival():
-    """Based on the datetime_list goes and gets the filenames of the tifs that were generated in daily_tifmaker"""
+# def tif_retreival(datetime_list):
+#     """Based on the datetime_list goes and gets the filenames of the tifs that were generated in daily_tifmaker"""
 
 # save dates is new.
 def taw_writer(tif, date_range, save_dates, input_root, output_root, taw_modification, root, output, start, end):
-    """Goal here is to plot the original masked taw and two modified versions of taw
-    to a csv for each pixel in masked domain
-
-    Additionally this will take in the tiffs from tiff_retreival and put in the values for each pixel to the
-    right of the corresponding taw value.
-
+    """ Short term goal: Get this working again and don't forget to comment what the function inputs are this time.
+    Med term goal, Have this output instead of a csv, a pandas dataframe that is stored...
     """
 
     mask_path = os.path.join(root, 'Mask')
@@ -109,13 +91,7 @@ def taw_writer(tif, date_range, save_dates, input_root, output_root, taw_modific
                     items = ('{}'.format(easting[ri,ci]), '{}'.format(northing[ri,ci]), '{}'.format(taw[ri,ci]), '{}'.format(taw_new_masked[ri,ci]),'{}'.format(taw_unmod[ri,ci]), '{}'.format(taw_new[ri,ci]))
                     wfile.write('{}\n'.format(','.join(items)))
 
-
-
 if __name__ == '__main__':
-
-
-
-
 
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
     root = inputs_path
@@ -133,13 +109,50 @@ if __name__ == '__main__':
     for tif in tifs:
         taw_writer(tif, (start, end), save_dates, inputs_path, outputs_path, taw_modification,
             root, output, start, end)
-    # for results use the output tiff and base it on the path.
+    for results use the output tiff and base it on the path.
 
     #=====================================================
 
     # v...Scratch work that is still relevant...v
 
+
     #=====================================================
+
+    # 5/15/17
+
+    # def run_pandastest(xmas_csv_path, taw_foil):
+    #     """Experimenting with pandas merge ability and read and write from csvs..."""
+    #
+    #     xmas = pd.read_csv(xmas_csv_path)
+    #
+    #     foil = pd.read_csv(taw_foil)
+    #
+    #     xmas = DataFrame(xmas)
+    #
+    #     foil = DataFrame(foil)
+    #
+    #     print 'y\n', foil['y']
+    #
+    #     print 'x\n', xmas['x']
+    #
+    #
+    #     merged = pd.merge(xmas, foil, on='x')
+    #
+    #     print 'merged', merged
+    #
+    #     merged.to_csv('/Users/Gabe/Desktop/merged_test.csv')
+    #
+    #     leaves a weird column in there... and why does 'x' give a key error and not 'y' or 'taw'?
+    #
+    #
+    #
+    # if __name__ == '__main__':
+    #
+    #     xmas_csv_path = "/Users/Gabe/Desktop/TAW_xmas_test_2013.csv"
+    #
+    #     taw_foil = "/Users/Gabe/Desktop/taw_xmas_foil.csv"
+    #
+    #     run_pandastest(xmas_csv_path, taw_foil)
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # def run(date_range, input_root, output_root, taw_modification, root, output, start, end):
     #     """Approach here is to just cut out the taw array from the file and multiply that array by whatever
@@ -393,3 +406,16 @@ if __name__ == '__main__':
         #                    root, output, start, end)
 
 
+        # def daily_tifmaker(taw_modification, date_range, dates, inputs_path, outputs_path, modified_taw_root):
+        #     """Takes taw from model, modifies one taw, leaves one control taw, runs model twice and produces two sets of daily
+        #     tifs. One set is perhaps key_day_month_year.tif(*x) the other key_day_month_year_mod.tif(*x).
+        #     """
+        #
+        #     etrm = Processes(date_range, inputs_path, outputs_path, write_freq='daily')
+        #     etrm.set_save_dates(dates)
+        #     etrm.run()
+        #
+        #     etrm_mod = Processes(date_range, inputs_path, outputs_path, mod_output_root=modified_taw_root, write_freq='daily', taw_mod_switch=True)
+        #     etrm_mod.modify_taw(taw_modification, return_taw=True)
+        #     etrm_mod.set_save_dates(dates)
+        #     etrm_mod.run()
