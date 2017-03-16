@@ -34,7 +34,7 @@ from recharge.dict_setup import initialize_tabular_dict, initialize_raster_track
 from recharge.raster import Raster
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
 from recharge.raster_tools import make_results_dir, convert_array_to_raster
-from runners.paths import paths
+from app.paths import paths
 
 
 class RasterManager(object):

@@ -22,8 +22,8 @@ from recharge.raster import Raster
 from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
 import time
 
-from runners.config import Config
-from runners.paths import paths
+from app.config import Config
+from app.paths import paths
 
 
 def run():

@@ -20,7 +20,7 @@ import os
 from datetime import datetime
 
 from recharge.point_extract_utility import get_dynamic_inputs_from_shape
-from runners.paths import paths
+from app.paths import paths
 
 
 def extract_etrm_point_inputs(input_root, output_root, simulation_period):

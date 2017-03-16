@@ -23,7 +23,7 @@ from numpy import array, asarray
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 
-from runners.paths import paths
+from app.paths import paths
 
 
 class Raster:

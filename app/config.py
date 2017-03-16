@@ -22,7 +22,7 @@ from datetime import datetime
 
 import yaml
 
-from runners.paths import paths
+from app.paths import paths
 
 DEFAULT_CFG = '''
 ---

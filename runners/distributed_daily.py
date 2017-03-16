@@ -16,7 +16,7 @@
 import os
 from datetime import datetime
 from recharge.etrm_processes import Processes
-from runners.config import Config
+from app.config import Config
 
 
 def run():

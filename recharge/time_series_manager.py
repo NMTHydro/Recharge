@@ -19,69 +19,58 @@ from pandas import DataFrame, notnull, to_numeric, concat
 from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
 
-from runners.paths import paths
+from app.paths import paths
 
 
-def get_etrm_time_series(inputs_path, dict_=None, single_file=False):
+def load_df(path):
+    """
+    :param path: path to csv file
+    :returns dataframe of etrm time series input
+    """
+    print 'reading in csv: {}'.format(path)
+    csv = loadtxt(path, dtype=str, delimiter=',')
+
+    # extracts should have headers
+    csv = csv[1:]
+
+    try:
+        new_ind = [datetime.strptime(row[0], '%Y-%m-%d') for row in csv]
+    except ValueError:
+        new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv[1:]]
+
+    arr = array(csv[, 1:], dtype=float)
+
+    cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
+
+    df = DataFrame(arr, index=new_ind, columns=cols)
+
+    return df
+
+
+def get_etrm_time_series(input_root, dict_):
     """
     Read pre-extracted data out of a formatted csv.  Use recharge.point_extract_utility.py to do extract.
 
-    :param inputs_path: path to a folder of csv files.
+    :param input_root: path to a folder of csv files.
     :param dict_: dict of point locations
-    :param single_file: if the inputs path is a single file path
-    :returns dataframe of etrm time series input
 
     csv will be in the following format
     ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
     """
 
-    if single_file:
+    csv_list = [filename for filename in os.listdir(input_root) if filename.endswith('.csv')]
 
-        csv = loadtxt(inputs_path, dtype=str, delimiter=',')
-        print 'inputs path: {}'.format(inputs_path)
-        name = inputs_path.replace('.csv', '')
-        print 'reading in csv for {}'.format(name)
+    print 'etrm extract csv list: {}'.format(csv_list)
+    for path in csv_list:
+        name = os.path.splitext(path)[0]
+        df = load_df(os.path.join(input_root, path))
 
-        try:
-            new_ind = [datetime.strptime(row[0], '%Y-%m-%d') for row in csv[1:]]  # extracts should have headers
-
-        except ValueError:
-            new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv[1:]]  # extracts should have headers
-
-        arr = array(csv[1:, 1:], dtype=float)
-
-        cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
-
-        df = DataFrame(arr, index=new_ind, columns=cols)
-
-        return df
-
-    else:
-        csv_list = os.listdir(inputs_path)
-        csv_list = [filename for filename in csv_list if filename.endswith('.csv')]
-
-    print 'etrm extract csv list: \n{}'.format(csv_list)
-    for file_ in csv_list:
-
-        csv = loadtxt(os.path.join(inputs_path, file_), dtype=str, delimiter=',')
-        name = file_.replace('.csv', '')
-        print 'reading in csv for {}'.format(name)
-
-        new_ind = [datetime.strptime(row[0], '%Y-%m-%d') for row in csv[1:]]  # extracts should have headers
-
-        arr = array(csv[1:, 1:], dtype=float)
-
-        cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
-
-        df = DataFrame(arr, index=new_ind, columns=cols)
         if dict_:
             for key, val in dict_.iteritems():
                 if val['Name'] == name:
                     print 'updating {} number {} with etrm inputs df'.format(name, key)
                     # print 'your df: \n{}'.format(df)
                     dict_[key]['etrm'] = df
-
-    return None
 
 
 def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=False,
@@ -109,55 +98,89 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     path = paths.etrm_input_root
 
     def day_fraction_to_hr_min(fractional_day, year):
+        """
+
+        :param fractional_day:  100.134
+        :param year:
+        :return:
+        """
+
+        def ext(d, scalar):
+            a, b = d.split('.')
+            aa, bb = int(a), float('.{}'.format(b))
+            return aa, bb * scalar
+
         dec = str(fractional_day)
-        dec_split = dec.split('.')
-        day_part_str = '.{}'.format(dec_split[1])
-        day, day_part_flt = int(dec_split[0]), float(day_part_str)
-        hour_dec = day_part_flt * 24
-        hour_split = str(hour_dec).split('.')
-        hour, hour_part = int(hour_split[0]), float('.{}'.format(hour_split[1]))
-        min_part = str(hour_part * 60).split('.')
-        min_ = int(min_part[0])
-        if min_ == 29:
-            min_ = 30
-        if min_ == 59:
-            min_ = 0
-        tup = datetime(year, 1, 1) + timedelta(days=day, hours=hour, minutes=min_)
+        day, timepart = ext(dec, 24)
+        hour, minpart = ext(timepart, 60)
+        minutes = int(minpart)
+
+        # day_part_str = '.{}'.format(dec_split[1])
+        # day, day_part_flt = int(dec_split[0]), float(day_part_str)
+        # hour_dec = day_part_flt * 24
+        # hour_split = str(hour_dec).split('.')
+        # hour, hour_part = int(hour_split[0]), float('.{}'.format(hour_split[1]))
+        # min_part = str(hour_part * 60).split('.')
+        #
+        # min_ = int(min_part[0])
+        # if min_ == 29:
+        #     min_ = 30
+        # if min_ == 59:
+        #     min_ = 0
+        #
+        if minutes == 29:
+            minutes = 30
+        elif minutes == 59:
+            minutes = 0
+
+        tup = datetime(year, 1, 1) + timedelta(days=day, hours=hour, minutes=minutes)
         return tup
 
-    for key, val in dict_.iteritems(): # Changes here
+    arr_cols = [0, 2, 12, 14, 28, 30, 33, 34, 35]
+    subset = ['year', 'day', 'H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
+    # ncols = len(arr_cols)
+
+    columns = ['H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
+    for key, val in dict_.iteritems():  # Changes here
         amf_name = val['Name']
-        print '\n name: {}'.format(amf_name)
+        print 'name: {}'.format(amf_name)
         folder = os.path.join(path, amf_name)
         print path
         print amf_name
-        folder_list = os.listdir(folder)
-        new_list = []
-        for item in folder_list:
-            new_list.append(os.path.join(path, amf_name, item))
-        print "this is the folder list: {}".format(folder_list)
-        print "this is the new list: {}".format(new_list)
-        csv_list = new_list
-        print folder
-        print 'csv list: \n{}'.format(csv_list)
-        arr_cols = [0, 2, 12, 14, 28, 30, 33, 34, 35]
-        amf_data = array([]).reshape(0, len(arr_cols))
-        subset = ['year', 'day', 'H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
 
-        print 'attempting to fetch headers:\n{}'.format(subset)
-        first = True
+        folder_list = os.listdir(folder)
+        csv_list = [os.path.join(path, amf_name, item) for item in folder_list]
+
+        # new_list = []
+        # for item in folder_list:
+        #     new_list.append(os.path.join(path, amf_name, item))
+
+        print "this is the folder list: {}".format(folder_list)
+        print "this is the new list: {}".format(csv_list)
+
+        # csv_list = new_list
+        # print folder
+        # print 'csv list: \n{}'.format(csv_list)
+
+        # amf_data = array([]).reshape(0, ncols)
+
+        print 'attempting to fetch headers: {}'.format(subset)
+        amf_data = None
         for item in csv_list:
-            if first:
-                col_check = loadtxt(os.path.join(folder, item), dtype=str, skiprows=0, delimiter=',', usecols=arr_cols)
-                print 'headers being read: \n {}'.format(col_check[:1, :])
-                first = False
-            csv = loadtxt(os.path.join(folder, item), dtype=str, skiprows=3, delimiter=',', usecols=arr_cols)
-            amf_data = append(amf_data, csv, axis=0)
+            p = os.path.join(folder, item)
+            # if i == 0:
+            #     col_check = loadtxt(p, dtype=str, skiprows=0, delimiter=',', usecols=arr_cols)
+            #     print 'headers being read: \n {}'.format(col_check[:1, :])
+
+            csv = loadtxt(p, dtype=str, skiprows=3, delimiter=',', usecols=arr_cols)
+            if amf_data is None:
+                amf_data = csv
+            else:
+                amf_data = append(amf_data, csv, axis=0)
 
         new_ind = [day_fraction_to_hr_min(float(row[1]), int(row[0])) for row in amf_data]
         amf_data = amf_data[:, 2:]
 
-        columns = ['H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
         df = DataFrame(amf_data, index=new_ind, columns=columns)
         print 'You have {} rows of --RAW-- data from {}'.format(df.shape[0], amf_name)
 
@@ -188,9 +211,14 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
         df = concat([df, new_df], axis=1, join='outer')
 
         for ind, row in df.iterrows():
-            row['rad_err'] = (abs((row['RN']) - (row['RG'] - row['RGout'] + row['RGL'] - row['RGLout'])) / row['RN'])
-            row['en_bal_err'] = ((row['RN'] - (row['LE'] + row['H'])) / row['RN'])
-            row['rad_minus_sens_heat'] = (row['RN'] - (row['LE'] + row['H'])) * 0.0864 / 48
+
+            rn = row['RN']
+            leg = row['LE'] + row['H']
+            rn_leg = rn - leg
+
+            row['rad_err'] = (abs(rn - (row['RG'] - row['RGout'] + row['RGL'] - row['RGLout'])) / rn)
+            row['en_bal_err'] = rn_leg / rn
+            row['rad_minus_sens_heat'] = rn_leg * 0.0864 / 48
             row['amf_ET'] = (row['LE'] / 2.45)  # convert from MJ/(step * m**2) to mm water
 
         df_low_err = df[df['en_bal_err'] <= close_threshold]
@@ -201,10 +229,11 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
                                                                                     amf_name)
 
         if save_cleaned_data_path:
-            df.to_csv(os.path.join('{}'.format(save_cleaned_data_path),'{}_cleaned_all.csv'.format(amf_name)))
-            #df.to_csv('{}\\{}_cleaned_all.csv'.format(save_cleaned_data_path, amf_name))
-            df_low_err.to_csv(os.path.join('{}'.format(save_cleaned_data_path), '{}_cleaned_lowErr.csv'.format(amf_name)))
-            df_low_err.to_csv('{}\\{}_cleaned_lowErr.csv'.format(save_cleaned_data_path, amf_name))
+            p = os.path.join(save_cleaned_data_path, '{}_cleaned_all.csv'.format(amf_name))
+            df.to_csv(p)
+
+            p = os.path.join(save_cleaned_data_path, '{}_cleaned_lowErr.csv'.format(amf_name))
+            df_low_err.to_csv(p)
 
         if return_low_err:
             val['AMF_Data'] = df_low_err

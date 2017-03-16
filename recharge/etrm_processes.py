@@ -21,10 +21,10 @@ from numpy import maximum, minimum, where, isnan, exp, median
 
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb, get_kcb
+from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it, day_generator
-from runners.paths import paths, PathsNotSetExecption
+from app.paths import paths, PathsNotSetExecption
 
 
 class Processes(object):
@@ -38,10 +38,9 @@ class Processes(object):
     dgketchum 24 JUL 2016
     """
 
-    tracker = None
-    _initial_depletions = None
-
     def __init__(self, cfg):
+        self.tracker = None
+        self._initial_depletions = None
 
         self._date_range = cfg.date_range
         self._use_individual_kcb = cfg.use_individual_kcb
@@ -66,11 +65,15 @@ class Processes(object):
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
-        self._static = time_it(initialize_static_dict)
+        # self._static = time_it(initialize_static_dict)
+        # shape = self._static['taw'].shape
+        # self._initial = time_it(initialize_initial_conditions_dict)
+        # self._master = time_it(initialize_master_dict, shape)
 
+        self._static = initialize_static_dict()
         shape = self._static['taw'].shape
-        self._initial = time_it(initialize_initial_conditions_dict)
-        self._master = time_it(initialize_master_dict, shape)
+        self._initial = initialize_initial_conditions_dict()
+        self._master = initialize_master_dict(shape)
 
         self._raster_manager = RasterManager(cfg)
 
@@ -131,8 +134,6 @@ class Processes(object):
 
             time_it(rm.update_raster_obj, m, day)
             time_it(self._update_master_tracker, m, day)
-
-            # m['first_day'] = False
 
         self._info('saving tabulated data')
         time_it(rm.save_csv)
@@ -482,30 +483,36 @@ class Processes(object):
         water_av_rew = water * ceff
         water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
 
-        # fill depletion in REW if possible
-        evap__ = pdrew + evap_1
-        drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
-        drew = minimum(drew, rew)
+        # # fill depletion in REW if possible
+        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew+evap_1)
 
-        # add excess water to the water available to TEW (Is this coding ok?)
-        water_av_tew = where(water_av_rew >= evap__,
-                             water_av_tew + water_av_rew - evap__,
-                             water_av_tew)
+        # # fill depletion in REW if possible
+        # evap__ = pdrew + evap_1
+        # drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
+        # drew = minimum(drew, rew)
+        #
+        # # add excess water to the water available to TEW (Is this coding ok?)
+        # water_av_tew = where(water_av_rew >= evap__,
+        #                      water_av_tew + water_av_rew - evap__,
+        #                      water_av_tew)
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
         water_av_tew *= ceff
         water_av_taw += water_av_tew * (1.0 - ceff)
 
-        # fill depletion in TEW if possible
-        evap2__ = pde + evap_2
-        de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
-        de = minimum(de, tew)
+        # # fill depletion in TEW if possible
+        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde+evap_2)
 
-        # add excess water to the water available to TAW (Help coding this more cleanly?)
-        water_av_taw = where(water_av_tew >= evap2__,
-                             water_av_taw + water_av_tew - evap2__,
-                             water_av_taw)
+        # # fill depletion in TEW if possible
+        # evap2__ = pde + evap_2
+        # de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
+        # de = minimum(de, tew)
+        #
+        # # add excess water to the water available to TAW (Help coding this more cleanly?)
+        # water_av_taw = where(water_av_tew >= evap2__,
+        #                      water_av_taw + water_av_tew - evap2__,
+        #                      water_av_taw)
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone
@@ -522,6 +529,17 @@ class Processes(object):
         m['drew'] = drew
         m['de'] = de
         m['dr'] = dr
+
+    def _fill_depletions(self, arr_1, arr_2, t, evap):
+
+        # fill depletion in REW if possible
+        drew = where(arr_1 >= evap, 0, evap - arr_1)
+        drew = minimum(drew, t)
+
+        # add excess water to the water available to TEW (Is this coding ok?)
+        arr_2 = where(arr_1 >= evap, arr_2 + arr_1 - evap, arr_2)
+
+        return arr_2, drew
 
     def _do_accumulations(self):
         """ This function simply accumulates all terms.
@@ -600,13 +618,19 @@ class Processes(object):
         else:
             m['kcb'] = get_kcb(date, m['pkcb'])
 
-        m['min_temp'] = min_temp = get_prism(date, variable='min_temp')
-        m['max_temp'] = max_temp = get_prism(date, variable='max_temp')
+        min_temp, max_temp, temp, precip = get_prisms(date)
+        m['min_temp'] = min_temp
+        m['max_temp'] = max_temp
+        m['temp'] = temp
+        m['precip'] = precip
 
-        m['temp'] = (min_temp + max_temp) / 2
-
-        precip = get_prism(date, variable='precip')
-        m['precip'] = where(precip < 0, 0, precip)
+        # m['min_temp'] = min_temp = get_prism(date, variable='min_temp')
+        # m['max_temp'] = max_temp = get_prism(date, variable='max_temp')
+        #
+        # m['temp'] = (min_temp + max_temp) / 2
+        #
+        # precip = get_prism(date, variable='precip')
+        # m['precip'] = where(precip < 0, 0, precip)
 
         etrs = get_penman(date, variable='etrs')
         etrs = where(etrs < 0, 0, etrs)

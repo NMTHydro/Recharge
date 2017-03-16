@@ -18,8 +18,8 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 from recharge.etrm_processes import Processes
-from runners.config import Config
-from runners.paths import paths
+from config import Config
+from paths import paths
 
 
 def run():
