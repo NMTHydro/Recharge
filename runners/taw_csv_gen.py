@@ -201,20 +201,31 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
                     # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
                     x_list.append('{}'.format(easting[ri, ci]))
                     y_list.append('{}'.format(northing[ri, ci]))
-                    value_list.append('{}'.format(array[ri, ci]))
+                    #value_list.append('{}'.format(array[ri, ci]))
+                    de_value_list.append('{}'.format(mod_array_list[0][ri,ci]))
+                    dr_value_list.append('{}'.format(mod_array_list[1][ri,ci]))
+                    drew_value_list.append('{}'.format(mod_array_list[2][ri, ci]))
+                    toteta_value_list.append('{}'.format(mod_array_list[3][ri, ci]))
+                    totetrs_value_list.append('{}'.format(mod_array_list[4][ri, ci]))
                     #print 'mod value list {}'.format(value_list)
-        mod_dict_data = {'x': x_list, 'mod_de': value_list[0], 'mod_dr':value_list[1],
-                         'mod_drew': value_list[2], 'mod_tot-eta': value_list[3], 'mod_tot-etrs': value_list[4]}
+        mod_dict_data = {'x': x_list, 'y': y_list, 'mod_de': de_value_list, 'mod_dr':dr_value_list,
+                         'mod_drew': drew_value_list, 'mod_tot-eta': toteta_value_list, 'mod_tot-etrs': totetrs_value_list}
         print mod_dict_data
     mod_dict_list.append(mod_dict_data)
 
     #print 'mod dict list \n {}'.format(mod_dict_list)
 
     unmod_dict_list = []
-    for array in unmod_array_list:
+    for i in range(len(unmod_array_list)):
         x_list = []
         y_list = []
-        value_list = []
+        x_list = []
+        y_list = []
+        de_value_list = []
+        dr_value_list = []
+        drew_value_list = []
+        toteta_value_list = []
+        totetrs_value_list = []
         nrows, ncols = unmod_array_list[0].shape
         for ri in xrange(nrows):
             for ci in xrange(ncols):
@@ -223,11 +234,15 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
                     # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
                     x_list.append('{}'.format(easting[ri, ci]))
                     y_list.append('{}'.format(northing[ri, ci]))
-                    value_list.append('{}'.format(array[ri, ci]))
+                    #value_list.append('{}'.format(array[ri, ci]))
+                    de_value_list.append('{}'.format(unmod_array_list[0][ri,ci]))
+                    dr_value_list.append('{}'.format(unmod_array_list[1][ri, ci]))
+                    drew_value_list.append('{}'.format(unmod_array_list[2][ri, ci]))
+                    toteta_value_list.append('{}'.format(unmod_array_list[3][ri, ci]))
+                    totetrs_value_list.append('{}'.format(unmod_array_list[4][ri, ci]))
                     #print 'unmod value list {}'.format(value_list)
-        unmod_dict_data = {'de': value_list, 'dr': '{}'.format(value_list),
-                         'drew': '{}'.format(value_list), 'tot-eta': '{}'.format(value_list),
-                         'tot-etrs': '{}'.format(value_list)}
+        unmod_dict_data = {'x': x_list, 'y': y_list, 'de': de_value_list, 'dr': dr_value_list, 'drew': drew_value_list,
+                           'tot-eta': toteta_value_list, 'tot-etrs': totetrs_value_list}
         #print 'unmod_dict_data {}'.format(unmod_dict_data)
     unmod_dict_list.append(unmod_dict_data)
 
