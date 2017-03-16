@@ -44,7 +44,7 @@ def coord_getter(tiff_path):
 
     # Get affine transform for pixel centres
     T1 = T0 * Affine.translation(0.5, 0.5)
-    print "T1",T1
+    #print "T1",T1
     # Function to convert pixel row/column index (from 0) to easting/northing at centre
     rc2en = lambda r, c: (c, r) * T1
 
@@ -60,8 +60,8 @@ def coord_getter(tiff_path):
 
     #northings, eastings = (p1*mesh.T).T
 
-    print 'northings', northings
-    print 'eastings', eastings
+    #print 'northings', northings
+    #print 'eastings', eastings
 
     # Project all longitudes, latitudes
     p2 = Proj(proj='latlong',datum='WGS84')
