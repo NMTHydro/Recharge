@@ -16,10 +16,6 @@
 
 # ============= standard library imports ========================
 import os
-from osgeo import gdal
-from numpy import array, asarray
-from numpy.ma import masked_where, nomask, filled
-from datetime import datetime
 
 # ============= local library imports ===========================
 
@@ -64,8 +60,8 @@ def coord_getter(tiff_path):
     #print 'eastings', eastings
 
     # Project all longitudes, latitudes
-    p2 = Proj(proj='latlong',datum='WGS84')
-    longs, lats = transform(p1, p2, eastings, northings)
+    # p2 = Proj(proj='latlong',datum='WGS84')
+    # longs, lats = transform(p1, p2, eastings, northings)
 
     return eastings, northings
 
