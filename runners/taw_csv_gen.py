@@ -128,24 +128,27 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
         strings = raster_file.split('/')
         #print strings
         raster_file = strings[6]
-        print 'raster_file',raster_file
+        #print 'raster_file',raster_file
         # TODO - Figure out why I get AttributeError: 'NoneType' object has no attribute 'GetRasterBand'
         # when we print rasters why don't they have band1 info in the metadata?
+        #print 'test array'
         test_array_list.append(convert_raster_to_array(test_root, raster_file, band=1)) # removed the band, maybe it wanted band=...
 
-    # mod_array_list = []
-    # for raster_file in mod_tif_list:
-    #     strings = raster_file.split('/')
-    #     print strings
-    #     raster_file = strings[8]
-    #     mod_array_list.append(convert_raster_to_array(mod_desktop_root, raster_file, band=1))
+    mod_array_list = []
+    for raster_file in mod_tif_list:
+        strings = raster_file.split('/')
+        print strings
+        raster_file = strings[8]
+        #print 'mod array'
+        mod_array_list.append(convert_raster_to_array(mod_desktop_root, raster_file, band=1))
     #
-    # unmod_array_list = []
-    # for raster_file in unmod_tif_list:
-    #     strings = raster_file.split('/')
-    #     print strings
-    #     raster_file = strings[8]
-    #     unmod_array_list.append(convert_raster_to_array(unmod_desktop_root, raster_file, band=1))
+    unmod_array_list = []
+    for raster_file in unmod_tif_list:
+        strings = raster_file.split('/')
+        print strings
+        raster_file = strings[8]
+        #print 'unmod array'
+        unmod_array_list.append(convert_raster_to_array(unmod_desktop_root, raster_file, band=1))
 
     mod_cols = ['mod_de', 'mod_dr', 'mod_drew', 'mod_tot-eta', 'mod_tot-etrs']
 
@@ -174,66 +177,61 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
 
         # This does not look right...
         test_dataframe = pd.DataFrame(test_dict_data, index=x_list,columns= test_cols,) # TODO - why do i need an index here?
-        print 'test dataframe', test_dataframe
-
+        #print 'test dataframe', test_dataframe
 
     test_df_list.append(test_dataframe)
-    print "test df list", test_df_list
-    # test_dict_list.append(test_dict_data)
-    #
-    #
-    # print 'test dict list \n {}'.format(test_dict_list)
-    #
-    #
-    # data_frames_list = []
-    # for item in test_dict_list:
-    #     data_frames_list.append(pd.DataFrame(item, columns=test_cols))
-
-    #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
-    # mod_dict_list = []
-    # for array in mod_array_list:
-    #     x_list = []
-    #     y_list = []
-    #     value_list = []
-    #     nrows, ncols = mod_array_list[0].shape
-    #     for ri in xrange(nrows):
-    #         for ci in xrange(ncols):
-    #             mask_values = mask_arr[ri, ci]
-    #             if mask_values:
-    #                 # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
-    #                 x_list.append('{}'.format(easting[ri, ci]))
-    #                 y_list.append('{}'.format(northing[ri, ci]))
-    #                 value_list.append('{}'.format(array[ri, ci]))
-    #                 print 'mod value list {}'.format(value_list)
-    #     mod_dict_data = {'mod_de': '{}'.format(value_list[0]), 'mod_dr':'{}'.format(value_list[1]),
-    #                      'mod_drew': '{}'.format(value_list[2]), 'mod_tot-eta': '{}'.format(value_list[3]), 'mod_tot-etrs': '{}'.format(value_list[4])}
-    # mod_dict_list.append(mod_dict_data)
-    #
-    # print 'mod dict list \n {}'.format(mod_dict_list)
-    #
-    # unmod_dict_list = []
-    # for array in unmod_array_list:
-    #     x_list = []
-    #     y_list = []
-    #     value_list = []
-    #     nrows, ncols = unmod_array_list[0].shape
-    #     for ri in xrange(nrows):
-    #         for ci in xrange(ncols):
-    #             mask_values = mask_arr[ri, ci]
-    #             if mask_values:
-    #                 # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
-    #                 x_list.append('{}'.format(easting[ri, ci]))
-    #                 y_list.append('{}'.format(northing[ri, ci]))
-    #                 value_list.append('{}'.format(array[ri, ci]))
-    #                 print 'unmod value list {}'.format(value_list)
-    #     unmod_dict_data = {'de': '{}'.format(value_list[0]), 'dr': '{}'.format(value_list[1]),
-    #                      'drew': '{}'.format(value_list[2]), 'tot-eta': '{}'.format(value_list[3]),
-    #                      'tot-etrs': '{}'.format(value_list[4])}
-    # unmod_dict_list.append(unmod_dict_data)
-    #
-    # print "unmod_dict_list \n {}".format(unmod_dict_list)
+    mod_dict_list = []
+    for array in mod_array_list:
+        print array
+        x_list = []
+        y_list = []
+        de_value_list = []
+        dr_value_list = []
+        drew_value_list = []
+        toteta_value_list = []
+        totetrs_value_list = []
+        print 'array shape', mod_array_list[0].shape
+        nrows, ncols = mod_array_list[0].shape
+        for ri in xrange(nrows):
+            for ci in xrange(ncols):
+                mask_values = mask_arr[ri, ci]
+                if mask_values:
+                    # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
+                    x_list.append('{}'.format(easting[ri, ci]))
+                    y_list.append('{}'.format(northing[ri, ci]))
+                    value_list.append('{}'.format(array[ri, ci]))
+                    #print 'mod value list {}'.format(value_list)
+        mod_dict_data = {'x': x_list, 'mod_de': value_list[0], 'mod_dr':value_list[1],
+                         'mod_drew': value_list[2], 'mod_tot-eta': value_list[3], 'mod_tot-etrs': value_list[4]}
+        print mod_dict_data
+    mod_dict_list.append(mod_dict_data)
+
+    #print 'mod dict list \n {}'.format(mod_dict_list)
+
+    unmod_dict_list = []
+    for array in unmod_array_list:
+        x_list = []
+        y_list = []
+        value_list = []
+        nrows, ncols = unmod_array_list[0].shape
+        for ri in xrange(nrows):
+            for ci in xrange(ncols):
+                mask_values = mask_arr[ri, ci]
+                if mask_values:
+                    # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
+                    x_list.append('{}'.format(easting[ri, ci]))
+                    y_list.append('{}'.format(northing[ri, ci]))
+                    value_list.append('{}'.format(array[ri, ci]))
+                    #print 'unmod value list {}'.format(value_list)
+        unmod_dict_data = {'de': value_list, 'dr': '{}'.format(value_list),
+                         'drew': '{}'.format(value_list), 'tot-eta': '{}'.format(value_list),
+                         'tot-etrs': '{}'.format(value_list)}
+        #print 'unmod_dict_data {}'.format(unmod_dict_data)
+    unmod_dict_list.append(unmod_dict_data)
+
+    #print "unmod_dict_list \n {}".format(unmod_dict_list)
 
 
 
@@ -248,7 +246,7 @@ if __name__ == '__main__':
 
     root = inputs_path
     mod_desktop_root = '/Users/Gabe/Desktop/ETRM_Desktop_TAW_Mod_Output/ETRM_results/ETRM_Results_2017_03_14/daily_rasters'
-    unmod_desktop_root = '/Users/Gabe/Desktop/ETRM_destop_output/ETRM_results/ETRM_Results_2017_03_14/daily_rasters'
+    unmod_desktop_root = '/Users/Gabe/Desktop/ETRM_desktop_output/ETRM_results/ETRM_Results_2017_03_14/daily_rasters'
 
     # test_root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_03_08/daily_rasters'
     test_root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_02_24/monthly_rasters'
