@@ -19,23 +19,20 @@ import time
 
 from numpy import maximum, minimum, where, isnan, exp, median
 
+from app.paths import paths, PathsNotSetExecption
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
 from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it, day_generator
-from app.paths import paths, PathsNotSetExecption
 
 
 class Processes(object):
     """
-    The purpose of this class is update the etrm master dict daily.  It should work for both point and
-    distributed model runs.
+    The purpose of this class is update the etrm master dict daily.
+
     See function explanations.
 
-    Returns dict with all rasters under keys of etrm variable names.
-
-    dgketchum 24 JUL 2016
     """
 
     def __init__(self, cfg):
@@ -80,6 +77,12 @@ class Processes(object):
         time_it(self.initialize)
 
     def configure_run(self, runspec):
+        """
+        configure the model run with a RunSpec object
+
+        :param runspec: RunSpec
+        :return:
+        """
         if runspec.save_dates:
             self.set_save_dates(runspec.save_dates)
 
@@ -87,6 +90,13 @@ class Processes(object):
             self.modify_taw(runspec.taw_modification)
 
     def run(self, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
+        """
+
+        :param ro_reinf_frac:
+        :param swb_mode:
+        :param allen_ceff:
+        :return:
+        """
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -143,9 +153,25 @@ class Processes(object):
         self._info('Execution time: {}'.format(time.time() - st))
 
     def set_save_dates(self, dates):
+        """
+        set the individual days to write
+
+        :param dates: list of datetimes
+        :return:
+        """
         self._raster_manager.set_save_dates(dates)
 
     def modify_master(self, alpha=1, beta=1, gamma=1, zeta=1, theta=1):
+        """
+        modify the master dictionary
+
+        :param alpha: temp scalar
+        :param beta: precip scalar
+        :param gamma: etrs scalar
+        :param zeta: kcb scalar
+        :param theta: soil_ksat scalar
+        :return:
+        """
         m = self._master
         m['temp'] += alpha
         m['precip'] *= beta
@@ -154,8 +180,14 @@ class Processes(object):
         m['soil_ksat'] *= theta
 
     def modify_taw(self, taw_modification):
-        """Gets the taw array, modifies it by a constant scalar value
-         (taw_modification) and returns the resulting array"""
+        """
+        Gets the taw array, modifies it by a constant scalar value
+        (taw_modification) and returns the resulting array
+
+        :param taw_modification: object
+        :return: taw array
+
+        """
 
         s = self._static
         taw = s['taw']
@@ -165,7 +197,11 @@ class Processes(object):
         return taw
 
     def get_taw(self):
-        """Gets the TAW array and returns it """
+        """
+        Gets the TAW array and returns it
+
+        :return: TAW array
+        """
 
         s = self._static
         taw = s['taw']
@@ -173,6 +209,11 @@ class Processes(object):
         return taw
 
     def initialize(self):
+        """
+        initialize the models initial state
+
+        :return:
+        """
         self._info('Initialize initial model state')
         m = self._master
 
@@ -189,6 +230,11 @@ class Processes(object):
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
     def save_tracker(self, path=None):
+        """
+
+        :param path:
+        :return:
+        """
         self._info('Saving tracker')
 
         base = 'etrm_master_tracker'
@@ -201,7 +247,6 @@ class Processes(object):
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
         self.tracker.to_csv(path, na_rep='nan', index_label='Date')
-
 
     def _do_snow(self, m, c):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.

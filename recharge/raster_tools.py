@@ -18,14 +18,14 @@ The purpose of this module is to provide some simple tools needed for raster pro
 
 
 """
+import os
+from datetime import datetime
+
 import rasterio
 from affine import Affine
-from osgeo import gdal
 from numpy import array, asarray, meshgrid, frompyfunc, arange
-from numpy.ma import masked_where, nomask, filled
-from datetime import datetime
-import os
-
+from numpy.ma import masked_where, nomask
+from osgeo import gdal
 from pandas import DataFrame
 
 
@@ -46,8 +46,9 @@ def convert_raster_to_array(input_raster_path, raster, band=1):
     Convert .tif raster into a numpy numerical array.
 
     :param input_raster_path: Path to raster.
-    :param raster: Raster name with *.tif
+    :param raster: Raster name with \*.tif
     :param band: Band of raster sought.
+
     :return: Numpy array.
     """
     # print "input raster path", input_raster_path

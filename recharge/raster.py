@@ -46,9 +46,18 @@ class Raster:
         return r
 
     def array(self):
+        """
+
+        :return:
+        """
         return self._masked_arr if self._masked_arr is not None else self._arr
 
     def apply_mask(self):
+        """
+        apply mask to ourself
+
+        :return:
+        """
         self._masked_arr = self.masked()
 
     def filter_greater(self, fvalue, value):
@@ -67,11 +76,11 @@ class Raster:
 
     def filter_less(self, fvalue, value):
         """
-                where arr is greater than fvalue set arr to value
-                :param fvalue: float
-                :param value: float
-                :return:
-                """
+        where arr is greater than fvalue set arr to value
+        :param fvalue: float
+        :param value: float
+        :return:
+        """
         if self._masked_arr:
             arr = self._masked_arr
         else:
@@ -92,10 +101,21 @@ class Raster:
         return masked_arr.filled(0)
 
     def masked(self):
+        """
+        returns valid points as 1-d array
+
+        :return:
+        """
         idxs = self._get_mask_indices()
         return self._arr[idxs].flatten()
 
     def open(self, path, band=1):
+        """
+
+        :param path: path to GeoTiff
+        :param band:
+        :return:
+        """
         if not os.path.isfile(path):
             print 'Not a valid file: {}'.format(path)
             return
@@ -110,6 +130,14 @@ class Raster:
                      'geotransform': raster.GetGeoTransform(), 'resolution': raster.GetGeoTransform()[1]}
 
     def save(self, arr=None, geo=None, band=None):
+        """
+        save an array as a GeoTiff
+
+        :param arr:
+        :param geo:
+        :param band:
+        :return:
+        """
         op = 'fff'
         if arr is None:
             arr = self._arr
@@ -119,6 +147,7 @@ class Raster:
             band = self._band
         self._save(op, arr, geo, band)
 
+    # private
     def _get_masked_indices(self):
         mask = Raster(paths.mask)
         idxs = asarray(mask, dtype=bool)

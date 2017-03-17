@@ -15,9 +15,10 @@
 # ===============================================================================
 
 import os
-from pandas import DataFrame, notnull, to_numeric, concat
-from numpy import array, nan, loadtxt, append, zeros
 from datetime import datetime, timedelta
+
+from numpy import array, nan, loadtxt, append, zeros
+from pandas import DataFrame, notnull, to_numeric, concat
 
 from app.paths import paths
 
@@ -25,6 +26,7 @@ from app.paths import paths
 def load_df(path):
     """
     :param path: path to csv file
+
     :returns dataframe of etrm time series input
     """
     print 'reading in csv: {}'.format(path)
@@ -38,7 +40,7 @@ def load_df(path):
     except ValueError:
         new_ind = [datetime.strptime(row[0], '%Y/%m/%d') for row in csv[1:]]
 
-    arr = array(csv[, 1:], dtype=float)
+    arr = array(csv[:, 1:], dtype=float)
 
     cols = ['kcb', 'rg', 'etrs', 'min_temp', 'max_temp', 'temp', 'precip']
 

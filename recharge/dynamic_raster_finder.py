@@ -25,14 +25,20 @@ dgketchum 24 JUL 2016
 import os
 
 from numpy import where, isnan
-from osgeo import gdal
 
+from app.paths import paths
 from recharge import NUMS, PRISM_YEARS
 from recharge.raster import Raster
-from app.paths import paths
 
 
 def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
+    """
+    convert to ndvi to Kcb.
+
+    :param date_object: Datetime object of date.
+    :param previous_kcb: Previous day's kcb value.
+    :return: numpy array object
+    """
     raster = Raster(name, root=in_path, band=band)
     ndvi = raster.masked()
     kcb = ndvi * scalar
@@ -45,6 +51,13 @@ def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
 
 
 def get_spline_kcb(date_object, previous_kcb=None):
+    """
+    Find NDVI image and convert to Kcb.
+
+    :param date_object: Datetime object of date.
+    :param previous_kcb: Previous day's kcb value.
+    :return: numpy array object
+    """
     year = str(date_object.year)
 
     tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
@@ -56,6 +69,13 @@ def get_spline_kcb(date_object, previous_kcb=None):
 
 
 def get_individ_kcb(date_object, previous_kcb=None):
+    """
+    Find NDVI image and convert to Kcb.
+
+    :param date_object: Datetime object of date.
+    :param previous_kcb: Previous day's kcb value.
+    :return: numpy array object
+    """
     year = str(date_object.year)
     tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
                                              date_object.timetuple().tm_mon,
@@ -106,6 +126,12 @@ def get_kcb(date_object, previous_kcb=None):
 
 
 def get_prisms(date):
+    """
+    return all prism variables
+
+    :param date:
+    :return: min_temp, max_temp, temp, precip
+    """
     min_temp = get_prism(date, variable='min_temp')
     max_temp = get_prism(date, variable='max_temp')
     temp = (min_temp + max_temp) / 2

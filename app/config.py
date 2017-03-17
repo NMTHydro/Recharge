@@ -63,13 +63,15 @@ class RunSpec:
     output_path = None
     write_freq = None
     use_verify_paths = None
+    taw_modification = 1.0
 
     def __init__(self, obj):
         self._obj = obj
         attrs = ('mask', 'polygons', 'use_individual_kcb',
                  'input_root', 'output_root', 'output_path', 'write_freq', 'use_verify_paths',
                  'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
-                 'y_cord_name')
+                 'y_cord_name',
+                 'taw_modification')
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
 

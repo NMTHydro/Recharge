@@ -14,13 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-"""
-The purpose of this module is to initialize empty etrm arrays before run.
-
-returns dict with all rasters under keys of etrm variable names
-
-dgketchum 24 JUL 2016
-"""
 
 import os
 from datetime import datetime
@@ -29,9 +22,9 @@ from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum, 
 from osgeo import ogr
 from pandas import DataFrame, date_range, MultiIndex
 
+from app.paths import paths
 from recharge import STATIC_KEYS, OUTPUTS
 from recharge.raster import Raster
-from app.paths import paths
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
@@ -46,7 +39,19 @@ def set_constants(ze=40, p=0.4,
                   snow_alpha=0.2, snow_beta=11.0,
                   ke_max=1.0,
                   a_min=0.45, a_max=0.90):
+    """
 
+    :param ze:
+    :param p:
+    :param kc_min:
+    :param kc_max:
+    :param snow_alpha:
+    :param snow_beta:
+    :param ke_max:
+    :param a_min:
+    :param a_max:
+    :return:
+    """
     d = dict(s_mon=datetime(1900, 7, 1),
              e_mon=datetime(1900, 10, 1),
              ze=ze, p=p,
@@ -81,6 +86,10 @@ def initialize_master_dict(shape):
 
 
 def initialize_static_dict():
+    """
+
+    :return:
+    """
     def initial_plant_height(r):
         # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
         return r * 0.3048
@@ -164,6 +173,13 @@ def initialize_static_dict():
 
 
 def tiff_list(root, sort=True):
+    """
+
+    :type sort: bool
+    :param root:
+    :param sort:
+    :return:
+    """
     fs = [fn for fn in os.listdir(root) if fn.endswith('.tif')]
     if sort:
         fs = sorted(fs)
@@ -171,6 +187,10 @@ def tiff_list(root, sort=True):
 
 
 def initialize_initial_conditions_dict():
+    """
+
+    :return:
+    """
     # read in initial soil moisture conditions from spin up, put in dict
     inputs_root = paths.initial_inputs
     fs = tiff_list(inputs_root)
@@ -190,12 +210,23 @@ def initialize_initial_conditions_dict():
 
 
 def initialize_raster_tracker(shape):
+    """
+
+    :param shape:
+    :return:
+    """
     keys = ('current_year', 'current_month', 'current_day', 'last_mo', 'last_yr', 'yesterday')
     d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in keys}
     return d
 
 
 def initialize_tabular_dict(date_range_, write_frequency):
+    """
+
+    :param date_range_:
+    :param write_frequency:
+    :return:
+    """
     units = ('AF', 'CBM')
 
     outputs = OUTPUTS
@@ -236,12 +267,21 @@ def initialize_tabular_dict(date_range_, write_frequency):
 
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will
-     be filled as the simulation progresses"""
+     be filled as the simulation progresses
+
+     :param master: dict
+
+     """
     tracker = DataFrame(columns=sorted(master.keys()))
     return tracker
 
 
 def cmb_sample_site_data(shape):
+    """
+
+    :param shape:
+    :return:
+    """
     ds = ogr.Open(shape)
     lyr = ds.GetLayer()
     cmb_dict = {}
