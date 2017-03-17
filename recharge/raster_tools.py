@@ -18,15 +18,18 @@ The purpose of this module is to provide some simple tools needed for raster pro
 
 
 """
+import rasterio
+from affine import Affine
 from osgeo import gdal
-from numpy import array, asarray
+from numpy import array, asarray, meshgrid, frompyfunc, arange
 from numpy.ma import masked_where, nomask, filled
 from datetime import datetime
 import os
 
+from pandas import DataFrame
+
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
-
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
@@ -88,11 +91,19 @@ def apply_mask(mask_path, arr):
 
 
 def get_mask(path):
-    idxs = None
     file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
+
     if file_name is not None:
-        mask = convert_raster_to_array(path, file_name)
-        idxs = asarray(mask, dtype=bool)
+        return get_mask_arr(path, file_name)
+        # if file_name is not None:
+        #     mask = convert_raster_to_array(path, file_name)
+        #     idxs = asarray(mask, dtype=bool)
+        # return idxs
+
+
+def get_mask_arr(path, name):
+    mask = convert_raster_to_array(path, name)
+    idxs = asarray(mask, dtype=bool)
     return idxs
 
 
@@ -199,7 +210,81 @@ def make_results_dir(out_root, shapes):
     return results_directories
 
 
+def get_gps_coordinates(tiff_path):
+    with rasterio.open(tiff_path) as r:
+        t0 = r.affine  # upper-left pixel corner affine transform
+        # arr = r.read(1)  # pixel values
+        mesh = meshgrid(arange(r.width), arange(r.height))  # cols, rows
+        t1 = t0 * Affine.translation(0.5, 0.5)
+
+        transform = frompyfunc(lambda pt: pt * t1)
+        mesh = transform(mesh)
+
+        return mesh
+        # northings, eastings = mesh.T
+        # return northings, eastings
+
+
+def tiff_framer(root, mask_path, tiff_list):
+    mask_arr = get_mask(mask_path)
+
+    gps = get_gps_coordinates(mask_path)
+
+    arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
+
+    nrows, ncols = arrs[0].shape
+
+    def rowfactory(r, c):
+        return gps[r, c] + tuple([arr[r, c] for arr in arrs])
+
+    rows = [rowfactory(ri, ci) for ri in xrange(nrows) for ci in xrange(ncols) if mask_arr[ri, ci]]
+    df = DataFrame(rows)
+    return df
+
+
+def coord_getter_old(tiff_path):
+    """
+    http://gis.stackexchange.com/questions/129847/obtain-coordinates-and-corresponding-pixel-values-from-geotiff-using-python-gdal
+    """
+    import numpy as np
+    # Read raster
+    with rasterio.open(tiff_path) as r:
+        t0 = r.affine  # upper-left pixel corner affine transform
+        # p1 = Proj(r.crs)
+        a = r.read(1)  # pixel values
+
+    # All rows and columns
+    cols, rows = meshgrid(arange(a.shape[1]), arange(a.shape[0]))
+
+    # Get affine transform for pixel centres
+    t1 = t0 * Affine.translation(0.5, 0.5)
+    print "T1", t1
+    # Function to convert pixel row/column index (from 0) to easting/northing at centre
+    rc2en = lambda r, c: (c, r) * t1
+
+    # All eastings and northings (there is probably a faster way to do this)
+    northings, eastings = np.vectorize(rc2en, otypes=[np.float, np.float])(rows, cols)
+
+    # suggested Jake Edits. Talk to him soon.
+    # mesh = meshgrid(arange(cols.shape[1]), arange(rows.shape[0]))
+
+    # print 'mesh', mesh
+
+    # northings, eastings = [(c,r)* T1 for c, r in mesh.T]
+
+    # northings, eastings = (p1*mesh.T).T
+
+    print 'northings', northings
+    print 'eastings', eastings
+
+    return eastings, northings
+
+
 if __name__ == '__main__':
-    pass
+    root = '/Users/ross/Sandbox/ETRM'
+    tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
+    mp = os.path.join(root, 'mask', 'zuni_1.tif')
+
+    tiff_framer(root, mp, tnames)
 
 # =================================== EOF =========================
