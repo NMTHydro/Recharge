@@ -23,7 +23,7 @@ def run():
     cfg = Config()
     etrm = Processes(cfg)
     etrm.set_save_dates(cfg.save_dates)
-    etrm.run()
+    etrm.run(ro_reinf_frac=0.0, allen_ceff=1.0)
 
 
 if __name__ == '__main__':

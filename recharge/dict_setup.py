@@ -42,7 +42,7 @@ et_depletion_factor ASCE pg 226 (0.3 to 0.7 given range) 0.5 common for ag crops
 
 
 def set_constants(ze=40, p=0.4,
-                  kc_min=0.01, kc_max=1.05,
+                  kc_min=0.01, kc_max=1.0,
                   snow_alpha=0.2, snow_beta=11.0,
                   ke_max=1.0,
                   a_min=0.45, a_max=0.90):
