@@ -205,87 +205,54 @@ def make_results_dir(out_root, shapes):
             os.makedirs(dst)
             d[a] = dst
 
-    results_directories[tab_folder] = d
+        results_directories[tab_folder] = d
 
     print 'results dirs: \n{}'.format(results_directories)
     return results_directories
 
 
-def get_gps_coordinates(tiff_path):
-    with rasterio.open(tiff_path) as r:
-        t0 = r.affine  # upper-left pixel corner affine transform
-        # arr = r.read(1)  # pixel values
-        mesh = meshgrid(arange(r.width), arange(r.height))  # cols, rows
-        t1 = t0 * Affine.translation(0.5, 0.5)
+def get_tiff_transform(tiff_path, tx=0.5, ty=0.5):
+    with rasterio.open(tiff_path) as rfile:
+        t0 = rfile.affine  # upper-left pixel corner affine transform
+        t1 = t0 * Affine.translation(tx, ty)
 
-        transform = frompyfunc(lambda pt: pt * t1)
-        mesh = transform(mesh)
-
-        return mesh
-        # northings, eastings = mesh.T
-        # return northings, eastings
+        transform = frompyfunc(lambda r, c: (c, r) * t1, 2, 1)
+        return transform
 
 
 def tiff_framer(root, mask_path, tiff_list):
     mask_arr = get_mask(mask_path)
 
-    gps = get_gps_coordinates(mask_path)
-
     arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
 
     nrows, ncols = arrs[0].shape
 
+    transform = get_tiff_transform(mask_path)
+
     def rowfactory(r, c):
-        return gps[r, c] + tuple([arr[r, c] for arr in arrs])
+        gps_pt = transform(r, c)
+        return gps_pt + tuple(arr[r, c] for arr in arrs)
 
     rows = [rowfactory(ri, ci) for ri in xrange(nrows) for ci in xrange(ncols) if mask_arr[ri, ci]]
     df = DataFrame(rows)
     return df
 
 
-def coord_getter_old(tiff_path):
-    """
-    http://gis.stackexchange.com/questions/129847/obtain-coordinates-and-corresponding-pixel-values-from-geotiff-using-python-gdal
-    """
-    import numpy as np
-    # Read raster
-    with rasterio.open(tiff_path) as r:
-        t0 = r.affine  # upper-left pixel corner affine transform
-        # p1 = Proj(r.crs)
-        a = r.read(1)  # pixel values
-
-    # All rows and columns
-    cols, rows = meshgrid(arange(a.shape[1]), arange(a.shape[0]))
-
-    # Get affine transform for pixel centres
-    t1 = t0 * Affine.translation(0.5, 0.5)
-    print "T1", t1
-    # Function to convert pixel row/column index (from 0) to easting/northing at centre
-    rc2en = lambda r, c: (c, r) * t1
-
-    # All eastings and northings (there is probably a faster way to do this)
-    northings, eastings = np.vectorize(rc2en, otypes=[np.float, np.float])(rows, cols)
-
-    # suggested Jake Edits. Talk to him soon.
-    # mesh = meshgrid(arange(cols.shape[1]), arange(rows.shape[0]))
-
-    # print 'mesh', mesh
-
-    # northings, eastings = [(c,r)* T1 for c, r in mesh.T]
-
-    # northings, eastings = (p1*mesh.T).T
-
-    print 'northings', northings
-    print 'eastings', eastings
-
-    return eastings, northings
-
-
 if __name__ == '__main__':
     root = '/Users/ross/Sandbox/ETRM'
     tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
-    mp = os.path.join(root, 'mask', 'zuni_1.tif')
 
-    tiff_framer(root, mp, tnames)
+    p = os.path.join(root, tnames[0])
+    import time
+
+    # st = time.time()
+    # get_gps_coordinates(p)
+    # print 'geta', time.time() - st
+
+    # st = time.time()
+    # coord_getter_old(p)
+    # print 'getb', time.time() - st
+    # mp = os.path.join(root, 'mask', 'zuni_1.tif')
+    # tiff_framer(root, mp, tnames)
 
 # =================================== EOF =========================
