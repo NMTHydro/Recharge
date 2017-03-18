@@ -23,7 +23,7 @@ from datetime import datetime
 
 import rasterio
 from affine import Affine
-from numpy import array, asarray, meshgrid, frompyfunc, arange
+from numpy import array, asarray
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 from pandas import DataFrame
@@ -215,44 +215,51 @@ def get_tiff_transform(tiff_path, tx=0.5, ty=0.5):
     with rasterio.open(tiff_path) as rfile:
         t0 = rfile.affine  # upper-left pixel corner affine transform
         t1 = t0 * Affine.translation(tx, ty)
-
-        transform = frompyfunc(lambda r, c: (c, r) * t1, 2, 1)
-        return transform
+        return lambda pt: pt * t1
 
 
-def tiff_framer(root, mask_path, tiff_list):
-    mask_arr = get_mask(mask_path)
+def tiff_framer(mask_path, tiff_list):
+    """
+    this function stacks tiffs depth-wise, applys a mask and creates a DataFrame
 
-    arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
+    E,N,Tiff0,Tiff1,...TiffN
 
-    nrows, ncols = arrs[0].shape
+    :param mask_path: path to mask tiff
+    :param tiff_list: list of tiff paths
+
+    :return DataFrame
+    """
+
+    mask_arr = get_mask_arr(*os.path.split(mask_path))
+
+    import time
 
     transform = get_tiff_transform(mask_path)
 
-    def rowfactory(r, c):
-        gps_pt = transform(r, c)
-        return gps_pt + tuple(arr[r, c] for arr in arrs)
+    st = time.time()
+    arrs = [convert_raster_to_array(*os.path.split(tiff_path)) for tiff_path in tiff_list]
+    print 'get arrays', time.time() - st
 
+    nrows, ncols = arrs[0].shape
+
+    def rowfactory(r, c):
+        gps_pt = transform((c, r))
+        return (int(gps_pt[0]), int(gps_pt[1])) + tuple(a[r, c] for a in arrs)
+
+    st = time.time()
     rows = [rowfactory(ri, ci) for ri in xrange(nrows) for ci in xrange(ncols) if mask_arr[ri, ci]]
+    print 'get rows', time.time() - st
+
     df = DataFrame(rows)
     return df
 
 
 if __name__ == '__main__':
-    root = '/Users/ross/Sandbox/ETRM'
+    rr = '/Users/ross/Sandbox/ETRM'
     tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
+    tnames = ['de_30_12_2013.tif', 'dr_30_12_2013.tif']
 
-    p = os.path.join(root, tnames[0])
-    import time
-
-    # st = time.time()
-    # get_gps_coordinates(p)
-    # print 'geta', time.time() - st
-
-    # st = time.time()
-    # coord_getter_old(p)
-    # print 'getb', time.time() - st
-    # mp = os.path.join(root, 'mask', 'zuni_1.tif')
-    # tiff_framer(root, mp, tnames)
+    mp = os.path.join(rr, 'mask', 'zuni_1.tif')
+    print tiff_framer(mp, [os.path.join(rr, ti) for ti in tnames])
 
 # =================================== EOF =========================

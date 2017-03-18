@@ -15,6 +15,7 @@
 # ===============================================================================
 
 import os
+import shutil
 import time
 
 from numpy import maximum, minimum, where, isnan, exp, median
@@ -68,13 +69,14 @@ class Processes(object):
         # self._master = time_it(initialize_master_dict, shape)
 
         self._static = initialize_static_dict()
-        shape = self._static['taw'].shape
         self._initial = initialize_initial_conditions_dict()
+
+        shape = self._static['taw'].shape
         self._master = initialize_master_dict(shape)
 
         self._raster_manager = RasterManager(cfg)
 
-        time_it(self.initialize)
+        self.initialize()
 
     def configure_run(self, runspec):
         """
@@ -217,9 +219,9 @@ class Processes(object):
         self._info('Initialize initial model state')
         m = self._master
 
-        m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
-        m['pde'], m['de'] = self._initial['de'], self._initial['de']
-        m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+        m['pdr'] = m['dr'] = self._initial['dr']
+        m['pde'] = m['de'] = self._initial['de']
+        m['pdrew'] = m['drew'] = self._initial['drew']
 
         s = self._static
         for key in ('rew', 'tew', 'taw', 'soil_ksat'):
@@ -228,6 +230,11 @@ class Processes(object):
             self._debug(msg)
 
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
+
+        # copy the mask path file into results
+        path = paths.mask
+        name = os.path.basename(path)
+        shutil.copyfile(paths.mask, os.path.join(paths.etrm_output_root, name))
 
     def save_tracker(self, path=None):
         """
@@ -489,7 +496,7 @@ class Processes(object):
         m['ke_init'] = ke_init
 
         # ke evaporation efficency; Allen 2011, Eq 13a
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), tew * kc_max, 1)
         ke = maximum(0.01, ke)
         m['ke'] = ke
 
