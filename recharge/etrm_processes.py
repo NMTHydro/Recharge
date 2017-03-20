@@ -82,7 +82,7 @@ class Processes(object):
 
         time_it(self.initialize)
 
-    def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
+    def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='fao', allen_ceff=1.0):
 
         start, end = self._start_date, self._end_date
         self._info('Run started. Simulation period: start={}, end={}'.format(start, end))
@@ -360,8 +360,8 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
-        ke = maximum(0.01, ke)
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
+        ke = maximum(0.01, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
@@ -405,7 +405,7 @@ class Processes(object):
         m['de'] = de = minimum(maximum(pde - (water - ro) + evap/few, 0), tew)
 
         # Calculate depletion in REW, skin layer
-        m['drew'] = drew = minimum(maximum(pdrew - (water - ro) + evap/few, 0), rew)
+        m['drew'] = drew = minimum(maximum(pdrew - ((water - ro) * ceff) + evap/few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 
@@ -442,6 +442,7 @@ class Processes(object):
         m['ke_init'] = ke_init
 
         # ke evaporation efficency; Allen 2011, Eq 13a
+        few = m['few']
         ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
         ke = maximum(0.01, ke)
         m['ke'] = ke

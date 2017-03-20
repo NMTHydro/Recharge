@@ -67,20 +67,20 @@ def get_kcb(in_path, date_object):
 
 
 if __name__ == '__main__':
-    input_root = 'F:\\ETRM_Inputs'
+    input_root = '/Volumes/Seagate Expansion Drive/ETRM_Inputs'
     # mask = 'Mask'
     # mask_path = os.path.join(input_root, mask)
     ndvi_path = os.path.join(input_root, 'NDVI', 'NDVI_std_all')
 
     penman_path = os.path.join(input_root, 'PM_RAD')
     penman_example = 'PM_NM_2000_001.tif'
-    map_for_reference = os.path.join(penman_path, '2000', penman_example)
+    map_for_reference = os.path.join(penman_path, 'PM2000', penman_example)
     _, _, _, _, x, y, _, prj, fill_val = read_map(map_for_reference, 'Gtiff')
 
     # print('ndvi_path',ndvi_path)
 
-    start = datetime.datetime(2000, 1, 1, 0)
-    end = datetime.datetime(2001, 12, 31, 0)
+    start = datetime.datetime(2012, 1, 1, 0)
+    end = datetime.datetime(2012, 12, 31, 0)
 
     fill_val = -999.
 
