@@ -15,77 +15,116 @@
 # ===============================================================================
 
 import os
+import shutil
 import time
-from numpy import ones, zeros, maximum, minimum, where, isnan, exp, median
-from dateutil import rrule
 
+from numpy import maximum, minimum, where, isnan, exp, median
+
+from app.paths import paths, PathsNotSetExecption
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
+from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_individ_kcb
-from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it
+from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it, day_generator
 
 
 class Processes(object):
     """
-    The purpose of this class is update the etrm master dict daily.  It should work for both point and
-    distributed model runs.
+    The purpose of this class is update the etrm master dict daily.
+
     See function explanations.
 
-    Returns dict with all rasters under keys of etrm variable names.
-
-    dgketchum 24 JUL 2016
     """
+    _date_range = None
+    _use_individual_kcb = None
+    _ro_reinf_frac = 0.0
+    _swb_mode = 'swb'
+    _allen_ceff = 1.0
+    _winter_evap_limiter = 0.3
+    _winter_end_day = 92
+    _winter_start_day = 306
 
-    tracker = None
-    _initial_depletions = None
+    def __init__(self, cfg):
+        self.tracker = None
+        self._initial_depletions = None
 
-    def __init__(self,
-                 date_range,
-                 input_root,
-                 output_root,
-                 mask='Mask',
-                 polygons='Blank_Geo',
-                 write_freq=None):
+        if not paths.is_set():
+            raise PathsNotSetExecption()
 
-        #TAW MOD CHANGE
-        #self.taw_mod = taw_modification
-        self._mask_path = os.path.join(input_root, mask)
-        self._polygons_path = os.path.join(input_root, polygons)
-        self._output_root = output_root
+        self._cfg = cfg
+        mask = cfg.mask
+        polygons = cfg.polygons
+
+        paths.set_polygons_path(polygons)
+        paths.set_mask_path(mask)
+
+        if cfg.use_verify_paths:
+            paths.verify()
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        self._constants = time_it(set_constants)
+        # self._constants = time_it(set_constants)
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
 
-        static_inputs = os.path.join(input_root, 'statics')
-        initial_inputs = os.path.join(input_root, 'initialize')
+        # self._static = time_it(initialize_static_dict)
+        # shape = self._static['taw'].shape
+        # self._initial = time_it(initialize_initial_conditions_dict)
+        # self._master = time_it(initialize_master_dict, shape)
 
-        #TAW MOD CHANGE
-        self._static = time_it(initialize_static_dict, static_inputs, self._mask_path)
-        self._shape = self._static['taw'].shape
-        self._initial = time_it(initialize_initial_conditions_dict, initial_inputs, self._mask_path)
-        self._master = time_it(initialize_master_dict, self._shape)
+        self._constants = set_constants()
+        self._static = initialize_static_dict(cfg.static_pairs)
+        self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
 
-        # self._ones, self._zeros = ones(self._shape), zeros(self._shape)
-        self._raster_manager = RasterManager(static_inputs, self._polygons_path, date_range, output_root,
-                                             write_freq)  # self._outputs
+        shape = self._static['taw'].shape
+        self._master = initialize_master_dict(shape)
 
-        self._ndvi_path = os.path.join(input_root, 'NDVI_individ')
-        self._prism_path = os.path.join(input_root, 'PRISM')
-        self._penman_path = os.path.join(input_root, 'PM_RAD')
-        self._start_date, self._end_date = date_range
+        self._raster_manager = RasterManager(cfg)
 
-        time_it(self.initialize)
+        self.initialize()
 
-    def run(self, sensitivity_matrix_column=None, ro_reinf_frac=0.0, swb_mode='fao', allen_ceff=1.0):
+    def configure_run(self, runspec):
+        """
+        configure the model run with a RunSpec object
 
-        start, end = self._start_date, self._end_date
-        self._info('Run started. Simulation period: start={}, end={}'.format(start, end))
+        :param runspec: RunSpec
+        :return:
+        """
+        if runspec.save_dates:
+            self.set_save_dates(runspec.save_dates)
+
+        if runspec.taw_modification is not None:
+            self.modify_taw(runspec.taw_modification)
+
+        self._date_range = runspec.date_range
+        self._use_individual_kcb = runspec.use_individual_kcb
+        self._ro_reinf_frac = runspec.ro_reinf_frac
+        self._swb_mode = runspec.swb_mode
+        self._allen_ceff = runspec.allen_ceff
+        self._winter_evap_limiter = runspec.winter_evap_limiter
+        self._winter_end_day = runspec.winter_end_day
+        self._winter_start_day = runspec.winter_start_day
+
+    def run(self, ro_reinf_frac=None, swb_mode=None, allen_ceff=None):
+        """
+
+        :param ro_reinf_frac:
+        :param swb_mode:
+        :param allen_ceff:
+        :return:
+        """
+        if ro_reinf_frac is None:
+            ro_reinf_frac = self._ro_reinf_frac
+
+        if swb_mode is None:
+            swb_mode = self._swb_mode
+
+        if allen_ceff is None:
+            allen_ceff = self._allen_ceff
+
+        self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
         c = self._constants
         m = self._master
@@ -93,9 +132,10 @@ class Processes(object):
         rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
+        self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
 
         st = time.time()
-        for day in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
+        for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
             self._info('DAY:     {}({})'.format(day, tm_yday))
 
@@ -109,12 +149,8 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            if sensitivity_matrix_column:
-                time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
-
-            # self._do_dual_crop_coefficient(tm_yday, m, s, c)
-            # self._do_snow()
-            # self._do_soil_ksat_adjustment(m, s)
+            # if sensitivity_matrix_column:
+            #     time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
 
             time_it(self._do_snow, m, c)
             time_it(self._do_soil_ksat_adjustment, m, s)
@@ -122,7 +158,7 @@ class Processes(object):
             time_it(self._do_fraction_covered, m, s, c)
 
             if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
+                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
             elif swb_mode == 'vertical':
                 time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
 
@@ -133,10 +169,8 @@ class Processes(object):
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            time_it(rm.update_raster_obj, m, self._mask_path, day)
+            time_it(rm.update_raster_obj, m, day)
             time_it(self._update_master_tracker, m, day)
-
-            m['first_day'] = False
 
         self._info('saving tabulated data')
         time_it(rm.save_csv)
@@ -144,31 +178,74 @@ class Processes(object):
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
+    def set_save_dates(self, dates):
+        """
+        set the individual days to write
+
+        :param dates: list of datetimes
+        :return:
+        """
+        self._raster_manager.set_save_dates(dates)
+
+    def modify_master(self, alpha=1, beta=1, gamma=1, zeta=1, theta=1):
+        """
+        modify the master dictionary
+
+        :param alpha: temp scalar
+        :param beta: precip scalar
+        :param gamma: etrs scalar
+        :param zeta: kcb scalar
+        :param theta: soil_ksat scalar
+        :return:
+        """
+        m = self._master
+        m['temp'] += alpha
+        m['precip'] *= beta
+        m['etrs'] *= gamma
+        m['kcb'] *= zeta
+        m['soil_ksat'] *= theta
+
     def modify_taw(self, taw_modification):
+        """
+        Gets the taw array, modifies it by a constant scalar value
+        (taw_modification) and returns the resulting array
+
+        :param taw_modification: object
+        :return: taw array
+
+        """
 
         s = self._static
-
         taw = s['taw']
-
         taw = taw * taw_modification
-
         s['taw'] = taw
 
+        return taw
+
+    def get_taw(self):
+        """
+        Gets the TAW array and returns it
+
+        :return: TAW array
+        """
+
+        s = self._static
+        taw = s['taw']
+
+        return taw
 
     def initialize(self):
+        """
+        initialize the models initial state
+
+        :return:
+        """
         self._info('Initialize initial model state')
         m = self._master
 
-        m['first_day'] = True
-        m['albedo'] = ones(self._shape) * 0.45
-        m['swe'] = zeros(self._shape)  # this should be initialized correctly using simulation results
-        # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
-        # by method of Ritchie et al (1989), rew derived from percent sand/clay
-        m['dry_days'] = zeros(self._shape)
-
-        m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
-        m['pde'], m['de'] = self._initial['de'], self._initial['de']
-        m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
+        m['pdr'] = m['dr'] = self._initial['dr']
+        m['pde'] = m['de'] = self._initial['de']
+        m['pdrew'] = m['drew'] = self._initial['drew']
 
         s = self._static
         for key in ('rew', 'tew', 'taw', 'soil_ksat'):
@@ -176,37 +253,31 @@ class Processes(object):
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
 
-        # self._debug('rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
-        #                                                        s['rew'].max(),
-        #                                                        s['rew'].min()))
-        # self._debug('tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
-        #                                                        s['tew'].max(),
-        #                                                        s['tew'].min()))
-        # self._debug('taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
-        #                                                        s['taw'].max(),
-        #                                                        s['taw'].min()))
-        # self._debug('soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
-        #                                                              s['soil_ksat'].mean(),
-        #                                                              s['soil_ksat'].max(),
-        #                                                              s['soil_ksat'].min()))
-
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
+        # copy the mask path file into results
+        path = paths.mask
+        name = os.path.basename(path)
+        shutil.copyfile(paths.mask, os.path.join(paths.etrm_output_root, name))
+
     def save_tracker(self, path=None):
+        """
+
+        :param path:
+        :return:
+        """
         self._info('Saving tracker')
 
         base = 'etrm_master_tracker'
         if path is None:
-            path = add_extension(os.path.join(self._output_root, base), '.csv')
+            path = add_extension(os.path.join(paths.etrm_output_root, base), '.csv')
 
         if os.path.isfile(path):
-
-            path = unique_path(self._output_root, base, '.csv')
+            path = unique_path(paths.etrm_output_root, base, '.csv')
 
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
         self.tracker.to_csv(path, na_rep='nan', index_label='Date')
-
 
     def _do_snow(self, m, c):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
@@ -224,10 +295,7 @@ class Processes(object):
 
         sf = where(temp < 0.0, precip, 0)
         rain = where(temp >= 0.0, precip, 0)
-        # alb = where(m['snow_fall'] > 3.0, self._ones * c['a_max'], palb)
-        # alb = where(m['snow_fall'] <= 3.0, c['a_min'] + (palb - c['a_min']) * exp(-0.12), alb)
-        # alb = where(m['snow_fall'] == 0.0, c['a_min'] + (palb - c['a_min']) * exp(-0.05), alb)
-        # alb = where(alb < c['a_min'], c['a_min'], alb)
+
         alb = where(sf > 3.0, a_max, palb)
         alb = where(sf <= 3.0, a_min + (palb - a_min) * exp(-0.12), alb)
         alb = where(sf == 0.0, a_min + (palb - a_min) * exp(-0.05), alb)
@@ -254,22 +322,32 @@ class Processes(object):
         land_cover = s['land_cover']
         soil_ksat = m['soil_ksat']
 
-        o = ones(soil_ksat.shape)
-        soil_ksat = where((land_cover == 41) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 41) & (water < 12.0 * ones(soil_ksat.shape)),
-                          soil_ksat * 1.2 * o, soil_ksat)
-        soil_ksat = where((land_cover == 42) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 42) & (water < 12.0 * o),
-                          soil_ksat * 1.2 * o, soil_ksat)
-        soil_ksat = where((land_cover == 43) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 43) & (water < 12.0 * o),
-                          soil_ksat * 1.2 * o, soil_ksat)
+        # o = ones(soil_ksat.shape)
+        # soil_ksat = where((land_cover == 41) & (water < 50.0 * o),
+        #                   soil_ksat * 2.0 * o, soil_ksat)
+        # soil_ksat = where((land_cover == 41) & (water < 12.0 * ones(soil_ksat.shape)),
+        #                   soil_ksat * 1.2 * o, soil_ksat)
+        # soil_ksat = where((land_cover == 42) & (water < 50.0 * o),
+        #                   soil_ksat * 2.0 * o, soil_ksat)
+        # soil_ksat = where((land_cover == 42) & (water < 12.0 * o),
+        #                   soil_ksat * 1.2 * o, soil_ksat)
+        # soil_ksat = where((land_cover == 43) & (water < 50.0 * o),
+        #                   soil_ksat * 2.0 * o, soil_ksat)
+        # soil_ksat = where((land_cover == 43) & (water < 12.0 * o),
+        #                   soil_ksat * 1.2 * o, soil_ksat)
+
+        for lc, wthres, ksat_scalar in ((41, 50.0, 2.0),
+                                        (41, 12.0, 1.2),
+
+                                        (42, 50.0, 2.0),
+                                        (42, 12.0, 1.2),
+
+                                        (43, 50.0, 2.0),
+                                        (43, 12.0, 1.2)):
+
+            soil_ksat = where((land_cover == lc) & (water < wthres), soil_ksat * ksat_scalar, soil_ksat)
 
         m['soil_ksat'] = soil_ksat
-
 
     def _do_dual_crop_transpiration(self, tm_yday, m, s, c):
         """ Calculate dual crop coefficients for transpiration only.
@@ -294,10 +372,10 @@ class Processes(object):
 
         # enforce winter dormancy of vegetation
         m['transp_adj'] = False
-        if 92 > tm_yday or tm_yday > 306:
+        if self._winter_end_day > tm_yday or tm_yday > self._winter_start_day:
             # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
             # Using 30% DC 2/20/17
-            transp *= 0.3
+            transp *= self._winter_evap_limiter
             m['transp_adj'] = True
 
         m['transp'] = transp
@@ -324,7 +402,6 @@ class Processes(object):
     def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate evap and all soil water balance at each time step.
 
-        :return: None
         """
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
@@ -405,7 +482,7 @@ class Processes(object):
         m['de'] = de = minimum(maximum(pde - (water - ro) + evap/few, 0), tew)
 
         # Calculate depletion in REW, skin layer
-        m['drew'] = drew = minimum(maximum(pdrew - ((water - ro) * ceff) + evap/few, 0), rew)
+        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap/few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 
@@ -509,42 +586,63 @@ class Processes(object):
         water_av_rew = water * ceff
         water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
 
-        # fill depletion in REW if possible
-        drew = where(water_av_rew >= pdrew + evap_1, 0, pdrew + evap_1 - water_av_rew)
-        drew = minimum(drew, rew)
+        # # fill depletion in REW if possible
+        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew+evap_1)
 
-        # add excess water to the water available to TEW (Is this coding ok?)
-        water_av_tew = where(water_av_rew >= pdrew + evap_1,
-                             water_av_tew + water_av_rew - (pdrew + evap_1),
-                             water_av_tew)
+        # # fill depletion in REW if possible
+        # evap__ = pdrew + evap_1
+        # drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
+        # drew = minimum(drew, rew)
+        #
+        # # add excess water to the water available to TEW (Is this coding ok?)
+        # water_av_tew = where(water_av_rew >= evap__,
+        #                      water_av_tew + water_av_rew - evap__,
+        #                      water_av_tew)
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
         water_av_tew *= ceff
         water_av_taw += water_av_tew * (1.0 - ceff)
 
-        # fill depletion in TEW if possible
-        de = where(water_av_tew >= pde + evap_2, 0, pde + evap_2 - water_av_tew)
-        de = minimum(de, tew)
+        # # fill depletion in TEW if possible
+        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde+evap_2)
 
-        # add excess water to the water available to TAW (Help coding this more cleanly?)
-        water_av_taw = where(water_av_tew >= pde + evap_2,
-                             water_av_taw + water_av_tew - (pde + evap_2),
-                             water_av_taw)
+        # # fill depletion in TEW if possible
+        # evap2__ = pde + evap_2
+        # de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
+        # de = minimum(de, tew)
+        #
+        # # add excess water to the water available to TAW (Help coding this more cleanly?)
+        # water_av_taw = where(water_av_tew >= evap2__,
+        #                      water_av_taw + water_av_tew - evap2__,
+        #                      water_av_taw)
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone
 
         # fill depletion in TAW if possible
         depletion = pdr + transp
-        m['infil'] = where(water_av_taw >= depletion, water_av_taw - depletion, 0)
-        dr = where(water_av_taw >= depletion, 0, depletion - water_av_taw)
+
+        dd = water_av_taw - depletion
+        m['infil'] = where(water_av_taw >= depletion, dd, 0)
+        dr = where(water_av_taw >= depletion, 0, dd*-1)
 
         m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
         m['drew'] = drew
         m['de'] = de
         m['dr'] = dr
+
+    def _fill_depletions(self, arr_1, arr_2, t, evap):
+
+        # fill depletion in REW if possible
+        drew = where(arr_1 >= evap, 0, evap - arr_1)
+        drew = minimum(drew, t)
+
+        # add excess water to the water available to TEW (Is this coding ok?)
+        arr_2 = where(arr_1 >= evap, arr_2 + arr_1 - evap, arr_2)
+
+        return arr_2, drew
 
     def _do_accumulations(self):
         """ This function simply accumulates all terms.
@@ -553,39 +651,17 @@ class Processes(object):
         """
         m = self._master
 
-        # strangely, these keys wouldn't update with augmented assignment
-        # i.e. m['tot_infil] += m['infil'] wasn't working
-        # m['tot_infil'] = m['infil'] + m['tot_infil']
-        # m['tot_etrs'] = m['etrs'] + m['tot_etrs']
-        # m['tot_eta'] = m['eta'] + m['tot_eta']
-        # m['tot_precip'] = m['precip'] + m['tot_precip']
-        # m['tot_rain'] = m['rain'] + m['tot_rain']
-        # m['tot_melt'] = m['melt'] + m['tot_melt']
-        # m['tot_ro'] = m['ro'] + m['tot_ro']
-        # m['tot_snow'] = m['snow_fall'] + m['tot_snow']
-
         for k in ('infil', 'etrs', 'eta', 'precip', 'rain', 'melt', 'ro', 'swe'):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
-        print 'today infil: {}, etrs: {}, eta: {}, ' \
-              'precip: {}, ro: {}, swe: {}, stor {}'.format(mm_af(m['infil']),
-                                                            mm_af(m['etrs']),
-                                                            mm_af(m['eta']),
-                                                            mm_af(m['precip']),
-                                                            mm_af(m['ro']),
-                                                            mm_af(m['swe']),
-                                                            mm_af(m['soil_storage']))
+        ms = [mm_af(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
+        print 'today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(*ms)
 
-        print 'total infil: {}, etrs: {}, eta: {}, ' \
-              'precip: {}, ro: {}, swe: {}'.format(mm_af(m['tot_infil']),
-                                                   mm_af(m['tot_etrs']),
-                                                   mm_af(m['tot_eta']),
-                                                   mm_af(m['tot_precip']),
-                                                   mm_af(m['tot_ro']),
-                                                   mm_af(m['tot_swe']))
+        ms = [mm_af(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
+        print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -637,40 +713,49 @@ class Processes(object):
         param date: datetime.day object
         :return: None
         """
-        ndvi, prism, penman = self._ndvi_path, self._prism_path, self._penman_path
         m = self._master
 
-        m['kcb'] = get_individ_kcb(self._mask_path, ndvi, date, m['pkcb'])
+        if self._use_individual_kcb:
+            m['kcb'] = get_individ_kcb(date, m['pkcb'])  # paths.mask
 
-        m['min_temp'] = min_temp = get_prism(self._mask_path, prism, date, variable='min_temp')
-        m['max_temp'] = max_temp = get_prism(self._mask_path, prism, date, variable='max_temp')
+        else:
+            m['kcb'] = get_kcb(date, m['pkcb'])
 
-        m['temp'] = (min_temp + max_temp) / 2
+        min_temp, max_temp, temp, precip = get_prisms(date)
+        m['min_temp'] = min_temp
+        m['max_temp'] = max_temp
+        m['temp'] = temp
+        m['precip'] = precip
 
-        precip = get_prism(self._mask_path, prism, date, variable='precip')
-        m['precip'] = where(precip < 0, 0, precip)
+        # m['min_temp'] = min_temp = get_prism(date, variable='min_temp')
+        # m['max_temp'] = max_temp = get_prism(date, variable='max_temp')
+        #
+        # m['temp'] = (min_temp + max_temp) / 2
+        #
+        # precip = get_prism(date, variable='precip')
+        # m['precip'] = where(precip < 0, 0, precip)
 
-        etrs = get_penman(self._mask_path, penman, date, variable='etrs')
+        etrs = get_penman(date, variable='etrs')
         etrs = where(etrs < 0, 0, etrs)
         m['etrs'] = where(isnan(etrs), 0, etrs)
 
-        m['rg'] = get_penman(self._mask_path, penman, date, variable='rg')
+        m['rg'] = get_penman(date, variable='rg')
 
         m['pkcb'] = m['kcb']
 
-    def _do_parameter_adjustment(self, m, s, adjustment_array):
-
-        alpha, beta, gamma, delta, zeta, theta = adjustment_array
-        if m['first_day']:
-            print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(*adjustment_array)
-            # taw is found once, and should be modified once
-            s['taw'] *= delta
-        # these are found daily, so can be modified daily
-        m['temp'] += alpha
-        m['precip'] *= beta
-        m['etrs'] *= gamma
-        m['kcb'] *= zeta
-        m['soil_ksat'] *= theta
+    # def _do_parameter_adjustment(self, m, s, adjustment_array):
+    #
+    #     alpha, beta, gamma, delta, zeta, theta = adjustment_array
+    #     if m['first_day']:
+    #         print 'a: {}, b: {}, gam: {}, del: {}, z: {}, theta: {}'.format(*adjustment_array)
+    #         # taw is found once, and should be modified once
+    #         s['taw'] *= delta
+    #     # these are found daily, so can be modified daily
+    #     m['temp'] += alpha
+    #     m['precip'] *= beta
+    #     m['etrs'] *= gamma
+    #     m['kcb'] *= zeta
+    #     m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, m, date):
         def factory(k):
@@ -679,7 +764,7 @@ class Processes(object):
             if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
                      'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
                 v = v.mean()
-            elif k in ('first_day', 'transp_adj'):
+            elif k == 'transp_adj':
                 v = median(v)
             else:
                 v = mm_af(v)
@@ -724,23 +809,15 @@ class Processes(object):
         rswe = tracker['swe'][-1]
         print 'remaining snow on ground (swe) = {}'.format(rswe)
 
-        # input_sum = tracker['swe'][-1] + tracker['melt'].sum() + tracker['rain'].sum()
         input_sum = rswe + ms + rs
 
         print 'total inputs (swe, rain, melt): {}'.format(input_sum)
         print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, ps)
         print 'total runoff = {}, total recharge = {}'.format(ros, infils)
 
-        # output_sum = reduce(lambda a, b: a + b, map(sum, (tracker[k] for k in ('transp', 'evap', 'ro', 'infil'))))
-        # output_sum = reduce(lambda a, b: a + b, (sum(tracker[k]) for k in ('transp', 'evap', 'ro', 'infil')))
-        # output_sum = sum(sum(tracker[k]) for k in ('transp', 'evap', 'ro', 'infil'))
         output_sum = ts + et + ros + infils
 
-        # output_sum = sum((tracker[k] for k in ('transp', 'evap', 'ro', 'infil')))
         output_sum += delta_soil_water + rswe  # added swe to output_sum; Dan, 2/11/17
-
-        # output_sum = tracker['transp'].sum() + tracker['evap'].sum() + tracker['ro'].sum() + tracker[
-        #     'infil'].sum() + delta_soil_water
 
         print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
         mass_balance = input_sum - output_sum
@@ -791,7 +868,7 @@ class Processes(object):
 #
 #     start_date, end_date = self._date_range
 #     print 'simulation period: {}'.format((start_date, end_date))
-#     start_monsoon, end_monsoon = c['s_mon'], c['e_mon']
+#     start_monsoon, end_monsoon = c['s_mon'], c['e_mon]
 #     start_time = datetime.now()
 #     print 'start time :{}'.format(start_time)
 #     for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):

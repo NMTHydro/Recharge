@@ -34,13 +34,13 @@ def run(date_range, input_root, output_root, taw_modification):
 if __name__ == '__main__':
     start_year = 2013
     start_month = 12
-    start_day = 29
+    start_day = 1
 
     end_year = 2013
     end_month = 12
     end_day = 31
 
-    taw_modification = 2
+    taw_modification = .6
 
     hard_drive_path = os.path.join('/Volumes','Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
@@ -50,3 +50,5 @@ if __name__ == '__main__':
          datetime(end_year, end_month, end_day)),
         inputs_path,
         outputs_path, taw_modification)
+
+

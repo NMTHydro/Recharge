@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2016 Jake Ross
+# Copyright 2017 ross
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@
 # limitations under the License.
 # ===============================================================================
 
+# ============= enthought library imports =======================
 # ============= standard library imports ========================
-# ============= local library imports  ==========================
-NUMS = (1, 17, 33, 49, 65, 81, 97, 113, 129, 145, 161, 177, 193, 209, 225, 241, 257, 273, 289, 305, 321, 337, 353)
-NUMSIZE = len(NUMS)
+from numpy import where
 
-PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
+from recharge.raster import Raster
 
-STATIC_KEYS = 'bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew'
-INITIAL_KEYS = 'de', 'dr', 'drew'
 
-OUTPUTS = 'tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb'
+def generate_rew_tiff(sand_tif, clay_tif, output):
+    sand = Raster(sand_tif)
+    clay = Raster(clay_tif)
+
+    # From ASCE pg 195, equations from Ritchie et al., 1989
+    rew = 8 + 0.08 * clay
+    rew = where(sand > 80.0, 20.0 - 0.15 * sand, rew)
+    rew = where(clay > 50, 11 - 0.06 * clay, rew)
+
+    out = Raster.fromarray(rew, sand.geo)
+    out.save(output)
 
 # ============= EOF =============================================
-
-
-

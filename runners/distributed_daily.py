@@ -13,28 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-
+import os
 from datetime import datetime
 from recharge.etrm_processes import Processes
+from app.config import Config
 
 
-def run(date_range, input_root, output_root):
-    etrm = Processes(date_range, input_root, output_root)
+def run():
+    cfg = Config()
+    etrm = Processes(cfg)
+    etrm.set_save_dates(cfg.save_dates)
     etrm.run(ro_reinf_frac=0.0, allen_ceff=1.0)
 
 
 if __name__ == '__main__':
-    start_year = 2013
-    start_month = 12
-    start_day = 29
+    run()
 
-    end_year = 2013
-    end_month = 12
-    end_day = 31
-
-    run((datetime(start_year, start_month, start_day),
-         datetime(end_year, end_month, end_day)),
-        'F:\\ETRM_Inputs',
-        'F:\\ETRM_Results')
 
 # ============= EOF =============================================
