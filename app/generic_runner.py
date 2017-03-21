@@ -30,9 +30,7 @@ def run_model():
         paths.build(runspec.input_root, runspec.output_root)
 
         etrm = Processes(runspec)
-
         etrm.configure_run(runspec)
-
         etrm.run()
 
 
@@ -42,18 +40,41 @@ def run_rew():
 
 
 def run_help():
+    print 'help'
+
+
+def run_commands():
     keys = ('model', 'rew', 'help')
     print 'Available Commands: {}'.format(','.join(keys))
 
 
-COMMANDS = {'model': run_model, 'rew': run_rew, 'help': run_help}
+def welcome():
+    print '''====================================================================================
+ _______  _______  ______    __   __
+|       ||       ||    _ |  |  |_|  |
+|    ___||_     _||   | ||  |       |
+|   |___   |   |  |   |_||_ |       |
+|    ___|  |   |  |    __  ||       |
+|   |___   |   |  |   |  | || ||_|| |
+|_______|  |___|  |___|  |_||_|   |_|
+====================================================================================
+Developed by David Ketchum, Jake Ross 2016
+New Mexico Tech/New Mexico Bureau of Geology
+
+
+Available commands are enumerated using "commands"
+
+For more information regarding a specific command use "help <command>". Replace <command> with the command of interest
+'''
 
 
 def run():
+    cmds = {'model': run_model, 'rew': run_rew, 'help': run_help, 'commands': run_commands}
+    welcome()
     while 1:
-        cmd = raw_input('>> ')
+        cmd = raw_input('>>> ')
         try:
-            func = COMMANDS[cmd]
+            func = cmds[cmd]
         except KeyError:
             continue
 
