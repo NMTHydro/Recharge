@@ -13,17 +13,17 @@
 # limitations under the License.
 # ===============================================================================
 
-from datetime import datetime
-from dateutil import rrule
-from numpy import array, where
 import os
-from recharge.dynamic_raster_finder import get_penman, get_prism, get_spline_kcb as get_kcb
-from recharge.raster import Raster
-from recharge.raster_tools import convert_raster_to_array, apply_mask, save_daily_pts
 import time
+
+from dateutil import rrule
+from numpy import array
 
 from app.config import Config
 from app.paths import paths
+from recharge.dynamic_raster_finder import get_penman, get_prism, get_spline_kcb as get_kcb
+from recharge.raster import Raster
+from recharge.raster_tools import save_daily_pts
 
 
 def run():
@@ -72,12 +72,12 @@ def run():
 
     rslope.apply_mask()
     rslope.filter_less(0,0)
-    slope = rslope.array()
+    slope = rslope.array
 
     raspect.apply_mask()
     raspect.filter_less(0, 0)
     raspect.filter_greater(360, 0)
-    aspect = raspect.array()
+    aspect = raspect.array
 
     keys = ('Year', 'Month', 'Day', 'X', 'Y', 'NDVI', 'Tavg', 'Precip', 'ETr',
             'PminusEtr', 'NLCD_class', 'Elev', 'Slope', 'Aspect')

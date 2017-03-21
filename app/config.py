@@ -23,6 +23,7 @@ from datetime import datetime
 import yaml
 
 from app.paths import paths
+from recharge import STATIC_KEYS, INITIAL_KEYS
 
 DEFAULT_CFG = '''
 ---
@@ -45,8 +46,13 @@ daily_outputs:
 
 ro_reinf_frac: 0.0
 swb_mode: swb
-allen_coeff: 1.0
+allen_ceff: 1.0
 winter_evap_limiter: 0.3
+
+initial:
+ de:
+ dr:
+ drew:
 
 '''
 
@@ -71,7 +77,7 @@ class RunSpec:
     taw_modification = 1.0
     ro_reinf_frac = 0.0
     swb_mode = 'swb'
-    allen_coeff = 1.0
+    allen_ceff = 1.0
     winter_evap_limiter = 0.3
     winter_end_day = 92
     winter_start_day = 306
@@ -83,11 +89,35 @@ class RunSpec:
                  'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
                  'y_cord_name',
                  'taw_modification',
-                 'ro_reinf_frac', 'swb_mode', 'allen_coeff',
+                 'ro_reinf_frac', 'swb_mode', 'allen_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
+
+        initial = self._obj.get('initial')
+        if initial:
+            for attr in INITIAL_KEYS:
+                setattr(self, attr, initial.get(attr))
+
+        static = self._obj.get('static')
+        if static:
+            for attr in STATIC_KEYS:
+                setattr(self, attr, static.get(attr))
+
+    @property
+    def initial_pairs(self):
+        try:
+            return tuple((k, getattr(self, k)) for k in INITIAL_KEYS)
+        except AttributeError:
+            pass
+
+    @property
+    def static_pairs(self):
+        try:
+            return tuple((k, getattr(self, k)) for k in STATIC_KEYS)
+        except AttributeError:
+            pass
 
     @property
     def save_dates(self):

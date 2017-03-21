@@ -26,7 +26,7 @@ from osgeo import gdal
 from app.paths import paths
 
 
-class Raster:
+class Raster(object):
     _band = 1
     _path = None
     _arr = None
@@ -40,11 +40,17 @@ class Raster:
             self.open(path, band)
 
     @classmethod
-    def fromarray(cls, arr):
+    def fromarray(cls, arr, geo=None):
         r = cls()
         r._arr = arr
+        r._geo = geo
         return r
 
+    @property
+    def geo(self):
+        return self._geo
+
+    @property
     def array(self):
         """
 
@@ -129,7 +135,7 @@ class Raster:
                      'data_type': rband.DataType, 'projection': raster.GetProjection(),
                      'geotransform': raster.GetGeoTransform(), 'resolution': raster.GetGeoTransform()[1]}
 
-    def save(self, arr=None, geo=None, band=None):
+    def save(self, output, arr=None, geo=None, band=None):
         """
         save an array as a GeoTiff
 
@@ -138,14 +144,14 @@ class Raster:
         :param band:
         :return:
         """
-        op = 'fff'
         if arr is None:
             arr = self._arr
         if geo is None:
             geo = self._geo
         if band is None:
             band = self._band
-        self._save(op, arr, geo, band)
+
+        self._save(output, arr, geo, band)
 
     # private
     def _get_masked_indices(self):

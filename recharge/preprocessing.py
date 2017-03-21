@@ -16,50 +16,21 @@
 
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
-# ============= local library imports  ==========================
-from app.paths import paths
-from config import Config
-from recharge.etrm_processes import Processes
-from recharge.preprocessing import generate_rew_tiff
+from numpy import where
+
+from recharge.raster import Raster
 
 
-def run_model():
-    print 'Running Model'
-    cfg = Config()
-    for runspec in cfg.runspecs:
-        paths.build(runspec.input_root, runspec.output_root)
+def generate_rew_tiff(sand_tif, clay_tif, output):
+    sand = Raster(sand_tif)
+    clay = Raster(clay_tif)
 
-        etrm = Processes(runspec)
+    # From ASCE pg 195, equations from Ritchie et al., 1989
+    rew = 8 + 0.08 * clay
+    rew = where(sand > 80.0, 20.0 - 0.15 * sand, rew)
+    rew = where(clay > 50, 11 - 0.06 * clay, rew)
 
-        etrm.configure_run(runspec)
+    out = Raster.fromarray(rew, sand.geo)
+    out.save(output)
 
-        etrm.run()
-
-
-def run_rew():
-    print 'Running REW'
-    generate_rew_tiff()
-
-
-def run_help():
-    keys = ('model', 'rew', 'help')
-    print 'Available Commands: {}'.format(','.join(keys))
-
-
-COMMANDS = {'model': run_model, 'rew': run_rew, 'help': run_help}
-
-
-def run():
-    while 1:
-        cmd = raw_input('>> ')
-        try:
-            func = COMMANDS[cmd]
-        except KeyError:
-            continue
-
-        func()
-
-
-if __name__ == '__main__':
-    run()
 # ============= EOF =============================================

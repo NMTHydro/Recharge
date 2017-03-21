@@ -39,7 +39,7 @@ class Processes(object):
     _use_individual_kcb = None
     _ro_reinf_frac = 0.0
     _swb_mode = 'swb'
-    _allen_coeff = 1.0
+    _allen_ceff = 1.0
     _winter_evap_limiter = 0.3
     _winter_end_day = 92
     _winter_start_day = 306
@@ -48,13 +48,10 @@ class Processes(object):
         self.tracker = None
         self._initial_depletions = None
 
-        # self._date_range = cfg.date_range
-        # self._use_individual_kcb = cfg.use_individual_kcb
-        self._cfg = cfg
-
         if not paths.is_set():
             raise PathsNotSetExecption()
 
+        self._cfg = cfg
         mask = cfg.mask
         polygons = cfg.polygons
 
@@ -78,8 +75,8 @@ class Processes(object):
         # self._master = time_it(initialize_master_dict, shape)
 
         self._constants = set_constants()
-        self._static = initialize_static_dict()
-        self._initial = initialize_initial_conditions_dict()
+        self._static = initialize_static_dict(cfg.static_pairs)
+        self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
 
         shape = self._static['taw'].shape
         self._master = initialize_master_dict(shape)
@@ -105,12 +102,12 @@ class Processes(object):
         self._use_individual_kcb = runspec.use_individual_kcb
         self._ro_reinf_frac = runspec.ro_reinf_frac
         self._swb_mode = runspec.swb_mode
-        self._allen_coeff = runspec.allen_coeff
+        self._allen_ceff = runspec.allen_ceff
         self._winter_evap_limiter = runspec.winter_evap_limiter
         self._winter_end_day = runspec.winter_end_day
         self._winter_start_day = runspec.winter_start_day
 
-    def run(self, ro_reinf_frac=None, swb_mode=None, allen_coeff=None):
+    def run(self, ro_reinf_frac=None, swb_mode=None, allen_ceff=None):
         """
 
         :param ro_reinf_frac:
@@ -124,8 +121,8 @@ class Processes(object):
         if swb_mode is None:
             swb_mode = self._swb_mode
 
-        if allen_coeff is None:
-            allen_coeff = self._allen_coeff
+        if allen_ceff is None:
+            allen_ceff = self._allen_ceff
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -163,7 +160,7 @@ class Processes(object):
             if swb_mode == 'fao':
                 time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
             elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_coeff)
+                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
 
             time_it(self._do_mass_balance, day, swb=swb_mode)
 
@@ -402,7 +399,7 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0):
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
         """ Calculate evap and all soil water balance at each time step.
 
         """
@@ -440,8 +437,8 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
-        ke = maximum(0.01, ke)
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
+        ke = maximum(0.01, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
@@ -485,7 +482,7 @@ class Processes(object):
         m['de'] = de = minimum(maximum(pde - (water - ro) + evap/few, 0), tew)
 
         # Calculate depletion in REW, skin layer
-        m['drew'] = drew = minimum(maximum(pdrew - (water - ro) + evap/few, 0), rew)
+        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap/few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 
@@ -522,7 +519,8 @@ class Processes(object):
         m['ke_init'] = ke_init
 
         # ke evaporation efficency; Allen 2011, Eq 13a
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), tew * kc_max, 1)
+        few = m['few']
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
         ke = maximum(0.01, ke)
         m['ke'] = ke
 

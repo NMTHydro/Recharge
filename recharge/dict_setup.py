@@ -23,7 +23,7 @@ from osgeo import ogr
 from pandas import DataFrame, date_range, MultiIndex
 
 from app.paths import paths
-from recharge import STATIC_KEYS, OUTPUTS
+from recharge import STATIC_KEYS, OUTPUTS, INITIAL_KEYS
 from recharge.raster import Raster
 
 """
@@ -85,11 +85,12 @@ def initialize_master_dict(shape):
     return master
 
 
-def initialize_static_dict():
+def initialize_static_dict(pairs=None):
     """
 
     :return:
     """
+
     def initial_plant_height(r):
         # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
         return r * 0.3048
@@ -106,18 +107,13 @@ def initialize_static_dict():
     def initial_rew(r):
         return maximum(r, 0.001)
 
-    inputs_root = paths.static_inputs
-    print 'static inputs path: {}'.format(inputs_root)
-
-    # statics = sorted((fn for fn in os.listdir(inputs_root) if fn.endswith('.tif')))
-    statics = tiff_list(inputs_root)
-
     d = {}
-    # this requires that the alphabetically sorted input rasters correspond to the order of the following inputs
+    if pairs is None:
+        print 'static inputs path: {}'.format(paths.static_inputs)
+        pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
 
-    for k, fn in zip(STATIC_KEYS, statics):
-        # arr = apply_mask(paths.mask, convert_raster_to_array(inputs_root, fn))
-        raster = Raster(fn, root=inputs_root)
+    for k, p in pairs:
+        raster = Raster(p, root=paths.etrm_input_root)
         arr = raster.masked()
 
         if k == 'plant_height':
@@ -158,11 +154,6 @@ def initialize_static_dict():
     print 'taw median: {}, mean {}, max {}, min {}'.format(median(taw), taw.mean(), taw.max(), taw.min())
     d['taw'] = taw
 
-    # #TAW MOD CHANGE
-    # if taw_mod:
-    #
-    #     d['taw'] = taw_mod * taw
-
     # apply tew adjustment
     tew = where(land_cover == 41, tew * 0.25, tew)
     tew = where(land_cover == 42, tew * 0.25, tew)
@@ -170,6 +161,11 @@ def initialize_static_dict():
     d['tew'] = where(land_cover == 52, tew * 0.75, tew)
 
     return d
+
+
+def make_pairs(root, keys):
+    fs = tiff_list(root)
+    return [(k, os.path.join(root, s)) for k, s in zip(keys, fs)]
 
 
 def tiff_list(root, sort=True):
@@ -186,20 +182,20 @@ def tiff_list(root, sort=True):
     return fs
 
 
-def initialize_initial_conditions_dict():
+def initialize_initial_conditions_dict(pairs=None):
     """
 
     :return:
     """
     # read in initial soil moisture conditions from spin up, put in dict
-    inputs_root = paths.initial_inputs
-    fs = tiff_list(inputs_root)
+
+    if pairs is None:
+        print 'initial inputs path: {}'.format(paths.initial_inputs)
+        pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
 
     d = {}
-    for k, fn in zip(('de', 'dr', 'drew'), fs):
-        # raster = convert_raster_to_array(inputs_root, fn)
-        # data = apply_mask(paths.mask, raster)
-        raster = Raster(fn, root=inputs_root)
+    for k, p in pairs:
+        raster = Raster(p, root=paths.etrm_input_root)
         data = raster.masked()
         d[k] = data
 
