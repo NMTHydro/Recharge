@@ -18,6 +18,7 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 import os
+import sys
 from datetime import datetime
 
 import yaml
@@ -151,20 +152,25 @@ class Config:
         self.load(path=path)
 
     def load(self, path=None):
-        if path is None:
-            path = paths.config
-
-        if not os.path.isfile(path):
-            print '***** The config file {} does not exist. A default one will be written'.format(path)
-
-            with open(path, 'w') as wfile:
-                print '-------------- DEFAULT CONFIG -----------------'
-                print DEFAULT_CFG
-                print '-----------------------------------------------'
-                wfile.write(DEFAULT_CFG)
-
+        check_config(path)
         with open(path, 'r') as rfile:
             # self._obj = yaml.load(rfile)
             self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
 
+
+def check_config(path=None):
+    if path is None:
+        path = paths.config
+
+    if not os.path.isfile(path):
+        print '***** The config file {} does not exist. A default one will be written'.format(path)
+
+        with open(path, 'w') as wfile:
+            print '-------------- DEFAULT CONFIG -----------------'
+            print DEFAULT_CFG
+            print '-----------------------------------------------'
+            wfile.write(DEFAULT_CFG)
+
+        print '***** Please edit the config file at {} and rerun the model'.format(path)
+        sys.exit()
 # ============= EOF =============================================

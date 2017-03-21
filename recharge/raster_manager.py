@@ -29,12 +29,13 @@ import gdal
 import ogr
 from numpy import array, where, zeros
 
-from recharge import OUTPUTS
+from app.paths import paths
+from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
+    CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from recharge.raster import Raster
 from recharge.raster_tools import get_raster_geo_attributes as get_geo
 from recharge.raster_tools import make_results_dir, convert_array_to_raster
-from app.paths import paths
 
 
 class RasterManager(object):
@@ -120,6 +121,7 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
+
         periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
@@ -130,11 +132,11 @@ class RasterManager(object):
 
         tracker = self._output_tracker
         if period == 'annual':
-            ckey, lkey = 'current_year', 'last_yr'
+            ckey, lkey = ANNUAL_TRACKER_KEYS
         elif period == 'daily':
-            ckey, lkey = 'current_day', 'yesterday'
+            ckey, lkey = DAILY_TRACKER_KEYS
         elif period == 'monthly':
-            ckey, lkey = 'current_month', 'last_month'
+            ckey, lkey = MONTHLY_TRACKER_KEYS
 
         print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
         print 'mean value master {} today: {}'.format(var, vv.mean())
@@ -145,7 +147,15 @@ class RasterManager(object):
         tracker[lkey][var] = vv
 
     def _write_raster(self, key, date, period=None, master=None):
-        "Writes rasters like no body's business."
+        """
+        get array from tracker and save to file
+
+        file name based on attribute and period e.g
+
+        dr_05_2017.tif is a monthly raster of dr
+        de_01_01_2017.tif is daily raster of de
+
+        """
 
         print 'Saving {}_{}_{}'.format(key, date.month, date.year)
         # print "mask path -> {}".format(mask_path)
@@ -153,30 +163,24 @@ class RasterManager(object):
         # root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
         if period == 'annual':
-            file_ = '{}_{}.tif'.format(key, date.year)
-            filename = os.path.join(rd['annual_rasters'], file_)
-            array_to_save = tracker['current_year'][key]
+            name = '{}_{}.tif'.format(key, date.year)
+            filename = os.path.join(rd['annual_rasters'], name)
+            array_to_save = tracker[CURRENT_YEAR][key]
 
         elif period == 'monthly':
-            file_ = '{}_{}_{}.tif'.format(key, date.month, date.year)
-            filename = os.path.join(rd['monthly_rasters'], file_)
-            array_to_save = tracker['current_month'][key]
-            print 'saving {}, mean: {}'.format(key, tracker['current_month'][key].mean())
+            name = '{}_{}_{}.tif'.format(key, date.month, date.year)
+            filename = os.path.join(rd['monthly_rasters'], name)
+            array_to_save = tracker[CURRENT_MONTH][key]
 
         elif period == 'daily':
-            file_ = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
-            filename = os.path.join(rd['daily_rasters'], file_)
-            array_to_save = tracker['current_day'][key]
-
-            # print 'masterkey', master[key]
-            # print 'masterkey shape', master[key].shape
-            # array_to_save = master[key]
+            name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
+            filename = os.path.join(rd['daily_rasters'], name)
+            array_to_save = tracker[CURRENT_DAY][key]
 
         elif period == 'simulation':
-            file_ = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
-            filename = os.path.join(rd['simulation_tot_rasters'], file_)
+            name = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
+            filename = os.path.join(rd['simulation_tot_rasters'], name)
             array_to_save = master[key]
-
         else:
             array_to_save = None
             filename = None

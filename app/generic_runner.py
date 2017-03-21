@@ -18,7 +18,7 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 from app.paths import paths
-from config import Config
+from config import Config, check_config
 from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
 
@@ -69,7 +69,13 @@ For more information regarding a specific command use "help <command>". Replace 
 
 
 def run():
-    cmds = {'model': run_model, 'rew': run_rew, 'help': run_help, 'commands': run_commands}
+
+    # check for a configuration file
+    check_config()
+
+    cmds = {'model': run_model, 'rew': run_rew,
+            'help': run_help, 'commands': run_commands}
+
     welcome()
     while 1:
         cmd = raw_input('>>> ')

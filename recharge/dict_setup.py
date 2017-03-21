@@ -23,7 +23,7 @@ from osgeo import ogr
 from pandas import DataFrame, date_range, MultiIndex
 
 from app.paths import paths
-from recharge import STATIC_KEYS, OUTPUTS, INITIAL_KEYS
+from recharge import STATIC_KEYS, OUTPUTS, INITIAL_KEYS, TRACKER_KEYS
 from recharge.raster import Raster
 
 """
@@ -113,7 +113,7 @@ def initialize_static_dict(pairs=None):
         pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
 
     for k, p in pairs:
-        raster = Raster(p, root=paths.etrm_input_root)
+        raster = Raster(p, root=paths.static_inputs)
         arr = raster.masked()
 
         if k == 'plant_height':
@@ -165,7 +165,7 @@ def initialize_static_dict(pairs=None):
 
 def make_pairs(root, keys):
     fs = tiff_list(root)
-    return [(k, os.path.join(root, s)) for k, s in zip(keys, fs)]
+    return [(k, s) for k, s in zip(keys, fs)]
 
 
 def tiff_list(root, sort=True):
@@ -195,7 +195,7 @@ def initialize_initial_conditions_dict(pairs=None):
 
     d = {}
     for k, p in pairs:
-        raster = Raster(p, root=paths.etrm_input_root)
+        raster = Raster(p, root=paths.initial_inputs)
         data = raster.masked()
         d[k] = data
 
@@ -211,8 +211,8 @@ def initialize_raster_tracker(shape):
     :param shape:
     :return:
     """
-    keys = ('current_year', 'current_month', 'current_day', 'last_mo', 'last_yr', 'yesterday')
-    d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in keys}
+
+    d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in TRACKER_KEYS}
     return d
 
 

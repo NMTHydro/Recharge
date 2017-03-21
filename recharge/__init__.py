@@ -26,6 +26,16 @@ INITIAL_KEYS = 'de', 'dr', 'drew'
 
 OUTPUTS = 'tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb'
 
+
+CURRENT_DAY = 'current_day'
+CURRENT_MONTH = 'current_month'
+CURRENT_YEAR = 'current_year'
+
+ANNUAL_TRACKER_KEYS = CURRENT_YEAR, 'last_year'
+MONTHLY_TRACKER_KEYS = CURRENT_MONTH, 'last_month'
+DAILY_TRACKER_KEYS = CURRENT_DAY, 'yesterday'
+
+TRACKER_KEYS = ANNUAL_TRACKER_KEYS + MONTHLY_TRACKER_KEYS + DAILY_TRACKER_KEYS
 # ============= EOF =============================================
 
 

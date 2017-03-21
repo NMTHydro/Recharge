@@ -52,29 +52,22 @@ class Processes(object):
             raise PathsNotSetExecption()
 
         self._cfg = cfg
-        mask = cfg.mask
-        polygons = cfg.polygons
 
-        paths.set_polygons_path(polygons)
-        paths.set_mask_path(mask)
+        # set global mask and polygons paths
+        paths.set_polygons_path(cfg.polygons)
+        paths.set_mask_path(cfg.mask)
 
         if cfg.use_verify_paths:
             paths.verify()
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        # self._constants = time_it(set_constants)
+
+        self._constants = set_constants()
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
-
-        # self._static = time_it(initialize_static_dict)
-        # shape = self._static['taw'].shape
-        # self._initial = time_it(initialize_initial_conditions_dict)
-        # self._master = time_it(initialize_master_dict, shape)
-
-        self._constants = set_constants()
         self._static = initialize_static_dict(cfg.static_pairs)
         self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
 
@@ -834,139 +827,3 @@ class Processes(object):
         print '%%%%%%%%%%%%%%%% {}'.format(msg)
 
 # ============= EOF =============================================
-# def run(self, ndvi_path=None, prism_path=None, penman_path=None,
-#         point_dict=None, point_dict_key=None, sensitivity_matrix_column=None, sensitivity=False,
-#         modify_soils=False, apply_rofrac=0.0, swb_mode='vertical', allen_ceff=1.0):
-#     """
-#     Perform all ETRM functions for each time step, updating master dict and saving data as specified.
-#
-#     :param swb_mode:
-#     :param apply_rofrac:
-#     :param allen_ceff
-#     :param modify_soils:
-#     :param sensitivity: True if running a sensitivity analysis.  Will trigger call of _do_parameter_adjustment().
-#     :param sensitivity_matrix_column: Column of varied parameters (see sensitivity_analysis.py docs)
-#     :param ndvi_path: NDVI input data path.
-#     :param prism_path: PRISM input data path.
-#     :param penman_path: Reference ET and shortwave radiation data.
-#     :param point_dict: Dict of point metadata for the point model.
-#     :param point_dict_key: Passed from point model main, will be iterated through each point.
-#     :return: Point: point tracker dataframe object.  Distributed: master tracker dataframe object.
-#     """
-#
-#     self._point_dict_key = point_dict_key
-#     m = self._master
-#     s = self._static
-#     if point_dict:
-#         s = s[self._point_dict_key]
-#
-#     if modify_soils:
-#         s['rew'] *= 0.1
-#         s['tew'] *= 1.0
-#
-#     c = self._constants
-#
-#     start_date, end_date = self._date_range
-#     print 'simulation period: {}'.format((start_date, end_date))
-#     start_monsoon, end_monsoon = c['s_mon'], c['e_mon]
-#     start_time = datetime.now()
-#     print 'start time :{}'.format(start_time)
-#     for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
-#
-#         if not point_dict:
-#             print ''
-#             print "Time : {a} day {b}_{c}".format(a=str(datetime.now() - start_time),
-#                                                   b=day.timetuple().tm_yday, c=day.year)
-#             self._zeros = zeros(self._shape)
-#             self._ones = ones(self._shape)
-#
-#         if day == start_date:
-#
-#             m['first_day'] = True
-#             m['albedo'] = self._ones * 0.45
-#             m['swe'] = self._zeros  # this should be initialized correctly using simulation results
-#             # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
-#             # by method of Ritchie et al (1989), rew derived from percent sand/clay
-#             m['dry_days'] = self._ones
-#
-#             if self._point_dict:
-#                 m['pdr'], m['dr'] = self._initial[point_dict_key]['dr'], self._initial[point_dict_key]['dr']
-#                 m['pde'], m['de'] = self._initial[point_dict_key]['de'], self._initial[point_dict_key]['de']
-#                 m['pdrew'], m['drew'] = self._initial[point_dict_key]['drew'], self._initial[point_dict_key]['drew']
-#                 print 'rew: {}, tew: {}, taw: {}'.format(s['rew'], s['tew'], s['taw'])
-#
-#             else:
-#                 m['pdr'], m['dr'] = self._initial['dr'], self._initial['dr']
-#                 m['pde'], m['de'] = self._initial['de'], self._initial['de']
-#                 m['pdrew'], m['drew'] = self._initial['drew'], self._initial['drew']
-#                 print 'rew median: {}, mean {}, max {}, min {}'.format(median(s['rew']), s['rew'].mean(),
-#                                                                        s['rew'].max(),
-#                                                                        s['rew'].min())
-#                 print 'tew median: {}, mean {}, max {}, min {}'.format(median(s['tew']), s['tew'].mean(),
-#                                                                        s['tew'].max(),
-#                                                                        s['tew'].min())
-#                 print 'taw median: {}, mean {}, max {}, min {}'.format(median(s['taw']), s['taw'].mean(),
-#                                                                        s['taw'].max(),
-#                                                                        s['taw'].min())
-#                 print 'soil_ksat median: {}, mean {}, max {}, min {}'.format(median(s['soil_ksat']),
-#                                                                              s['soil_ksat'].mean(),
-#                                                                              s['soil_ksat'].max(),
-#                                                                              s['soil_ksat'].min())
-#
-#             self._initial_depletions = m['dr'] + m['de'] + m['drew']
-#         else:
-#             m['first_day'] = False
-#
-#         if self._point_dict:
-#             self._do_daily_point_load(point_dict, day)
-#         else:
-#             self._do_daily_raster_load(ndvi_path, prism_path, penman_path, day)
-#
-#         # the soil ksat should be read each day from the static data, then set in the master #
-#         # otherwise the static is updated and diminishes each day #
-#         # [mm/day] #
-#         if start_monsoon.timetuple().tm_yday <= day.timetuple().tm_yday <= end_monsoon.timetuple().tm_yday:
-#             m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
-#         else:
-#             m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
-#
-#         if sensitivity:
-#             self._do_parameter_adjustment(sensitivity_matrix_column)
-#
-#         self._do_dual_crop_coefficient(day)
-#
-#         self._do_snow()
-#
-#         self._do_soil_ksat_adjustment()
-#         if swb_mode == 'fao':
-#             self._do_fao_soil_water_balance(apply_rofrac, allen_ceff)
-#         elif swb_mode == 'vertical':
-#             self._do_vert_soil_water_balance(apply_rofrac, allen_ceff)
-#
-#         self._do_mass_balance(day, swb=swb_mode)
-#
-#         self._do_accumulations()
-#
-#         if day == start_date:
-#             if self._point_dict:
-#                 self.tracker = initialize_point_tracker(self._master)
-#             else:
-#                 self.tracker = initialize_master_tracker(self._master)
-#
-#         if point_dict:
-#             self._update_point_tracker(day)
-#         else:
-#             self._raster_manager.update_raster_obj(m, day)
-#             self._update_master_tracker(day)
-#
-#         if point_dict and day == end_date:
-#             self._get_tracker_summary(self.tracker, point_dict_key)
-#             # print 'returning tracker: {}'.format(self.tracker)
-#             return self.tracker
-#
-#         elif day == end_date:
-#             print 'last day: saving tabulated data'
-#             self.save_tracker(self.tracker)
-#
-#             # if point_dict:
-#             #     self._get_tracker_summary(self.tracker, point_dict_key)
