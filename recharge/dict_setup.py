@@ -142,6 +142,7 @@ def initialize_static_dict(inputs_root, mask_path):
     taw = d['taw']
     tew = d['tew']
     land_cover = d['land_cover']
+    print 'original Ksat = {}, REW = {}, TAW = {}, land cover = {}'.format(d['soil_ksat'],d['rew'],d['taw'],d['land_cover'])
 
     # apply high TAW to unconsolidated Quaternary deposits
     min_val = 250

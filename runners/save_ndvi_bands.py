@@ -79,8 +79,8 @@ if __name__ == '__main__':
 
     # print('ndvi_path',ndvi_path)
 
-    start = datetime.datetime(2012, 1, 1, 0)
-    end = datetime.datetime(2012, 12, 31, 0)
+    start = datetime.datetime(2000, 1, 1, 0)
+    end = datetime.datetime(2013, 12, 31, 0)
 
     fill_val = -999.
 

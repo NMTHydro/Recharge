@@ -108,7 +108,7 @@ class Processes(object):
                 m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
-
+            print 'todays soil Ksat = {}, static soil Ksat = {}'.format(m['soil_ksat'],s['soil_ksat'])
             if sensitivity_matrix_column:
                 time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
 
@@ -254,22 +254,22 @@ class Processes(object):
         land_cover = s['land_cover']
         soil_ksat = m['soil_ksat']
 
-        o = ones(soil_ksat.shape)
-        soil_ksat = where((land_cover == 41) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 41) & (water < 12.0 * ones(soil_ksat.shape)),
-                          soil_ksat * 1.2 * o, soil_ksat)
-        soil_ksat = where((land_cover == 42) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 42) & (water < 12.0 * o),
-                          soil_ksat * 1.2 * o, soil_ksat)
-        soil_ksat = where((land_cover == 43) & (water < 50.0 * o),
-                          soil_ksat * 2.0 * o, soil_ksat)
-        soil_ksat = where((land_cover == 43) & (water < 12.0 * o),
-                          soil_ksat * 1.2 * o, soil_ksat)
+        # o = ones(soil_ksat.shape)
+        soil_ksat = where((land_cover == 41) & (water < 50.0),
+                          soil_ksat * 2.0, soil_ksat)
+        soil_ksat = where((land_cover == 41) & (water < 12.0),
+                          soil_ksat * 1.2, soil_ksat)
+        soil_ksat = where((land_cover == 42) & (water < 50.0),
+                          soil_ksat * 2.0, soil_ksat)
+        soil_ksat = where((land_cover == 42) & (water < 12.0),
+                          soil_ksat * 1.2, soil_ksat)
+        soil_ksat = where((land_cover == 43) & (water < 50.0),
+                          soil_ksat * 2.0, soil_ksat)
+        soil_ksat = where((land_cover == 43) & (water < 12.0),
+                          soil_ksat * 1.2, soil_ksat)
 
         m['soil_ksat'] = soil_ksat
-
+        print 'forest adjust soil Ksat = {}'.format(m['soil_ksat'])
 
     def _do_dual_crop_transpiration(self, tm_yday, m, s, c):
         """ Calculate dual crop coefficients for transpiration only.
@@ -383,7 +383,7 @@ class Processes(object):
 
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
-
+        print 'Ksat after snow adjust = {},{}'.format(m['soil_ksat'],soil_ksat)
         # Only used if Experimental stage 2 reduction is used
         dd = m['dry_days']
         dd[water < 0.1] = dd + 1
@@ -671,13 +671,14 @@ class Processes(object):
         m['etrs'] *= gamma
         m['kcb'] *= zeta
         m['soil_ksat'] *= theta
+        print 'theta?? adjustment = {}, Ksat after theta = {}'.format(theta,m['soil_ksat'])
 
     def _update_master_tracker(self, m, date):
         def factory(k):
             v = m[k]
 
             if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
-                     'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
+                     'max_temp', 'min_temp', 'rg', 'soil_ksat', 'st_1_dur', 'st_2_dur',):
                 v = v.mean()
             elif k in ('first_day', 'transp_adj'):
                 v = median(v)
