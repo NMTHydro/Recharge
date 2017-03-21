@@ -35,13 +35,22 @@ class Processes(object):
     See function explanations.
 
     """
+    _date_range = None
+    _use_individual_kcb = None
+    _ro_reinf_frac = 0.0
+    _swb_mode = 'swb'
+    _allen_coeff = 1.0
+    _winter_evap_limiter = 0.3
+    _winter_end_day = 92
+    _winter_start_day = 306
 
     def __init__(self, cfg):
         self.tracker = None
         self._initial_depletions = None
 
-        self._date_range = cfg.date_range
-        self._use_individual_kcb = cfg.use_individual_kcb
+        # self._date_range = cfg.date_range
+        # self._use_individual_kcb = cfg.use_individual_kcb
+        self._cfg = cfg
 
         if not paths.is_set():
             raise PathsNotSetExecption()
@@ -57,7 +66,7 @@ class Processes(object):
 
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
-        self._constants = time_it(set_constants)
+        # self._constants = time_it(set_constants)
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
@@ -68,6 +77,7 @@ class Processes(object):
         # self._initial = time_it(initialize_initial_conditions_dict)
         # self._master = time_it(initialize_master_dict, shape)
 
+        self._constants = set_constants()
         self._static = initialize_static_dict()
         self._initial = initialize_initial_conditions_dict()
 
@@ -91,7 +101,16 @@ class Processes(object):
         if runspec.taw_modification is not None:
             self.modify_taw(runspec.taw_modification)
 
-    def run(self, ro_reinf_frac=0.0, swb_mode='vertical', allen_ceff=1.0):
+        self._date_range = runspec.date_range
+        self._use_individual_kcb = runspec.use_individual_kcb
+        self._ro_reinf_frac = runspec.ro_reinf_frac
+        self._swb_mode = runspec.swb_mode
+        self._allen_coeff = runspec.allen_coeff
+        self._winter_evap_limiter = runspec.winter_evap_limiter
+        self._winter_end_day = runspec.winter_end_day
+        self._winter_start_day = runspec.winter_start_day
+
+    def run(self, ro_reinf_frac=None, swb_mode=None, allen_coeff=None):
         """
 
         :param ro_reinf_frac:
@@ -99,6 +118,14 @@ class Processes(object):
         :param allen_ceff:
         :return:
         """
+        if ro_reinf_frac is None:
+            ro_reinf_frac = self._ro_reinf_frac
+
+        if swb_mode is None:
+            swb_mode = self._swb_mode
+
+        if allen_coeff is None:
+            allen_coeff = self._allen_coeff
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -134,9 +161,9 @@ class Processes(object):
             time_it(self._do_fraction_covered, m, s, c)
 
             if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
+                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
             elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
+                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_coeff)
 
             time_it(self._do_mass_balance, day, swb=swb_mode)
 
@@ -348,10 +375,10 @@ class Processes(object):
 
         # enforce winter dormancy of vegetation
         m['transp_adj'] = False
-        if 92 > tm_yday or tm_yday > 306:
+        if self._winter_end_day > tm_yday or tm_yday > self._winter_start_day:
             # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
             # Using 30% DC 2/20/17
-            transp *= 0.3
+            transp *= self._winter_evap_limiter
             m['transp_adj'] = True
 
         m['transp'] = transp
@@ -375,10 +402,9 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0):
         """ Calculate evap and all soil water balance at each time step.
 
-        :return: None
         """
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
