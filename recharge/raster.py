@@ -25,6 +25,9 @@ from osgeo import gdal
 
 from app.paths import paths
 
+gmask = None
+gmask_path = None
+
 
 class Raster(object):
     _band = 1
@@ -155,9 +158,17 @@ class Raster(object):
 
     # private
     def _get_masked_indices(self):
-        mask = Raster(paths.mask)
-        idxs = asarray(mask._arr, dtype=bool)
-        return idxs
+        global gmask_path, gmask
+        if gmask is None or gmask_path != paths.mask:
+
+            print 'caching mask: {}'.format(paths.mask)
+            mask = Raster(paths.mask)
+            idxs = asarray(mask._arr, dtype=bool)
+
+            gmask = idxs
+            gmask_path = paths.mask
+
+        return gmask
 
     def _save(self, path, arr, geo, band):
         driver = gdal.GetDriverByName('GTiff')
