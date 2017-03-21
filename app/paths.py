@@ -20,6 +20,8 @@
 import os
 import sys
 
+from datetime import datetime
+
 
 class PathsNotSetExecption(BaseException):
     def __str__(self):
@@ -48,6 +50,7 @@ class Paths:
     amf_ex_sac_extract = None
     amf_ex_sac_output_root = None
     amf_ex_sac_trackers = None
+    results_root = None
 
     def __init__(self):
         self._is_set = False
@@ -61,6 +64,12 @@ class Paths:
             output_root = input_root
 
         self.etrm_output_root = os.path.join(output_root, 'ETRM_Results')
+
+        now = datetime.now()
+        tag = now.strftime('%y%m%d_%H_%M')
+
+        self.results_root = os.path.join(self.etrm_output_root, tag)
+
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
         self.ndvi_statics = os.path.join(etrm_input_root, 'NDVI_statics')

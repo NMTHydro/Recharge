@@ -112,7 +112,7 @@ class Raster(object):
 
         :return:
         """
-        idxs = self._get_mask_indices()
+        idxs = self._get_masked_indices()
         return self._arr[idxs].flatten()
 
     def open(self, path, band=1):
@@ -156,7 +156,7 @@ class Raster(object):
     # private
     def _get_masked_indices(self):
         mask = Raster(paths.mask)
-        idxs = asarray(mask, dtype=bool)
+        idxs = asarray(mask._arr, dtype=bool)
         return idxs
 
     def _save(self, path, arr, geo, band):

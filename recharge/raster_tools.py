@@ -20,6 +20,7 @@ The purpose of this module is to provide some simple tools needed for raster pro
 """
 import os
 from datetime import datetime
+from pprint import pformat
 
 import rasterio
 from affine import Affine
@@ -27,6 +28,8 @@ from numpy import array, asarray
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 from pandas import DataFrame
+
+from app.paths import paths
 
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
@@ -168,7 +171,7 @@ def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, 
 #             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
 
 
-def make_results_dir(out_root, shapes):
+def make_results_dir(out_root=None, shapes=None):
     """
     Creates a directory tree of empty folders that will recieve ETRM model output rasters.
 
@@ -179,10 +182,12 @@ def make_results_dir(out_root, shapes):
 
     empties = ('annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
                'monthly_tabulated', 'daily_tabulated', 'daily_rasters')
-    now = datetime.now()
-    tag = now.strftime('%Y_%m_%d')
 
-    out_root = os.path.join(out_root, 'ETRM_Results_{}'.format(tag))
+    if out_root is None:
+        out_root = paths.results_root
+
+    if shapes is None:
+        shapes = paths.polygons
 
     results_directories = {'root': out_root}
 
@@ -196,18 +201,19 @@ def make_results_dir(out_root, shapes):
     else:
         results_directories = {item: os.path.join(out_root, item) for item in empties}
 
-    region_types = os.listdir(shapes)
-    for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
-        d = {}
-        for region_type in region_types:
-            a, b = region_type.split('_P')
-            dst = os.path.join(out_root, tab_folder, a)
-            os.makedirs(dst)
-            d[a] = dst
+    if shapes and os.path.isdir(shapes):
+        region_types = os.listdir(shapes)
+        for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
+            d = {}
+            for region_type in region_types:
+                a, b = region_type.split('_P')
+                dst = os.path.join(out_root, tab_folder, a)
+                os.makedirs(dst)
+                d[a] = dst
 
-        results_directories[tab_folder] = d
+            results_directories[tab_folder] = d
 
-    print 'results dirs: \n{}'.format(results_directories)
+    print 'results dirs: {}'.format(pformat(results_directories, indent=2))
     return results_directories
 
 

@@ -63,6 +63,8 @@ class Processes(object):
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
 
+        self._info('Constructing/Initializing Processes')
+
         self._constants = set_constants()
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
@@ -85,6 +87,8 @@ class Processes(object):
         :param runspec: RunSpec
         :return:
         """
+        self._info('Configuring Processes')
+
         if runspec.save_dates:
             self.set_save_dates(runspec.save_dates)
 
@@ -168,6 +172,8 @@ class Processes(object):
         self._info('saving tabulated data')
         time_it(rm.save_csv)
 
+        self.save_mask()
+
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
@@ -248,10 +254,13 @@ class Processes(object):
 
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
+    def save_mask(self):
+        self._info('saving mask to results')
+
         # copy the mask path file into results
         path = paths.mask
         name = os.path.basename(path)
-        shutil.copyfile(paths.mask, os.path.join(paths.etrm_output_root, name))
+        shutil.copyfile(path, os.path.join(paths.results_root, name))
 
     def save_tracker(self, path=None):
         """
@@ -261,12 +270,13 @@ class Processes(object):
         """
         self._info('Saving tracker')
 
+        root = paths.results_root
         base = 'etrm_master_tracker'
         if path is None:
-            path = add_extension(os.path.join(paths.etrm_output_root, base), '.csv')
+            path = add_extension(os.path.join(root, base), '.csv')
 
         if os.path.isfile(path):
-            path = unique_path(paths.etrm_output_root, base, '.csv')
+            path = unique_path(root, base, '.csv')
 
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
@@ -446,7 +456,10 @@ class Processes(object):
         m['evap'] = evap = minimum(evap, (taw - pdr) - transp)
 
         m['eta'] = et_actual = evap + transp
-        print 'evap 1 = {}, evap 2 = {}, evap = {}, transp = {}, ET = {}'.format(e1, e2, evap, transp, et_actual)
+        for k, v in (('evap 1', e1), ('evap 2', e2),
+                     ('evap', evap), ('transp', transp),
+                     ('ET', et_actual)):
+            print '{} = {}'.format(k, v)
 
         # Start Water Balance
         water = m['rain'] + m['melt']

@@ -152,6 +152,9 @@ class Config:
         self.load(path=path)
 
     def load(self, path=None):
+        if path is None:
+            path = paths.config
+
         check_config(path)
         with open(path, 'r') as rfile:
             # self._obj = yaml.load(rfile)

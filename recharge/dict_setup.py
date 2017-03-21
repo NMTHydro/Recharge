@@ -17,6 +17,7 @@
 
 import os
 from datetime import datetime
+from pprint import pprint, pformat
 
 from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum, ones
 from osgeo import ogr
@@ -25,6 +26,7 @@ from pandas import DataFrame, date_range, MultiIndex
 from app.paths import paths
 from recharge import STATIC_KEYS, OUTPUTS, INITIAL_KEYS, TRACKER_KEYS
 from recharge.raster import Raster
+from recharge.raster_tools import apply_mask, convert_raster_to_array
 
 """
 kc_min is from ASCE pg 199 (0.1 to 0.15 given range, but say to use 0 or nearly 0 for natural settings)
@@ -60,7 +62,7 @@ def set_constants(ze=40, p=0.4,
              ke_max=ke_max,
              a_min=a_min, a_max=a_max)
 
-    print 'constants dict: {}'.format(d)
+    print 'constants dict: {}\n'.format(pformat(d, indent=2))
 
     return d
 
@@ -75,6 +77,8 @@ def initialize_master_dict(shape):
 
     master['pkcb'] = None
     master['albedo'] = ones(shape) * 0.45
+    master['swe'] = zeros(shape)
+    master['dry_days'] = zeros(shape)
 
     # master['swe'] = zeros(shape)  # this should be initialized correctly using simulation results
     # s['rew'] = minimum((2 + (s['tew'] / 3.)), 0.8 * s['tew'])  # this has been replaced
@@ -109,10 +113,13 @@ def initialize_static_dict(pairs=None):
 
     d = {}
     if pairs is None:
-        print 'static inputs path: {}'.format(paths.static_inputs)
+        print 'Using default static inputs path: {}'.format(paths.static_inputs)
         pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
 
+    print '-------------------------------------------------------'
+    print '       Key                  Name'
     for k, p in pairs:
+        print 'static {:<20s} {}'.format(k, p)
         raster = Raster(p, root=paths.static_inputs)
         arr = raster.masked()
 
@@ -128,6 +135,7 @@ def initialize_static_dict(pairs=None):
             arr = initial_tew(arr)
 
         d[k] = arr
+    print '-------------------------------------------------------'
 
     q = d['quat_deposits']
     taw = d['taw']
@@ -151,7 +159,7 @@ def initialize_static_dict(pairs=None):
 
     non_zero = count_nonzero(data < min_val)
     print 'taw has {} cells below the minimum'.format(non_zero, min_val)
-    print 'taw median: {}, mean {}, max {}, min {}'.format(median(taw), taw.mean(), taw.max(), taw.min())
+    print 'taw median: {}, mean {}, max {}, min {}\n'.format(median(taw), taw.mean(), taw.max(), taw.min())
     d['taw'] = taw
 
     # apply tew adjustment
@@ -190,17 +198,27 @@ def initialize_initial_conditions_dict(pairs=None):
     # read in initial soil moisture conditions from spin up, put in dict
 
     if pairs is None:
-        print 'initial inputs path: {}'.format(paths.initial_inputs)
+        print 'Using default initial inputs path: {}'.format(paths.initial_inputs)
         pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
 
     d = {}
+
+    print '-------------------------------------------------------'
+    print '        Key                  Name'
     for k, p in pairs:
+        print 'initial {:<20s} {}'.format(k, p)
         raster = Raster(p, root=paths.initial_inputs)
         data = raster.masked()
         d[k] = data
 
-        print '{} has {} nan values'.format(k, count_nonzero(isnan(data)))
-        print '{} has {} negative values'.format(k, count_nonzero(data < 0.0))
+        nans = count_nonzero(isnan(data))
+        if nans:
+            print '{} has {} nan values'.format(k, nans)
+        nons = count_nonzero(data < 0.0)
+        if nons:
+            print '{} has {} negative values'.format(k, nons)
+
+    print '-------------------------------------------------------\n'
 
     return d
 

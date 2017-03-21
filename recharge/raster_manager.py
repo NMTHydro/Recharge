@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+
+from pprint import pprint, pformat
+
 """
 The purpose of this module is to create a ETRM-style raster object. This carries important geographic information
 and water balance components used in output data.
@@ -57,7 +60,7 @@ class RasterManager(object):
 
         self._geo = get_geo(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
-        self._results_dir = make_results_dir(paths.etrm_output_root, paths.polygons)
+        self._results_dir = make_results_dir()
         self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq)
 
     def set_save_dates(self, dates):
@@ -271,7 +274,7 @@ class RasterManager(object):
         :param polygons: Folder containing polygon folders of each type of geography (counties, etc.)
         :return: None
         """
-        print 'results directories: "{}"'.format(results_directories)
+        print('results directories: "{}"'.format(pformat(results_directories, indent=2)))
         folders = os.listdir(polygons)
 
         print 'polygon directories: "{}"'.format(folders)
