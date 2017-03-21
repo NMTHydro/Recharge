@@ -29,11 +29,12 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 DEFAULT_CFG = '''
 ---
 input_root: /Volumes/Seagate Expansion Drive
+output_root: Please Set Me
 
 start_date: 12/1/2013
 end_date: 12/32/2013
 
-mask: Mask
+mask: masks/please_set_me.tif
 polygons: Blank_Geo
 
 save_dates: []
@@ -46,14 +47,9 @@ daily_outputs:
  - tot_kcb
 
 ro_reinf_frac: 0.0
-swb_mode: swb
+swb_mode: fao
 allen_ceff: 1.0
 winter_evap_limiter: 0.3
-
-initial:
- de:
- dr:
- drew:
 
 '''
 
