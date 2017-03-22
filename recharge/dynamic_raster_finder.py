@@ -142,6 +142,15 @@ def get_prisms(date):
     return min_temp, max_temp, temp, precip
 
 
+def get_geo(date_object):
+    tail = '{}{:02n}{:02n}.tif'.format(date_object.year, date_object.month, date_object.day)
+
+    root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
+    name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+    raster = Raster(name, root=os.path.join(paths.prism, root))
+    return raster.geo
+
+
 def get_prism(date_object, variable='precip'):
     """
     Find PRISM image.

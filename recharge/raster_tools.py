@@ -315,7 +315,13 @@ def make_results_dir(out_root=None, shapes=None):
     return results_directories
 
 
-def get_tiff_transform(tiff_path, tx=0.5, ty=0.5):
+def get_tiff_transform(tiff_path):
+    with rasterio.open(tiff_path) as rfile:
+        t0 = rfile.affine  # upper-left pixel corner affine transform
+        return t0
+
+
+def get_tiff_transform_func(tiff_path, tx=0.5, ty=0.5):
     with rasterio.open(tiff_path) as rfile:
         t0 = rfile.affine  # upper-left pixel corner affine transform
         t1 = t0 * Affine.translation(tx, ty)
@@ -338,7 +344,7 @@ def tiff_framer(mask_path, tiff_list):
 
     import time
 
-    transform = get_tiff_transform(mask_path)
+    transform = get_tiff_transform_func(mask_path)
 
     st = time.time()
     arrs = [convert_raster_to_array(*os.path.split(tiff_path)) for tiff_path in tiff_list]
