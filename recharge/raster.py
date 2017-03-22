@@ -54,12 +54,19 @@ class Raster(object):
         return self._geo
 
     @property
+    def as_bool_array(self):
+        return asarray(self._arr, dtype=bool)
+
+    @property
     def array(self):
         """
 
         :return:
         """
         return self._masked_arr if self._masked_arr is not None else self._arr
+
+    def set_array(self, arr):
+        self._arr = arr
 
     def apply_mask(self):
         """
@@ -160,12 +167,9 @@ class Raster(object):
     def _get_masked_indices(self):
         global gmask_path, gmask
         if gmask is None or gmask_path != paths.mask:
-
             print 'caching mask: {}'.format(paths.mask)
             mask = Raster(paths.mask)
-            idxs = asarray(mask._arr, dtype=bool)
-
-            gmask = idxs
+            gmask = mask.as_bool_array
             gmask_path = paths.mask
 
         return gmask
