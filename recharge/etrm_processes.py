@@ -103,6 +103,12 @@ class Processes(object):
         self._winter_evap_limiter = runspec.winter_evap_limiter
         self._winter_end_day = runspec.winter_end_day
         self._winter_start_day = runspec.winter_start_day
+        print '---------- CONFIGURATION ---------------'
+        for attr in ('date_range', 'use_individual_kcb',
+                     'winter_evap_limiter', '_winter_end_day', 'winter_start_day',
+                     'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
+            print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
+        print '----------------------------------------'
 
     def run(self, ro_reinf_frac=None, swb_mode=None, allen_ceff=None):
         """
@@ -347,7 +353,6 @@ class Processes(object):
 
                                         (43, 50.0, 2.0),
                                         (43, 12.0, 1.2)):
-
             soil_ksat = where((land_cover == lc) & (water < wthres), soil_ksat * ksat_scalar, soil_ksat)
 
         m['soil_ksat'] = soil_ksat
@@ -411,7 +416,7 @@ class Processes(object):
         m['pdrew'] = pdrew = m['drew']
 
         taw = maximum(s['taw'], 0.001)
-        tew = maximum(s['tew'], 0.001)          # TEW is zero at lakes in our data set
+        tew = maximum(s['tew'], 0.001)  # TEW is zero at lakes in our data set
         rew = s['rew']
 
         kcb = m['kcb']
@@ -485,10 +490,10 @@ class Processes(object):
         m['dr'] = dr = minimum(maximum(pdr - (water - ro) + et_actual + dp, 0), taw)
 
         # Calculate depletion in TEW, full evaporative layer
-        m['de'] = de = minimum(maximum(pde - (water - ro) + evap/few, 0), tew)
+        m['de'] = de = minimum(maximum(pde - (water - ro) + evap / few, 0), tew)
 
         # Calculate depletion in REW, skin layer
-        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap/few, 0), rew)
+        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap / few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 
@@ -593,7 +598,7 @@ class Processes(object):
         water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
 
         # # fill depletion in REW if possible
-        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew+evap_1)
+        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
 
         # # fill depletion in REW if possible
         # evap__ = pdrew + evap_1
@@ -611,7 +616,7 @@ class Processes(object):
         water_av_taw += water_av_tew * (1.0 - ceff)
 
         # # fill depletion in TEW if possible
-        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde+evap_2)
+        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
 
         # # fill depletion in TEW if possible
         # evap2__ = pde + evap_2
@@ -631,7 +636,7 @@ class Processes(object):
 
         dd = water_av_taw - depletion
         m['infil'] = where(water_av_taw >= depletion, dd, 0)
-        dr = where(water_av_taw >= depletion, 0, dd*-1)
+        dr = where(water_av_taw >= depletion, 0, dd * -1)
 
         m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
