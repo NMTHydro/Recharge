@@ -727,12 +727,14 @@ class Processes(object):
         m = self._master
 
         if self._use_individual_kcb:
-            m['kcb'] = get_individ_kcb(date, m['pkcb'])  # paths.mask
-
+            func = get_individ_kcb
         else:
-            m['kcb'] = get_kcb(date, m['pkcb'])
+            func = get_kcb
 
-        min_temp, max_temp, temp, precip = get_prisms(date)
+        kcb = time_it(func, date, m['pkcb'])
+
+        m['kcb'] = kcb
+        min_temp, max_temp, temp, precip = time_it(get_prisms, date)
         m['min_temp'] = min_temp
         m['max_temp'] = max_temp
         m['temp'] = temp
@@ -746,11 +748,11 @@ class Processes(object):
         # precip = get_prism(date, variable='precip')
         # m['precip'] = where(precip < 0, 0, precip)
 
-        etrs = get_penman(date, variable='etrs')
+        etrs = time_it(get_penman, date, variable='etrs')
         etrs = where(etrs < 0, 0, etrs)
         m['etrs'] = where(isnan(etrs), 0, etrs)
 
-        m['rg'] = get_penman(date, variable='rg')
+        m['rg'] = time_it(get_penman, date, variable='rg')
 
         m['pkcb'] = m['kcb']
 
