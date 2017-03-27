@@ -138,6 +138,8 @@ class Raster(object):
                      'data_type': rband.DataType, 'projection': raster.GetProjection(),
                      'geotransform': raster.GetGeoTransform(), 'resolution': raster.GetGeoTransform()[1]}
 
+        del raster
+
     def save(self, output, arr=None, geo=None, band=None):
         """
         save an array as a GeoTiff

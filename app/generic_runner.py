@@ -22,6 +22,8 @@ from config import Config, check_config
 from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
 
+CLI_ENABLED = False
+
 
 def run_model():
     print 'Running Model'
@@ -69,7 +71,6 @@ For more information regarding a specific command use "help <command>". Replace 
 
 
 def run():
-
     # check for a configuration file
     check_config()
 
@@ -77,14 +78,18 @@ def run():
             'help': run_help, 'commands': run_commands}
 
     welcome()
-    while 1:
-        cmd = raw_input('>>> ')
-        try:
-            func = cmds[cmd]
-        except KeyError:
-            continue
 
-        func()
+    if CLI_ENABLED:
+        while 1:
+            cmd = raw_input('>>> ')
+            try:
+                func = cmds[cmd]
+            except KeyError:
+                continue
+
+            func()
+    else:
+        run_model()
 
 
 if __name__ == '__main__':
