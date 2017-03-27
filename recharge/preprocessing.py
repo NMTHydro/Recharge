@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2016 dgketchum
+# Copyright 2017 ross
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,21 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-import os
-from datetime import datetime
-from recharge.etrm_processes import Processes
-from app.config import Config
+
+# ============= enthought library imports =======================
+# ============= standard library imports ========================
+from numpy import where
+
+from recharge.raster import Raster
 
 
-def run():
-    cfg = Config()
-    etrm = Processes(cfg)
-    etrm.set_save_dates(cfg.save_dates)
-    etrm.run(ro_reinf_frac=0.0, allen_ceff=1.0)
+def generate_rew_tiff(sand_tif, clay_tif, output):
+    sand = Raster(sand_tif)
+    clay = Raster(clay_tif)
 
+    # From ASCE pg 195, equations from Ritchie et al., 1989
+    rew = 8 + 0.08 * clay
+    rew = where(sand > 80.0, 20.0 - 0.15 * sand, rew)
+    rew = where(clay > 50, 11 - 0.06 * clay, rew)
 
-if __name__ == '__main__':
-    run()
-
+    out = Raster.fromarray(rew, sand.geo)
+    out.save(output)
 
 # ============= EOF =============================================
