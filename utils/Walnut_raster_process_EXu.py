@@ -3,6 +3,7 @@ import fnmatch
 import gdal
 from subprocess import call
 
+
 #folder path
 input_folder = 'G:\\Walnut\\RealData\\'
 output_folder = 'G:\\Walnut\\WalnutData\\'
