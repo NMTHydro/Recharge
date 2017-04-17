@@ -26,16 +26,23 @@ from utils.pixel_coord_finder import coord_getter
 
 
 def extract_keys(tiff_list):
-    keys = [tname.split('_')[0] for tname in tiff_list]
+    tiff_keys = [tname.split('_')[0] for tname in tiff_list]
+    keys = ['x','y']
+    [keys.append(item) for item in tiff_keys]
+    # for item in tiff_keys:
+    #     keys.append(item)
+    #keys.append(tiff_keys)
+    print 'keys!', keys
     return keys
 
 
-def tiff_framer(root, mask_path, tiff_list):
+def tiff_framer(root, mask_path, tiff_list, tiff_path):
     print 'started tiff framer'
     mask_arr = get_mask(mask_path)
+    print mask_arr
 
     # TODO - build the mask into the config object.
-    northing, easting = coord_getter(mask_path)
+    northing, easting = coord_getter(tiff_path) # mask_arr
     print 'got n/e'
 
     arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
@@ -52,23 +59,29 @@ def tiff_framer(root, mask_path, tiff_list):
                 x = int(easting[ri, ci])
                 y = int(northing[ri, ci])
                 data = [arr[ri, ci] for arr in arrs]
-                print data
+                #print data
                 data.insert(0, y)
                 data.insert(0, x)
 
                 rows.append(data)
+    keys = extract_keys(tiff_list)
+    df = DataFrame(rows, columns=keys)
+    #print df
 
-    df = DataFrame(rows)
+
+
     return df
 
 
 if __name__ == '__main__':
-    hard_drive_path = os.path.join('/Volumes', 'Seagate Expansion Drive')
-    inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
+    hard_drive_path = os.path.join('/', 'Volumes', 'Seagate Expansion Drive') #'/Volumes', 'Seagate Expansion Drive'
+    inputs_path = os.path.join(hard_drive_path, 'ETRM_inputs')
     mp = os.path.join(inputs_path, 'Mask')
 
-    root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_02_24/monthly_rasters'
-    tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
-    mp = os.path.join(mp, 'zuni_1.tif')
-    tiff_framer(root, mp, tnames)
+    root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_03_13/daily_rasters'
+    tnames = ['tot_eta_27_12_2013.tif', 'tot_etrs_27_12_2013.tif',]
+    print os.listdir(mp)
+    mask_path = os.path.join(mp) # mp, 'zuni_1.tif'
+    tiff_path = os.path.join(mask_path, 'zuni_1.tif')
+    tiff_framer(root, mask_path, tnames, tiff_path)
 # ============= EOF =============================================

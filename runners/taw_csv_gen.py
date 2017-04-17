@@ -199,6 +199,7 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
                 mask_values = mask_arr[ri, ci]
                 if mask_values:
                     # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
+                    #
                     x_list.append('{}'.format(easting[ri, ci]))
                     y_list.append('{}'.format(northing[ri, ci]))
                     #value_list.append('{}'.format(array[ri, ci]))
@@ -216,34 +217,34 @@ def tiff_framer(mod_tif_list, unmod_tif_list, root, unmod_desktop_root, mod_desk
     #print 'mod dict list \n {}'.format(mod_dict_list)
 
     unmod_dict_list = []
-    for i in range(len(unmod_array_list)):
-        x_list = []
-        y_list = []
-        x_list = []
-        y_list = []
-        de_value_list = []
-        dr_value_list = []
-        drew_value_list = []
-        toteta_value_list = []
-        totetrs_value_list = []
-        nrows, ncols = unmod_array_list[0].shape
-        for ri in xrange(nrows):
-            for ci in xrange(ncols):
-                mask_values = mask_arr[ri, ci]
-                if mask_values:
-                    # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
-                    x_list.append('{}'.format(easting[ri, ci]))
-                    y_list.append('{}'.format(northing[ri, ci]))
-                    #value_list.append('{}'.format(array[ri, ci]))
-                    de_value_list.append('{}'.format(unmod_array_list[0][ri,ci]))
-                    dr_value_list.append('{}'.format(unmod_array_list[1][ri, ci]))
-                    drew_value_list.append('{}'.format(unmod_array_list[2][ri, ci]))
-                    toteta_value_list.append('{}'.format(unmod_array_list[3][ri, ci]))
-                    totetrs_value_list.append('{}'.format(unmod_array_list[4][ri, ci]))
-                    #print 'unmod value list {}'.format(value_list)
-        unmod_dict_data = {'x': x_list, 'y': y_list, 'de': de_value_list, 'dr': dr_value_list, 'drew': drew_value_list,
-                           'tot-eta': toteta_value_list, 'tot-etrs': totetrs_value_list}
-        #print 'unmod_dict_data {}'.format(unmod_dict_data)
+    # TODO take loops out....
+    x_list = []
+    y_list = []
+    x_list = []
+    y_list = []
+    de_value_list = []
+    dr_value_list = []
+    drew_value_list = []
+    toteta_value_list = []
+    totetrs_value_list = []
+    nrows, ncols = unmod_array_list[0].shape
+    for ri in xrange(nrows):
+        for ci in xrange(ncols):
+            mask_values = mask_arr[ri, ci]
+            if mask_values:
+                # print ri, ci, taw[ri,ci], taw_new_masked[ri,ci], taw_new[ri,ci]
+                x_list.append('{}'.format(easting[ri, ci]))
+                y_list.append('{}'.format(northing[ri, ci]))
+                #value_list.append('{}'.format(array[ri, ci]))
+                de_value_list.append('{}'.format(unmod_array_list[0][ri, ci]))
+                dr_value_list.append('{}'.format(unmod_array_list[1][ri, ci]))
+                drew_value_list.append('{}'.format(unmod_array_list[2][ri, ci]))
+                toteta_value_list.append('{}'.format(unmod_array_list[3][ri, ci]))
+                totetrs_value_list.append('{}'.format(unmod_array_list[4][ri, ci]))
+                #print 'unmod value list {}'.format(value_list)
+    unmod_dict_data = {'x': x_list, 'y': y_list, 'de': de_value_list, 'dr': dr_value_list, 'drew': drew_value_list,
+                       'tot-eta': toteta_value_list, 'tot-etrs': totetrs_value_list}
+    #print 'unmod_dict_data {}'.format(unmod_dict_data)
     unmod_dict_list.append(unmod_dict_data)
 
     #print "unmod_dict_list \n {}".format(unmod_dict_list)
