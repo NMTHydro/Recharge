@@ -31,7 +31,7 @@ for shapefile in find_format(input_folder, '*.shp'):
 
     in_shp = os.path.join(input_folder, shp_name)
     temp = os.path.join(output_folder, 'temp.tif')
-    # out_shp = os.path.join(output_folder, shp_name)
+    # out_shp = os.path.join(output_folder, shp_name) # add reprojection later
     out_raster = os.path.join(output_folder, '{a}.tif').format(a=raster_name)
 
 # rasterize
