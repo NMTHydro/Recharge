@@ -85,7 +85,7 @@ def taw_func(root):
     return taw_df, taw_data_dict
 
 
-def rzsm_mapper(depletions, taw, inputs_path):
+def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     """Root Zone Soil Mapper, which takes two dataframe objects, depletions, taw and gets soil moiture using
     RZSM = 1- (D/TAW) for each pixel of the model. The RZSM will be converted to an array and refitted into
     a map using convert_array_to_raster()"""
@@ -93,30 +93,37 @@ def rzsm_mapper(depletions, taw, inputs_path):
     #de = depletions.as_matrix(columns='de') # why won't this work?
 
     de = depletions.ix[:, 2]
-    de = de.values.tolist()[1:]
+    de = de.values.tolist()[0:]
     de = np.array(de)
+    print 'de shape', de.shape
     print 'de', de
 
     dr = depletions.ix[:, 3]
-    dr = dr.values.tolist()[1:]
+    dr = dr.values.tolist()[0:]
     dr = np.array(dr)
+    print'dr shape', dr.shape
 
     drew = depletions.ix[:, 4]
-    drew = drew.values.tolist()[1:]
+    drew = drew.values.tolist()[0:]
     drew = np.array(drew)
+    print'drew shape', drew.shape
+
 
     d = de + dr + drew
     print 'depletion ->', d
+    print 'depletion shape', d.shape
 
-    ones = np.ones(32786,)
+    ones = np.ones(32787,) # 32768 needs to be 32787
 
     taw_unmod = taw.ix[:, 2]
-    taw_unmod = taw_unmod.values.tolist()[1:]
+    taw_unmod = taw_unmod.values.tolist()[0:]
+
     taw_unmod = [float(value) for value in taw_unmod]
     # for value in taw_unmod:
     #     value = int(value)
 
     taw_unmod = np.array(taw_unmod)
+    print 'taw_unmod shape', taw_unmod.shape
     print 'taw_unmod', taw_unmod
     quotient = (d/taw_unmod)
     print 'Quotient', quotient
@@ -126,7 +133,7 @@ def rzsm_mapper(depletions, taw, inputs_path):
     #print 'taw shape', taw_unmod.shape
 
     taw_mod = taw.ix[:, 3]
-    taw_mod = taw_mod.values.tolist()[1:]
+    taw_mod = taw_mod.values.tolist()[0:]
     taw_mod = [float(value) for value in taw_mod]
     taw_mod = np.array(taw_mod)
     quotient = d/taw_mod
@@ -142,7 +149,11 @@ def rzsm_mapper(depletions, taw, inputs_path):
     #geo_path = Paths()
     geo_path = os.path.join(inputs_path, 'statics')
     geo_thing = get_raster_geo_attributes(geo_path)
-    convert_array_to_raster('/Users/Gabe/Desktop', unmod_soil_arr, geo_thing)
+    print 'GEO THING', geo_thing
+    print 'unmod shape', unmod_soil_arr.shape
+    print unmod_soil_arr
+    unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
+    convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
 
 
@@ -159,12 +170,16 @@ def run():
     mask_path = os.path.join(mp)  # mp, 'zuni_1.tif'
     tiff_path = os.path.join(mask_path, 'zuni_1.tif')
 
-    #-----dates-----
+
 
 
     # ----TIFFS----
     tiff_list = ['de_27_12_2013.tif', 'dr_27_12_2013.tif', 'drew_27_12_2013.tif']
     tiff_frame = tiff_framer(tiff_root, mask_path, tiff_list, tiff_path)
+
+    #-----DATES-----
+
+    # TODO - pull out the dates from the tiff list. or something....
 
     #---- TAW ----------
     taw_df, taw_data_dict = taw_func(root)
@@ -174,7 +189,7 @@ def run():
     taw_df.to_excel('/Users/Gabe/Desktop/taw_df.xls')
 
     # ------ RZSM = 1- (D/TAW) -------
-    rzsm_mapper(tiff_frame, taw_df, inputs_path)
+    rzsm_mapper(tiff_frame, taw_df, inputs_path, mask_path)
 
 
 if __name__ == '__main__':
