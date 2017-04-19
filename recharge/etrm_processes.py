@@ -302,6 +302,9 @@ class Processes(object):
         a_min = c['a_min']
         a_max = c['a_max']
 
+        # The threshold values here were 0.0 and were changed to 4.0 in revision 84238ff
+        # If the threshold values are going to be manipulated then the should change to Config values
+        # and be set in the configuration file
         sf = where(temp < 4.0, precip, 0)
         rain = where(temp >= 4.0, precip, 0)
 
