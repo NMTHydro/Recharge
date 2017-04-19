@@ -302,8 +302,8 @@ class Processes(object):
         a_min = c['a_min']
         a_max = c['a_max']
 
-        sf = where(temp < 0.0, precip, 0)
-        rain = where(temp >= 0.0, precip, 0)
+        sf = where(temp < 4.0, precip, 0)
+        rain = where(temp >= 4.0, precip, 0)
 
         alb = where(sf > 3.0, a_max, palb)
         alb = where(sf <= 3.0, a_min + (palb - a_min) * exp(-0.12), alb)

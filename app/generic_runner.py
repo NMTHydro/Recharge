@@ -17,6 +17,11 @@
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
+import sys
+import os
+pp = os.path.realpath(__file__)
+sys.path.append(os.path.dirname(os.path.dirname(pp)))
+
 from app.paths import paths
 from config import Config, check_config
 from recharge.etrm_processes import Processes
