@@ -16,19 +16,15 @@
 
 # ============= standard library imports ========================
 import os
-import os
+from numpy import array
+from pandas import DataFrame
 
-import pandas as pd
-import numpy as np
-from runners.paths import Paths
 from recharge.etrm_processes import Processes
-from recharge.raster_tools import get_mask, convert_raster_to_array
-import xlwt
 from utils.pixel_coord_finder import coord_getter
 from runners.config import Config
-from recharge.raster_tools import apply_mask, get_mask, get_raster_geo_attributes, remake_array, convert_raster_to_array, convert_array_to_raster
+from recharge.raster_tools import get_mask, get_raster_geo_attributes, remake_array, convert_array_to_raster, \
+    tiff_framer
 
-from runners.taw_csv_gen2 import extract_keys, tiff_framer
 
 # ============= local library imports ===========================
 
@@ -41,12 +37,12 @@ def taw_func(root):
     northing, easting = coord_getter(os.path.join(mask_path, 'zuni_1.tif'))
 
     home = os.path.expanduser('~')
-    cp1 = os.path.join(home, 'ETRM_CONFIG.yml') # for an unmodified taw
-    cp2 = os.path.join(home, 'ETRM_CONFIG_TAW.yml') # for a modified taw
+    cp1 = os.path.join(home, 'ETRM_CONFIG.yml')  # for an unmodified taw
+    cp2 = os.path.join(home, 'ETRM_CONFIG_TAW.yml')  # for a modified taw
 
     # modified taw
     cfg1 = Config()
-    print 'cp2!!!!!!!!!!!--->',cp2
+    print 'cp2!!!!!!!!!!!--->', cp2
     cfg1.load(cp2)
     etrm_new = Processes(cfg1)
     print 'config taw_mod------->', cfg1.taw_modification
@@ -79,9 +75,9 @@ def taw_func(root):
                 taw_new_list.append('{}'.format(taw_new[ri, ci]))
 
     taw_data_dict = {'x': x_list, 'y': y_list, 'taw_unmodified': taw_unmodified_list, 'taw_new': taw_new_list}
-    taw_df = pd.DataFrame(taw_data_dict, columns=columns)
+    taw_df = DataFrame(taw_data_dict, columns=columns)
 
-    #print 'taw dataframe', taw_df
+    # print 'taw dataframe', taw_df
     return taw_df, taw_data_dict
 
 
@@ -90,63 +86,61 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     RZSM = 1- (D/TAW) for each pixel of the model. The RZSM will be converted to an array and refitted into
     a map using convert_array_to_raster()"""
 
-    #de = depletions.as_matrix(columns='de') # why won't this work?
+    # de = depletions.as_matrix(columns='de') # why won't this work?
 
     de = depletions.ix[:, 2]
     de = de.values.tolist()[0:]
-    de = np.array(de)
+    de = array(de)
     print 'de shape', de.shape
     print 'de', de
 
     dr = depletions.ix[:, 3]
     dr = dr.values.tolist()[0:]
-    dr = np.array(dr)
+    dr = array(dr)
     print'dr shape', dr.shape
 
     drew = depletions.ix[:, 4]
     drew = drew.values.tolist()[0:]
-    drew = np.array(drew)
+    drew = array(drew)
     print'drew shape', drew.shape
-
 
     d = de + dr + drew
     print 'depletion ->', d
     print 'depletion shape', d.shape
 
-    ones = np.ones(32787,) # 32768 needs to be 32787
+    # ones = np.ones(32787,) # 32768 needs to be 32787
 
     taw_unmod = taw.ix[:, 2]
     taw_unmod = taw_unmod.values.tolist()[0:]
 
-    taw_unmod = [float(value) for value in taw_unmod]
+    # taw_unmod = [float(value) for value in taw_unmod]
     # for value in taw_unmod:
     #     value = int(value)
 
-    taw_unmod = np.array(taw_unmod)
+    taw_unmod = array(taw_unmod, dtype=float)
     print 'taw_unmod shape', taw_unmod.shape
     print 'taw_unmod', taw_unmod
-    quotient = (d/taw_unmod)
+    quotient = d / taw_unmod
     print 'Quotient', quotient
-    unmod_soil_arr = ones - quotient
+    unmod_soil_arr = 1.0 - quotient
     print 'unmodified rzsm array', unmod_soil_arr
 
-    #print 'taw shape', taw_unmod.shape
+    # print 'taw shape', taw_unmod.shape
 
     taw_mod = taw.ix[:, 3]
     taw_mod = taw_mod.values.tolist()[0:]
-    taw_mod = [float(value) for value in taw_mod]
-    taw_mod = np.array(taw_mod)
-    quotient = d/taw_mod
-    mod_soil_arr = ones - quotient
+    # taw_mod = [float(value) for value in taw_mod]
+    taw_mod = array(taw_mod, dtyle=float)
+    quotient = d / taw_mod
+    mod_soil_arr = 1.0 - quotient
 
     print 'modified rzsm array', mod_soil_arr
 
-
     # ---- Get Arrays Back into shape! -----
 
-    #print 'paths.static_inputs',
+    # print 'paths.static_inputs',
     # should be able to get the paths thing to work.
-    #geo_path = Paths()
+    # geo_path = Paths()
     geo_path = os.path.join(inputs_path, 'statics')
     geo_thing = get_raster_geo_attributes(geo_path)
     print 'GEO THING', geo_thing
@@ -156,11 +150,8 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
 
-
-
 def run():
-
-    #------PATHS-------
+    # ------PATHS-------
     hard_drive_path = os.path.join('/', 'Volumes', 'Seagate Expansion Drive')
     inputs_path = os.path.join(hard_drive_path, 'ETRM_Inputs')
     root = inputs_path
@@ -170,18 +161,15 @@ def run():
     mask_path = os.path.join(mp)  # mp, 'zuni_1.tif'
     tiff_path = os.path.join(mask_path, 'zuni_1.tif')
 
-
-
-
     # ----TIFFS----
     tiff_list = ['de_27_12_2013.tif', 'dr_27_12_2013.tif', 'drew_27_12_2013.tif']
     tiff_frame = tiff_framer(tiff_root, mask_path, tiff_list, tiff_path)
 
-    #-----DATES-----
+    # -----DATES-----
 
     # TODO - pull out the dates from the tiff list. or something....
 
-    #---- TAW ----------
+    # ---- TAW ----------
     taw_df, taw_data_dict = taw_func(root)
 
     # ----- Take Stock ----

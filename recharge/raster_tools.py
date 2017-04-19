@@ -24,9 +24,56 @@ from numpy.ma import masked_where, nomask, filled
 from datetime import datetime
 import os
 
+from pandas import DataFrame
+
+from utils.pixel_coord_finder import coord_getter
+
+
+def extract_keys(tiff_list):
+    tiff_keys = [tname.split('_')[0] for tname in tiff_list]
+    keys = ['x', 'y']
+    [keys.append(item) for item in tiff_keys]
+    # for item in tiff_keys:
+    #     keys.append(item)
+    # keys.append(tiff_keys)
+    print 'keys!', keys
+    return keys
+
+
+def tiff_framer(root, mask_path, tiff_list, tiff_path):
+    print 'started tiff framer'
+    mask_arr = get_mask(mask_path)
+    print mask_arr
+
+    # TODO - build the mask into the config object.
+    northing, easting = coord_getter(tiff_path)  # mask_arr
+    print 'got n/e'
+
+    arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
+    print 'got arrs'
+
+    ref_arr = arrs[0]
+    nrows, ncols = ref_arr.shape
+
+    rows = []
+    for ri in xrange(nrows):
+        for ci in xrange(ncols):
+            mask_values = mask_arr[ri, ci]
+            if mask_values:
+                x = int(easting[ri, ci])
+                y = int(northing[ri, ci])
+                data = [arr[ri, ci] for arr in arrs]
+                data.insert(0, y)
+                data.insert(0, x)
+
+                rows.append(data)
+    keys = extract_keys(tiff_list)
+    df = DataFrame(rows, columns=keys)
+
+    return df
+
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
-
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
