@@ -17,10 +17,8 @@ before_install:
   - conda update --yes --quiet conda
 
 install:
-  - conda env create -n recharge -f environment.yml
-#  - conda create --yes --quiet -n recharge python
+  - conda env create -f travis_environment.yml
   - source activate recharge
-#  - conda install --yes --file requirements.txt
 
 script:
   - export GDAL_DATA=/home/travis/miniconda2/envs/recharge/share/gdal
