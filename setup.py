@@ -21,7 +21,7 @@ from setuptools import setup
 setup(name='Recharge',
       version='0.1',
       py_modules=[],
-      packages=['recharge'],
+      packages=['recharge', 'app'],
       test_suite='recharge.test_suite.suite', requires=['numpy', 'pandas', 'matplotlib'])
 
 # ============= EOF =============================================

@@ -151,11 +151,14 @@ class Config:
         if path is None:
             path = paths.config
 
-        check_config(path)
-        with open(path, 'r') as rfile:
-            # self._obj = yaml.load(rfile)
-            self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        if isinstance(path, (str, unicode)):
+            check_config(path)
+            rfile = open(path, 'r')
+        else:
+            rfile = path
 
+        self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        rfile.close()
 
 def check_config(path=None):
     if path is None:
