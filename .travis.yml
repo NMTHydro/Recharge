@@ -1,5 +1,5 @@
 # This is the config file for building Recharge and running its autotest suite
-# with Travis-ci.org
+# with Travis-ci.org.
 
 sudo: false
 
