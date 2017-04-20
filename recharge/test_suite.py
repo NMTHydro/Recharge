@@ -20,12 +20,12 @@ import unittest
 
 
 def suite():
-    from tests.test_case import MyTestCase
+    from tests.test_case import ConfigTestCase
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
-    tests = (MyTestCase, )
+    tests = (ConfigTestCase, )
     for t in tests:
         suite.addTest(loader.loadTestsFromTestCase(t))
     return suite
