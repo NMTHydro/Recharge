@@ -23,3 +23,6 @@ install:
 script:
   - export GDAL_DATA=/home/travis/miniconda2/envs/recharge/share/gdal
   - python setup.py test
+
+notifications:
+  slack: nmbgmr:7aYixFDHNlvkIyqqTdvQ7HS9
