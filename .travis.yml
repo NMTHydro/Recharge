@@ -22,4 +22,6 @@ install:
   - source activate recharge
 #  - conda install --yes --file requirements.txt
 
-script: python setup.py test
+script:
+  - export GDAL_DATA=/home/travis/miniconda2/envs/landsatenv/share/gdal
+  - python setup.py test
