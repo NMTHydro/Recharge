@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2016 Jake Ross
+# Copyright 2017 ross
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,5 @@
 # limitations under the License.
 # ===============================================================================
 
-# ============= standard library imports ========================
-# ============= local library imports  ==========================
-from setuptools import setup
-
-setup(name='Recharge',
-      version='0.1',
-      py_modules=[],
-      packages=['recharge', 'app'],
-      test_suite='recharge.test_suite.suite', requires=['numpy', 'pandas', 'matplotlib'])
 
 # ============= EOF =============================================

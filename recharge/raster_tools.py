@@ -32,7 +32,98 @@ from pandas import DataFrame
 from app.paths import paths
 
 
+def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_path, mask):
+    """
+        Root Zone Soil Mapper, which takes two dataframe objects, depletions, taw and gets soil moiture using
+        RZSM = 1- (D/TAW) for each pixel of the model. The RZSM will be converted to an array and refitted into
+        a map using convert_array_to_raster()
+    """
+    geo = get_raster_geo_attributes(os.path.dirname(taw_path))
+
+    taw_mod = convert_raster_to_array(taw_path)
+    taw_unmod = convert_raster_to_array(taw_unmod_path)
+    de = convert_raster_to_array(de_path)
+    dr = convert_raster_to_array(dr_path)
+    drew = convert_raster_to_array(drew_path)
+
+    taw_mod = apply_mask(mask, taw_mod)
+    taw_unmod = apply_mask(mask, taw_unmod)
+    de = apply_mask(mask, de)
+    dr = apply_mask(mask, dr)
+    drew = apply_mask(mask, drew)
+
+    # de = depletions.as_matrix(columns='de') # why won't this work?
+
+    # de = depletions.ix[:, 2]
+    # de = de.values.tolist()[0:]
+    # de = array(de)
+    print 'de shape', de.shape
+    print 'de', de
+
+    # dr = depletions.ix[:, 3]
+    # dr = dr.values.tolist()[0:]
+    # dr = array(dr)
+    print'dr shape', dr.shape
+
+    # drew = depletions.ix[:, 4]
+    # drew = drew.values.tolist()[0:]
+    # drew = array(drew)
+    print'drew shape', drew.shape
+
+    d = de + dr + drew
+    print 'depletion ->', d
+    print 'depletion shape', d.shape
+
+    # ones = np.ones(32787,) # 32768 needs to be 32787
+
+    # taw_unmod = taw.ix[:, 2]
+    # taw_unmod = taw_unmod.values.tolist()[0:]
+
+    # taw_unmod = [float(value) for value in taw_unmod]
+    # for value in taw_unmod:
+    #     value = int(value)
+
+    # taw_unmod = array(taw_unmod, dtype=float)
+    print 'taw_unmod shape', taw_unmod.shape
+    print 'taw_unmod', taw_unmod
+    quotient = d / taw_unmod
+    print 'Quotient', quotient
+    unmod_soil_arr = 1.0 - quotient
+    print 'unmodified rzsm array', unmod_soil_arr
+
+    # print 'taw shape', taw_unmod.shape
+
+    # taw_mod = taw.ix[:, 3]
+    # taw_mod = taw_mod.values.tolist()[0:]
+    # taw_mod = [float(value) for value in taw_mod]
+    # taw_mod = array(taw_mod, dtyle=float)
+
+    quotient = d / taw_mod
+    mod_soil_arr = 1.0 - quotient
+
+    print 'modified rzsm array', mod_soil_arr
+
+    # ---- Get Arrays Back into shape! -----
+    convert_array_to_raster(os.path.join(output_path, 'unmod.tif'), unmod_soil_arr, geo)
+    convert_array_to_raster(os.path.join(output_path, 'mod.tif'), mod_soil_arr, geo)
+
+    # print 'paths.static_inputs',
+    # should be able to get the paths thing to work.
+    # geo_path = Paths()
+    # geo_path = os.path.join(inputs_path, 'statics')
+    # geo_thing = get_raster_geo_attributes(geo_path)
+    # print 'GEO THING', geo_thing
+    # print 'unmod shape', unmod_soil_arr.shape
+    # print unmod_soil_arr
+    # unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
+    # convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
+
+
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
+    if not os.path.isfile(output_path):
+        print 'Not a valid file: {}. Raster could not be written!'.format(output_path)
+        return
+
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
@@ -44,7 +135,7 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     del out_data_set, output_band
 
 
-def convert_raster_to_array(input_raster_path, raster, band=1):
+def convert_raster_to_array(input_raster_path, raster=None, band=1):
     """
     Convert .tif raster into a numpy numerical array.
 
@@ -56,7 +147,10 @@ def convert_raster_to_array(input_raster_path, raster, band=1):
     """
     # print "input raster path", input_raster_path
     # print "raster", raster
-    p = os.path.join(input_raster_path, raster)
+    p = input_raster_path
+    if raster is not None:
+        p = os.path.join(p, raster)
+
     # print "filepath", os.path.isfile(p)
     # print p
     if not os.path.isfile(p):
@@ -95,7 +189,11 @@ def apply_mask(mask_path, arr):
 
 
 def get_mask(path):
-    file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
+    if os.path.isfile(path):
+        path, file_name = os.path.dirname(path), os.path.basename(path)
+    else:
+
+        file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
 
     if file_name is not None:
         return get_mask_arr(path, file_name)
