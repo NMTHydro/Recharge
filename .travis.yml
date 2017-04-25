@@ -22,10 +22,14 @@ before_install:
 install:
   - conda env create -f travis_environment.yml
   - source activate recharge
+  - pip install codecov coverage
 
 script:
   - export GDAL_DATA=/home/travis/miniconda2/envs/recharge/share/gdal
-  - python setup.py test
+  - coverage run setup.py test
+
+after_success:
+  - codecov
 
 notifications:
   slack: nmbgmr:7aYixFDHNlvkIyqqTdvQ7HS9
