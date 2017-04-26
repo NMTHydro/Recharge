@@ -103,7 +103,7 @@ def initialize_static_dict(pairs=None):
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return maximum(minimum(r, 20), 0.1)
+        return maximum(minimum(r, 20), 0.1) # ToDo: need to get rid of the upper limit with new KSat
 
     def initial_tew(r):
         return maximum(minimum(r, 10), 0.001)

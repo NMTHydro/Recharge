@@ -31,6 +31,11 @@ DEFAULT_CFG = '''
 input_root: /Volumes/Seagate Expansion Drive
 output_root: Please Set Me
 
+init_cond_root: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize
+rew_init: drew_4_19_23_11.tif
+tew_init: de_4_19_23_11.tif
+taw_init: dr_4_19_23_11.tif
+
 start_date: 12/1/2013
 end_date: 12/32/2013
 
