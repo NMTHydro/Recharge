@@ -50,6 +50,7 @@ ro_reinf_frac: 0.0
 swb_mode: fao
 allen_ceff: 1.0
 winter_evap_limiter: 0.3
+output_units: acre-ft
 
 '''
 
@@ -78,6 +79,7 @@ class RunSpec:
     winter_evap_limiter = 0.3
     winter_end_day = 92
     winter_start_day = 306
+    output_units = 'acre-ft'
 
     def __init__(self, obj):
         self._obj = obj
@@ -87,7 +89,8 @@ class RunSpec:
                  'y_cord_name',
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'allen_ceff',
-                 'winter_evap_limiter', 'winter_end_day', 'winter_start_day')
+                 'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
+                 'output_units')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
@@ -160,6 +163,7 @@ class Config:
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
         rfile.close()
 
+
 def check_config(path=None):
     if path is None:
         path = paths.config
@@ -175,4 +179,5 @@ def check_config(path=None):
 
         print '***** Please edit the config file at {} and rerun the model'.format(path)
         sys.exit()
+
 # ============= EOF =============================================

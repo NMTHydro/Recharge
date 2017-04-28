@@ -26,6 +26,7 @@ INITIAL_KEYS = 'de', 'dr', 'drew'
 
 OUTPUTS = 'tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb'
 
+MM = 'mm'
 
 CURRENT_DAY = 'current_day'
 CURRENT_MONTH = 'current_month'
