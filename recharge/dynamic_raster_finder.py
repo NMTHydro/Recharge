@@ -138,7 +138,6 @@ def get_prisms(date):
 
     precip = get_prism(date, variable='precip')
     precip = where(precip < 0, 0, precip)
-
     return min_temp, max_temp, temp, precip
 
 

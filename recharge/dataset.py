@@ -43,7 +43,7 @@ def extract_prism(day, out):
             if startr is None:
                 startr = i
         elif startr is not None:
-            endr = i + 1
+            endr = i
             break
 
     geo['rows'] = endr - startr
@@ -53,7 +53,7 @@ def extract_prism(day, out):
             if startc is None:
                 startc = i
         elif startc is not None:
-            endc = i + 1
+            endc = i
             break
 
     geo['cols'] = endc - startc
@@ -68,17 +68,19 @@ def extract_prism(day, out):
         if k == 'temp':
             continue
 
+        print k
         raster = Raster.fromarray(arr)
         marr = raster.unmasked()
-
         marr = marr[slice(startr, endr), slice(startc, endc)]
+        marr = marr * arr
         timestamp = day.strftime('%m_%d_%Y')
         p = os.path.join(out, '{}_{}.tif'.format(k, timestamp))
-
+        print raster.array
+        print marr
         raster.save(p, marr, geo)
 
 
-def extract_penman(mask_arr, day, out):
+def extract_penman(day, out):
     pass
 
 
@@ -86,8 +88,13 @@ def generate_dataset(daterange, out):
     if not paths.is_set():
         raise PathsNotSetExecption
 
+    extract_initial
+    extract_static
+
     for day in day_generator(*daterange):
         extract_prism(day, out)
+        extract_NDVI(day, out)
+        extract_penman(day, out)
         # extract_penman(day, out)
 
 
