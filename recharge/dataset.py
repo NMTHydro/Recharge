@@ -22,16 +22,15 @@ import os
 from affine import Affine
 
 from app.paths import paths, PathsNotSetExecption
-from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi
+from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman
 from recharge.raster import Raster
 from recharge.raster_tools import get_tiff_transform_func, get_tiff_transform
 from recharge.tools import day_generator
+from recharge.dict_setup import make_pairs
+from recharge import STATIC_KEYS, INITIAL_KEYS
 
 
 def extract_prism(day, out):
-    if not os.path.isdir(out):
-        os.makedirs(out)
-
     keys = ('min_temp', 'max_temp', 'temp', 'precip')
 
     geo = get_geo(day)
@@ -73,6 +72,7 @@ def extract_prism(day, out):
         marr = marr[slice(startr, endr), slice(startc, endc)]
         marr = marr * arr
         timestamp = day.strftime('%m_%d_%Y')
+        subpath = ''
         if k == 'precip':
             subpath = os.path.join('PRISM','precip','800m_std_all')
         elif k == 'max_temp':
@@ -80,19 +80,70 @@ def extract_prism(day, out):
         elif k == 'min_temp':
             subpath = os.path.join('PRISM','Temp','Minimum_standard')
 
-        p = os.path.join(out, subpath, '{}_{}.tif'.format(k, timestamp))
+        p = os.path.join(out, subpath)
+        if not os.path.isdir(p):
+            os.makedirs(p)
+        p = os.path.join(p, '{}_{}.tif'.format(k, timestamp))
 
         raster.save(p, marr, geo)
 
 
 def extract_penman(day, out):
-    pass
+    keys = ('etrs', 'rg')
+
+    geo = get_geo(day)
+    mask_arr = Raster(paths.mask).as_bool_array
+    # nr,nc = mask_arr.shape
+    startr, endr = None, None
+    for i, ri in enumerate(mask_arr):
+        if ri.any():
+            if startr is None:
+                startr = i
+        elif startr is not None:
+            endr = i
+            break
+
+    geo['rows'] = endr - startr
+    startc, endc = None, None
+    for i, ri in enumerate(mask_arr.T):
+        if ri.any():
+            if startc is None:
+                startc = i
+        elif startc is not None:
+            endc = i
+            break
+
+    geo['cols'] = endc - startc
+
+    transform = get_tiff_transform(paths.mask)
+    transform *= Affine.translation(startc, startr)
+    geo['geotransform'] = transform.to_gdal()
+
+    for k in keys:
+        arr = get_penman(day, k)
+
+        raster = Raster.fromarray(arr)
+        marr = raster.unmasked()
+        marr = marr[slice(startr, endr), slice(startc, endc)]
+        marr = marr * arr
+
+        year = str(day.year)
+        yday = day.timetuple().tm_yday
+        if k == 'etrs':
+            p = os.path.join(out, 'PM_RAD', '{}{}'.format('PM', year))
+            name = '{}_{}_{:03n}.tif'.format('PM_NM', year, yday)
+        elif k == 'rg':
+            p = os.path.join(out, 'PM_RAD', '{}{}'.format('rad', year))
+            name = '{}_{}_{:03n}.tif'.format('RTOT', year, yday)
+
+        if not os.path.isdir(p):
+            os.makedirs(p)
+        p = os.path.join(p, name)
+
+        raster.save(p, marr, geo)
 
 
 def extract_ndvi(day, out):
-    if not os.path.isdir(out):
-        os.makedirs(out)
-
     geo = get_geo(day)
     mask_arr = Raster(paths.mask).as_bool_array
     # nr,nc = mask_arr.shape
@@ -126,24 +177,81 @@ def extract_ndvi(day, out):
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
     marr = marr * arr
-    print marr
+
     timestamp = day.strftime('%m_%d_%Y')
     year = str(day.year)
-    p = os.path.join(out, 'NDVI', 'NDVI', year, '{}_{}.tif'.format('ndvi', timestamp))
+    p = os.path.join(out, 'NDVI', 'NDVI', year)
+    if not os.path.isdir(p):
+        os.makedirs(p)
+    p = os.path.join(p, '{}_{}.tif'.format('ndvi', timestamp))
 
     raster.save(p, marr, geo)
+
+
+def extract_initial(out):
+    mask_arr = Raster(paths.mask).as_bool_array
+    # nr,nc = mask_arr.shape
+    startr, endr = None, None
+    for i, ri in enumerate(mask_arr):
+        if ri.any():
+            if startr is None:
+                startr = i
+        elif startr is not None:
+            endr = i
+            break
+
+    startc, endc = None, None
+    for i, ri in enumerate(mask_arr.T):
+        if ri.any():
+            if startc is None:
+                startc = i
+        elif startc is not None:
+            endc = i
+            break
+
+    transform = get_tiff_transform(paths.mask)
+    transform *= Affine.translation(startc, startr)
+
+    pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
+    for k, pair in pairs:
+        print 'initial {} reduced'.format(k)
+        raster = Raster(pair, root=paths.initial_inputs)
+        geo = raster.geo
+        geo['rows'] = endr - startr
+        geo['cols'] = endc - startc
+        geo['geotransform'] = transform.to_gdal()
+
+        arr = raster.masked()
+
+        raster = Raster.fromarray(arr)
+        marr = raster.unmasked()
+        marr = marr[slice(startr, endr), slice(startc, endc)]
+        marr = marr * arr
+
+        path = os.path.join(out, 'initialize')
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        path = os.path.join(path, '{}_{}.tif'.format(k, 'reduced'))
+
+        raster.save(path, marr, geo)
+
+
+def extract_static(day, out):
+    pass
+
 
 def generate_dataset(daterange, out):
     if not paths.is_set():
         raise PathsNotSetExecption
 
-    # extract_initial
-    # extract_static
+    extract_initial(out)
+    # extract_static(out)
 
     for day in day_generator(*daterange):
         extract_prism(day, out)
         extract_ndvi(day, out)
-        # extract_penman(day, out)
+        extract_penman(day, out)
+        print 'day {}'.format(day.strftime('%m_%d_%Y'))
 
 
 if __name__ == '__main__':
