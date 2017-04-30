@@ -85,6 +85,17 @@ def get_individ_kcb(date_object, previous_kcb=None):
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
 
 
+def get_individ_ndvi(date_object):
+    year = str(date_object.year)
+    tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
+                                             date_object.timetuple().tm_mon,
+                                             date_object.timetuple().tm_mday)
+
+    name = os.path.join(year, tail)
+    raster = Raster(name, root=paths.ndvi_individ)
+    return raster.masked()
+
+
 def get_kcb(date_object, previous_kcb=None):
     """
     Find NDVI image and convert to Kcb.
