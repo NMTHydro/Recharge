@@ -71,41 +71,29 @@ def extract_prism(day, out):
     geo, startc, endc, startr, endr = setup_extract(day)
 
     # build directories
-    for a, b in (('precip', '800m_std_all'), ('Temp', 'Maximum_standard'), ('Temp', 'Minumum_standard')):
+    for a, b in (('precip', '800m_std_all'), ('Temp', 'Maximum_standard'), ('Temp', 'Minimum_standard')):
         p = os.path.join(out, 'PRISM', a, b)
         print 'build', a,b,p
         if not os.path.isdir(p):
             print 'making', p
             os.makedirs(p)
 
-    timestamp = day.strftime('%m_%d_%Y')
+    timestamp = day.strftime('%Y%m%d')
     for k, base, arr in zip(keys, bases, get_prisms(day)):
         # skip temp
         if k == 'temp':
             continue
 
-        # raster = Raster.fromarray(arr)
-        # marr = raster.unmasked()
-        # marr = marr[slice(startr, endr), slice(startc, endc)]
-        # marr = marr * arr
         p = os.path.join(out, 'PRISM', base, '{}_{}.tif'.format(k, timestamp))
-        #
-        # raster.save(p, marr, geo)
 
-        print 'primsim', p, os.path.isdir(os.path.dirname(p))
         slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
 
 def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     raster = Raster.fromarray(arr)
-    print arr
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
-    print marr
     marr = marr * arr
-    # timestamp = day.strftime('%m_%d_%Y')
-
-    # p = os.path.join(p, '{}_{}.tif'.format(k, timestamp))
 
     raster.save(p, marr, geo)
 
@@ -117,11 +105,6 @@ def extract_penman(day, out):
 
     for k in keys:
         arr = get_penman(day, k)
-
-        # raster = Raster.fromarray(arr)
-        # marr = raster.unmasked()
-        # marr = marr[slice(startr, endr), slice(startc, endc)]
-        # marr = marr * arr
 
         year = str(day.year)
         yday = day.timetuple().tm_yday
@@ -137,17 +120,12 @@ def extract_penman(day, out):
         p = os.path.join(p, name)
 
         slice_and_save(p, arr, geo, startc, endc, startr, endr)
-        # raster.save(p, marr, geo)
 
 
 def extract_ndvi(day, out):
     geo, startc, endc, startr, endr = setup_extract(day)
 
     arr = get_individ_ndvi(day)
-    # raster = Raster.fromarray(arr)
-    # marr = raster.unmasked()
-    # marr = marr[slice(startr, endr), slice(startc, endc)]
-    # marr = marr * arr
 
     timestamp = day.strftime('%Y_%m_%d')
     year = str(day.year)
@@ -156,7 +134,6 @@ def extract_ndvi(day, out):
         os.makedirs(p)
     p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
 
-    # raster.save(p, marr, geo)
     slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
 
@@ -177,20 +154,9 @@ def extract_initial(out):
 
         arr = raster.masked()
 
-        # raster = Raster.fromarray(arr)
-        # marr = raster.unmasked()
-        # marr = marr[slice(startr, endr), slice(startc, endc)]
-        # marr = marr * arr
-
-        # p = os.path.join(out, 'initialize')
-        # if not os.path.isdir(p):
-        #     os.makedirs(p)
-        # p = os.path.join(p, '{}_{}.tif'.format(k, 'reduced'))
-
         p = make_reduced_path(out, 'initialize', k)
         slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
-        # raster.save(path, marr, geo)
         print 'initial {} reduced'.format(k)
 
 
@@ -211,20 +177,10 @@ def extract_static(out):
 
         arr = raster.masked()
 
-        # raster = Raster.fromarray(arr)
-        # marr = raster.unmasked()
-        # marr = marr[slice(startr, endr), slice(startc, endc)]
-        # marr = marr * arr
-
-        # p = os.path.join(out, 'statics')
-        # if not os.path.isdir(p):
-        #     os.makedirs(p)
-        # p = os.path.join(p, '{}_{}.tif'.format(k, 'reduced'))
         p = make_reduced_path(out, 'statics', k)
 
         slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
-        # raster.save(path, marr, geo)
         print 'static {} reduced'.format(k)
 
 
@@ -243,21 +199,10 @@ def extract_mask(out):
 
     arr = raster.masked()
 
-    # raster = Raster.fromarray(arr)
-    # marr = raster.unmasked()
-    # marr = marr[slice(startr, endr), slice(startc, endc)]
-    # marr = marr * arr
-
-    # p = os.path.join(out, 'Mask')
-    # if not os.path.isdir(p):
-    #     os.makedirs(p)
-    # p = os.path.join(p, '{}_{}.tif'.format('mask', 'reduced'))
-    #
     p = make_reduced_path(out, 'Mask', 'mask')
 
     slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
-    # raster.save(path, marr, geo)
     print 'mask reduced'
 
 
