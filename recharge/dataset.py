@@ -33,48 +33,49 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 def setup_extract(day):
     geo = get_geo(day)
     mask_arr = Raster(paths.mask).as_bool_array
-    startc, endc, startr, endr = bounding_box(mask_arr, geo)
+    startc, endc, startr, endr = bounding_box(mask_arr)
+    geo['rows'] = endr - startr
+    geo['cols'] = endc - startc
+    transform = get_tiff_transform(paths.mask)
+    transform *= Affine.translation(startc, startr)
+    geo['geotransform'] = transform.to_gdal()
     return geo, startc, endc, startr, endr
 
 
-def bounding_box(arr, geo=None):
+def bounding_box(arr):
     startr, endr = None, None
     for i, ri in enumerate(arr):
         if ri.any():
             if startr is None:
-                startr = i
+                startr = i-1
         elif startr is not None:
-            endr = i
+            endr = i+1
             break
-    if geo:
-        geo['rows'] = endr - startr
+
     startc, endc = None, None
     for i, ri in enumerate(arr.T):
         if ri.any():
             if startc is None:
-                startc = i
+                startc = i-1
         elif startc is not None:
-            endc = i
+            endc = i+1
             break
-    if geo:
-        geo['cols'] = endc - startc
+
     return startc, endc, startr, endr
 
 
 def extract_prism(day, out):
     keys = ('min_temp', 'max_temp', 'temp', 'precip')
-    bases = ('Minimum_standard', 'Maxumum_standard', None, '800m_std_all')
+    bases = ('Temp/Minimum_standard', 'Temp/Maximum_standard', None, 'precip/800m_std_all')
 
     geo, startc, endc, startr, endr = setup_extract(day)
-
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
 
     # build directories
     for a, b in (('precip', '800m_std_all'), ('Temp', 'Maximum_standard'), ('Temp', 'Minumum_standard')):
         p = os.path.join(out, 'PRISM', a, b)
+        print 'build', a,b,p
         if not os.path.isdir(p):
+            print 'making', p
             os.makedirs(p)
 
     timestamp = day.strftime('%m_%d_%Y')
@@ -90,13 +91,17 @@ def extract_prism(day, out):
         p = os.path.join(out, 'PRISM', base, '{}_{}.tif'.format(k, timestamp))
         #
         # raster.save(p, marr, geo)
+
+        print 'primsim', p, os.path.isdir(os.path.dirname(p))
         slice_and_save(p, arr, geo, startc, endc, startr, endr)
 
 
-def slice_and_save(p, arr, geo, startr, endr, startc, endc):
+def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     raster = Raster.fromarray(arr)
+    print arr
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
+    print marr
     marr = marr * arr
     # timestamp = day.strftime('%m_%d_%Y')
 
@@ -109,10 +114,6 @@ def extract_penman(day, out):
     keys = ('etrs', 'rg')
 
     geo, startc, endc, startr, endr = setup_extract(day)
-
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
 
     for k in keys:
         arr = get_penman(day, k)
@@ -141,10 +142,6 @@ def extract_penman(day, out):
 
 def extract_ndvi(day, out):
     geo, startc, endc, startr, endr = setup_extract(day)
-
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
 
     arr = get_individ_ndvi(day)
     # raster = Raster.fromarray(arr)

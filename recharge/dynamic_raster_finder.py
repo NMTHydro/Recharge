@@ -158,6 +158,7 @@ def get_geo(date_object):
     root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
     name = 'PRISMD2_NMHW2mi_{}'.format(tail)
     raster = Raster(name, root=os.path.join(paths.prism, root))
+
     return raster.geo
 
 
