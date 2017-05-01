@@ -743,7 +743,7 @@ class Processes(object):
         kcb = time_it(func, date, m['pkcb'])
 
         m['kcb'] = kcb
-        min_temp, max_temp, temp, precip = time_it(get_prisms, date)
+        min_temp, max_temp, temp, precip = time_it(get_prisms, date, self._cfg.is_reduced)
         m['min_temp'] = min_temp
         m['max_temp'] = max_temp
         m['temp'] = temp

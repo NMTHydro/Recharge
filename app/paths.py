@@ -58,12 +58,11 @@ class Paths:
 
     def build(self, input_root, output_root=None):
         self._is_set = True
-        self.etrm_input_root = etrm_input_root = os.path.join(input_root,
-                                                              'ETRM_Inputs')
+        self.etrm_input_root = etrm_input_root = input_root
         if output_root is None:
-            output_root = input_root
+            output_root = os.path.join(input_root, 'ETRM_Results')
 
-        self.etrm_output_root = os.path.join(output_root, 'ETRM_Results')
+        self.etrm_output_root = output_root
 
         now = datetime.now()
         tag = now.strftime('%y%m%d_%H_%M')

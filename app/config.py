@@ -85,6 +85,7 @@ class RunSpec:
     winter_end_day = 92
     winter_start_day = 306
     output_units = 'acre-ft'
+    is_reduced = False
 
     def __init__(self, obj):
         self._obj = obj
@@ -95,7 +96,7 @@ class RunSpec:
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'allen_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                 'output_units')
+                 'output_units', 'is_reduced')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))

@@ -136,18 +136,18 @@ def get_kcb(date_object, previous_kcb=None):
     return post_process_ndvi(name, paths.ndvi_std_all, previous_kcb, band)
 
 
-def get_prisms(date):
+def get_prisms(date, is_reduced = False):
     """
     return all prism variables
 
     :param date:
     :return: min_temp, max_temp, temp, precip
     """
-    min_temp = get_prism(date, variable='min_temp')
-    max_temp = get_prism(date, variable='max_temp')
+    min_temp = get_prism(date, variable='min_temp', is_reduced=is_reduced)
+    max_temp = get_prism(date, variable='max_temp', is_reduced=is_reduced)
     temp = (min_temp + max_temp) / 2
 
-    precip = get_prism(date, variable='precip')
+    precip = get_prism(date, variable='precip', is_reduced=is_reduced)
     precip = where(precip < 0, 0, precip)
     return min_temp, max_temp, temp, precip
 
@@ -162,7 +162,7 @@ def get_geo(date_object):
     return raster.geo
 
 
-def get_prism(date_object, variable='precip'):
+def get_prism(date_object, variable='precip', is_reduced = False):
     """
     Find PRISM image.
 
@@ -181,18 +181,27 @@ def get_prism(date_object, variable='precip'):
     if variable == 'precip':
 
         root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
-        name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+        if is_reduced:
+            name = 'precip_{}'.format(tail)
+        else:
+            name = 'PRISMD2_NMHW2mi_{}'.format(tail)
 
     elif variable == 'min_temp':
         root = os.path.join('Temp', 'Minimum_standard')
-        if year in PRISM_YEARS:
-            name = 'cai_tmin_us_us_30s_{}'.format(tail)
+        if is_reduced:
+            name = 'min_temp_{}'.format(tail)
         else:
-            name = 'TempMin_NMHW2Buff_{}'.format(tail)
+            if year in PRISM_YEARS:
+                name = 'cai_tmin_us_us_30s_{}'.format(tail)
+            else:
+                name = 'TempMin_NMHW2Buff_{}'.format(tail)
 
     elif variable == 'max_temp':
         root = os.path.join('Temp', 'Maximum_standard')
-        name = 'TempMax_NMHW2Buff_{}'.format(tail)
+        if is_reduced:
+            name = 'max_temp_{}'.format(tail)
+        else:
+            name = 'TempMax_NMHW2Buff_{}'.format(tail)
 
     raster = Raster(name, root=os.path.join(paths.prism, root))
     return raster.masked()
