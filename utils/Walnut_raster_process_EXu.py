@@ -3,10 +3,12 @@ import fnmatch
 import gdal
 from subprocess import call
 
-
-#folder path
+#folder path and variables for Walnut
 input_folder = 'G:\\Walnut\\RealData\\'
 output_folder = 'G:\\Walnut\\WalnutData\\'
+
+
+
 projection = 26712  # NAD83 UTM Zone 12 North
 x_min = 576863
 y_min = 3501109
@@ -16,9 +18,26 @@ cols = 2430
 rows = 740
 cell_size = 25
 resample_method = 'average'
-rcols = 243
-rrows = 74
-rcell_size = 250
+rcols = cols/10
+rrows = rows/10
+rcell_size = cell_size*10
+
+#folder path and variables for New Mexico
+input_folder = 'G:\\ETRM_inputs\\SoilsData\\NM_Extracted\\Merged\\'
+output_folder = 'G:\\ETRM_inputs\\SoilsData\\NM_Ex..0tracted\\Merged\\'
+projection = 26913  # NAD83 UTM Zone 12 North
+x_min = 114757
+y_min = 3471163
+x_max = 682757
+y_max = 4102413
+cols = 22720
+rows = 25250
+cell_size = 25
+resample_method = 'average'
+rcols = cols/10
+rrows = rows/10
+rcell_size = cell_size*10
+
 
 os.chdir(input_folder)
 def find_format(path, filter_):
