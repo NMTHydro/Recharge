@@ -42,6 +42,17 @@ def run_dataset():
         generate_dataset(runspec.date_range, runspec.output_root)
 
 
+def run_dataset():
+    print 'Running Dataset'
+
+    cfg = Config()
+    for runspec in cfg.runspecs:
+        paths.build(runspec.input_root, runspec.output_root)
+        paths.set_mask_path(runspec.mask)
+
+        generate_dataset(runspec.date_range, runspec.output_root)
+
+
 def run_model():
     print 'Running Model'
     cfg = Config()
