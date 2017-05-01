@@ -49,18 +49,18 @@ def bounding_box(arr):
     for i, ri in enumerate(arr):
         if ri.any():
             if startr is None:
-                startr = i
+                startr = i-1
         elif startr is not None:
-            endr = i
+            endr = i+1
             break
 
     startc, endc = None, None
     for i, ri in enumerate(arr.T):
         if ri.any():
             if startc is None:
-                startc = i
+                startc = i-1
         elif startc is not None:
-            endc = i
+            endc = i+1
             break
     return startc, endc, startr, endr
 

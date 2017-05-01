@@ -50,6 +50,17 @@ def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
     return kcb
 
 
+def get_individ_ndvi(date_object):
+    year = str(date_object.year)
+    tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
+                                             date_object.timetuple().tm_mon,
+                                             date_object.timetuple().tm_mday)
+
+    name = os.path.join(year, tail)
+    raster = Raster(name, root=paths.ndvi_individ)
+    return raster.masked()
+
+
 def get_spline_kcb(date_object, previous_kcb=None):
     """
     Find NDVI image and convert to Kcb.
@@ -83,17 +94,6 @@ def get_individ_kcb(date_object, previous_kcb=None):
 
     name = os.path.join(year, tail)
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
-
-
-def get_individ_ndvi(date_object):
-    year = str(date_object.year)
-    tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
-                                             date_object.timetuple().tm_mon,
-                                             date_object.timetuple().tm_mday)
-
-    name = os.path.join(year, tail)
-    raster = Raster(name, root=paths.ndvi_individ)
-    return raster.masked()
 
 
 def get_kcb(date_object, previous_kcb=None):
@@ -149,16 +149,8 @@ def get_prisms(date):
 
     precip = get_prism(date, variable='precip')
     precip = where(precip < 0, 0, precip)
+
     return min_temp, max_temp, temp, precip
-
-
-def get_geo(date_object):
-    tail = '{}{:02n}{:02n}.tif'.format(date_object.year, date_object.month, date_object.day)
-
-    root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
-    name = 'PRISMD2_NMHW2mi_{}'.format(tail)
-    raster = Raster(name, root=os.path.join(paths.prism, root))
-    return raster.geo
 
 
 def get_prism(date_object, variable='precip'):
@@ -176,14 +168,17 @@ def get_prism(date_object, variable='precip'):
 
     year = date_object.year
     tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
+    # tail = '{:02n}_{:02n}_{:02n}.tif'.format(date_object.month, date_object.day, year)
 
     if variable == 'precip':
 
         root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
         name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+        # name = 'precip_{}'.format(tail)
 
     elif variable == 'min_temp':
         root = os.path.join('Temp', 'Minimum_standard')
+        # name = 'min_temp_{}'.format(tail)
         if year in PRISM_YEARS:
             name = 'cai_tmin_us_us_30s_{}'.format(tail)
         else:
@@ -192,9 +187,19 @@ def get_prism(date_object, variable='precip'):
     elif variable == 'max_temp':
         root = os.path.join('Temp', 'Maximum_standard')
         name = 'TempMax_NMHW2Buff_{}'.format(tail)
+        # name = 'min_temp_{}'.format(tail)
 
     raster = Raster(name, root=os.path.join(paths.prism, root))
     return raster.masked()
+
+
+def get_geo(date_object):
+    tail = '{}{:02n}{:02n}.tif'.format(date_object.year, date_object.month, date_object.day)
+
+    root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
+    name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+    raster = Raster(name, root=os.path.join(paths.prism, root))
+    return raster.geo
 
 
 def get_penman(date_object, variable='etrs'):
