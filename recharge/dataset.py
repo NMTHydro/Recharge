@@ -236,8 +236,52 @@ def extract_initial(out):
         raster.save(path, marr, geo)
 
 
-def extract_static(day, out):
-    pass
+def extract_static(out):
+    mask_arr = Raster(paths.mask).as_bool_array
+    # nr,nc = mask_arr.shape
+    startr, endr = None, None
+    for i, ri in enumerate(mask_arr):
+        if ri.any():
+            if startr is None:
+                startr = i
+        elif startr is not None:
+            endr = i
+            break
+
+    startc, endc = None, None
+    for i, ri in enumerate(mask_arr.T):
+        if ri.any():
+            if startc is None:
+                startc = i
+        elif startc is not None:
+            endc = i
+            break
+
+    transform = get_tiff_transform(paths.mask)
+    transform *= Affine.translation(startc, startr)
+
+    pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
+    for k, pair in pairs:
+        print 'static {} reduced'.format(k)
+        raster = Raster(pair, root=paths.static_inputs)
+        geo = raster.geo
+        geo['rows'] = endr - startr
+        geo['cols'] = endc - startc
+        geo['geotransform'] = transform.to_gdal()
+
+        arr = raster.masked()
+
+        raster = Raster.fromarray(arr)
+        marr = raster.unmasked()
+        marr = marr[slice(startr, endr), slice(startc, endc)]
+        marr = marr * arr
+
+        path = os.path.join(out, 'statics')
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        path = os.path.join(path, '{}_{}.tif'.format(k, 'reduced'))
+
+        raster.save(path, marr, geo)
 
 
 def generate_dataset(daterange, out):
@@ -245,7 +289,7 @@ def generate_dataset(daterange, out):
         raise PathsNotSetExecption
 
     extract_initial(out)
-    # extract_static(out)
+    extract_static(out)
 
     for day in day_generator(*daterange):
         extract_prism(day, out)
