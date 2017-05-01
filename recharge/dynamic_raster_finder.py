@@ -85,6 +85,17 @@ def get_individ_kcb(date_object, previous_kcb=None):
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
 
 
+def get_individ_ndvi(date_object):
+    year = str(date_object.year)
+    tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
+                                             date_object.timetuple().tm_mon,
+                                             date_object.timetuple().tm_mday)
+
+    name = os.path.join(year, tail)
+    raster = Raster(name, root=paths.ndvi_individ)
+    return raster.masked()
+
+
 def get_kcb(date_object, previous_kcb=None):
     """
     Find NDVI image and convert to Kcb.
@@ -138,8 +149,16 @@ def get_prisms(date):
 
     precip = get_prism(date, variable='precip')
     precip = where(precip < 0, 0, precip)
-
     return min_temp, max_temp, temp, precip
+
+
+def get_geo(date_object):
+    tail = '{}{:02n}{:02n}.tif'.format(date_object.year, date_object.month, date_object.day)
+
+    root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
+    name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+    raster = Raster(name, root=os.path.join(paths.prism, root))
+    return raster.geo
 
 
 def get_prism(date_object, variable='precip'):

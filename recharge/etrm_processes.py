@@ -21,11 +21,12 @@ import time
 from numpy import maximum, minimum, where, isnan, exp, median
 
 from app.paths import paths, PathsNotSetExecption
+from recharge import MM
 from recharge.dict_setup import initialize_master_dict, initialize_static_dict, initialize_initial_conditions_dict, \
     set_constants, initialize_master_tracker
 from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
-from recharge.tools import millimeter_to_acreft as mm_af, unique_path, add_extension, time_it, day_generator
+from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
 
 
 class Processes(object):
@@ -47,7 +48,6 @@ class Processes(object):
     def __init__(self, cfg):
         self.tracker = None
         self._initial_depletions = None
-
         if not paths.is_set():
             raise PathsNotSetExecption()
 
@@ -105,7 +105,7 @@ class Processes(object):
         self._winter_start_day = runspec.winter_start_day
         print '---------- CONFIGURATION ---------------'
         for attr in ('date_range', 'use_individual_kcb',
-                     'winter_evap_limiter', '_winter_end_day', 'winter_start_day',
+                     'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                      'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
@@ -302,6 +302,9 @@ class Processes(object):
         a_min = c['a_min']
         a_max = c['a_max']
 
+        # The threshold values here were 0.0 and were changed to 4.0 in revision 84238ff
+        # If the threshold values are going to be manipulated then the should change to Config values
+        # and be set in the configuration file
         sf = where(temp < 4.0, precip, 0)
         rain = where(temp >= 4.0, precip, 0)
 
@@ -668,11 +671,17 @@ class Processes(object):
 
         m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
 
-        ms = [mm_af(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
+        func = self._output_function
+        ms = [func(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
         print 'today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(*ms)
 
-        ms = [mm_af(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
+        ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
         print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
+
+    def _output_function(self, v):
+        if not self._cfg.output_units == MM:
+            v = millimeter_to_acreft(v)
+        return v
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -716,7 +725,7 @@ class Processes(object):
         #     # print 'zero mass balance first day'
         #     m['mass'] = zeros(m['mass'].shape)
         m['tot_mass'] = tot_mass = abs(mass) + m['tot_mass']
-        self._debug('total mass balance error: {}'.format(mm_af(tot_mass)))
+        self._debug('total mass balance error: {}'.format(self._output_function(tot_mass)))
 
     def _do_daily_raster_load(self, date):
         """ Find daily raster image for each ETRM input.
@@ -780,7 +789,7 @@ class Processes(object):
             elif k == 'transp_adj':
                 v = median(v)
             else:
-                v = mm_af(v)
+                v = self._output_function(v)
             return v
 
         tracker_from_master = [factory(key) for key in sorted(m)]

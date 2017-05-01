@@ -31,6 +31,11 @@ DEFAULT_CFG = '''
 input_root: /Volumes/Seagate Expansion Drive
 output_root: Please Set Me
 
+init_cond_root: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize
+rew_init: drew_4_19_23_11.tif
+tew_init: de_4_19_23_11.tif
+taw_init: dr_4_19_23_11.tif
+
 start_date: 12/1/2013
 end_date: 12/32/2013
 
@@ -50,6 +55,7 @@ ro_reinf_frac: 0.0
 swb_mode: fao
 allen_ceff: 1.0
 winter_evap_limiter: 0.3
+output_units: acre-ft
 
 '''
 
@@ -78,6 +84,7 @@ class RunSpec:
     winter_evap_limiter = 0.3
     winter_end_day = 92
     winter_start_day = 306
+    output_units = 'acre-ft'
 
     def __init__(self, obj):
         self._obj = obj
@@ -87,7 +94,8 @@ class RunSpec:
                  'y_cord_name',
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'allen_ceff',
-                 'winter_evap_limiter', 'winter_end_day', 'winter_start_day')
+                 'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
+                 'output_units')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
@@ -151,10 +159,14 @@ class Config:
         if path is None:
             path = paths.config
 
-        check_config(path)
-        with open(path, 'r') as rfile:
-            # self._obj = yaml.load(rfile)
-            self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        if isinstance(path, (str, unicode)):
+            check_config(path)
+            rfile = open(path, 'r')
+        else:
+            rfile = path
+
+        self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        rfile.close()
 
 
 def check_config(path=None):
@@ -172,4 +184,5 @@ def check_config(path=None):
 
         print '***** Please edit the config file at {} and rerun the model'.format(path)
         sys.exit()
+
 # ============= EOF =============================================

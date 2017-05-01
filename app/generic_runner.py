@@ -24,10 +24,33 @@ sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
 from app.paths import paths
 from config import Config, check_config
+from recharge.dataset import generate_dataset
 from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
 
 CLI_ENABLED = False
+
+
+def run_dataset():
+    print 'Running Dataset'
+
+    cfg = Config()
+    for runspec in cfg.runspecs:
+        paths.build(runspec.input_root, runspec.output_root)
+        paths.set_mask_path(runspec.mask)
+
+        generate_dataset(runspec.date_range, runspec.output_root)
+
+
+def run_dataset():
+    print 'Running Dataset'
+
+    cfg = Config()
+    for runspec in cfg.runspecs:
+        paths.build(runspec.input_root, runspec.output_root)
+        paths.set_mask_path(runspec.mask)
+
+        generate_dataset(runspec.date_range, runspec.output_root)
 
 
 def run_model():
@@ -80,7 +103,11 @@ def run():
     check_config()
 
     cmds = {'model': run_model, 'rew': run_rew,
-            'help': run_help, 'commands': run_commands}
+            'help': run_help, 'commands': run_commands,
+            'dataset':run_dataset}
+
+    run_dataset()
+    return
 
     welcome()
 
@@ -98,5 +125,5 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    run_dataset()
 # ============= EOF =============================================

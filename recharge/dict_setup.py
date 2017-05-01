@@ -103,7 +103,7 @@ def initialize_static_dict(pairs=None):
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return maximum(minimum(r, 20), 0.1)
+        return maximum(r, 0.01) * 86.4  # KSat raster is in um/s; convert using 1 um/s = 86.4 mm/day
 
     def initial_tew(r):
         return maximum(minimum(r, 10), 0.001)
@@ -141,6 +141,7 @@ def initialize_static_dict(pairs=None):
     taw = d['taw']
     tew = d['tew']
     land_cover = d['land_cover']
+    print 'original Ksat = {}, REW = {}, TAW = {}, land cover = {}'.format(d['soil_ksat'],d['rew'],d['taw'],d['land_cover'])
 
     # apply high TAW to unconsolidated Quaternary deposits
     min_val = 250

@@ -18,11 +18,18 @@ import os
 import time
 
 import gdal
+from datetime import datetime
 from dateutil import rrule
 from numpy import linspace, isnan
 
 
 def day_generator(start, end):
+    if isinstance(start, (str, unicode)):
+        start = datetime.strptime(start, '%m/%d/%Y')
+
+    if isinstance(end, (str, unicode)):
+        end = datetime.strptime(end, '%m/%d/%Y')
+
     return rrule.rrule(rrule.DAILY, dtstart=start, until=end)
 
 
