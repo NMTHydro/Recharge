@@ -30,14 +30,23 @@ from recharge.dict_setup import make_pairs
 from recharge import STATIC_KEYS, INITIAL_KEYS
 
 
-def extract_prism(day, out):
-    keys = ('min_temp', 'max_temp', 'temp', 'precip')
-
+def setup_extract(day):
     geo = get_geo(day)
     mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
+    startc, endc, startr, endr = bounding_box(mask_arr)
+
+    geo['rows'] = endr - startr
+    geo['cols'] = endc - startc
+    transform = get_tiff_transform(paths.mask)
+    transform *= Affine.translation(startc, startr)
+    geo['geotransform'] = transform.to_gdal()
+
+    return geo, startc, endc, startr, endr
+
+
+def bounding_box(arr):
     startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
+    for i, ri in enumerate(arr):
         if ri.any():
             if startr is None:
                 startr = i
@@ -45,21 +54,21 @@ def extract_prism(day, out):
             endr = i
             break
 
-    geo['rows'] = endr - startr
     startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
+    for i, ri in enumerate(arr.T):
         if ri.any():
             if startc is None:
                 startc = i
         elif startc is not None:
             endc = i
             break
+    return startc, endc, startr, endr
 
-    geo['cols'] = endc - startc
 
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
+def extract_prism(day, out):
+    keys = ('min_temp', 'max_temp', 'temp', 'precip')
+
+    geo, startc, endc, startr, endr = setup_extract(day)
 
     for k, arr in zip(keys, get_prisms(day)):
 
@@ -91,33 +100,7 @@ def extract_prism(day, out):
 def extract_penman(day, out):
     keys = ('etrs', 'rg')
 
-    geo = get_geo(day)
-    mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
-    startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
-        if ri.any():
-            if startr is None:
-                startr = i
-        elif startr is not None:
-            endr = i
-            break
-
-    geo['rows'] = endr - startr
-    startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
-        if ri.any():
-            if startc is None:
-                startc = i
-        elif startc is not None:
-            endc = i
-            break
-
-    geo['cols'] = endc - startc
-
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
+    geo, startc, endc, startr, endr = setup_extract(day)
 
     for k in keys:
         arr = get_penman(day, k)
@@ -125,6 +108,7 @@ def extract_penman(day, out):
         raster = Raster.fromarray(arr)
         marr = raster.unmasked()
         marr = marr[slice(startr, endr), slice(startc, endc)]
+        print marr
         marr = marr * arr
 
         year = str(day.year)
@@ -144,33 +128,8 @@ def extract_penman(day, out):
 
 
 def extract_ndvi(day, out):
-    geo = get_geo(day)
-    mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
-    startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
-        if ri.any():
-            if startr is None:
-                startr = i
-        elif startr is not None:
-            endr = i
-            break
 
-    geo['rows'] = endr - startr
-    startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
-        if ri.any():
-            if startc is None:
-                startc = i
-        elif startc is not None:
-            endc = i
-            break
-
-    geo['cols'] = endc - startc
-
-    transform = get_tiff_transform(paths.mask)
-    transform *= Affine.translation(startc, startr)
-    geo['geotransform'] = transform.to_gdal()
+    geo, startc, endc, startr, endr = setup_extract(day)
 
     arr = get_individ_ndvi(day)
     raster = Raster.fromarray(arr)
@@ -190,24 +149,7 @@ def extract_ndvi(day, out):
 
 def extract_initial(out):
     mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
-    startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
-        if ri.any():
-            if startr is None:
-                startr = i
-        elif startr is not None:
-            endr = i
-            break
-
-    startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
-        if ri.any():
-            if startc is None:
-                startc = i
-        elif startc is not None:
-            endc = i
-            break
+    startc, endc, startr, endr = bounding_box(mask_arr)
 
     transform = get_tiff_transform(paths.mask)
     transform *= Affine.translation(startc, startr)
@@ -238,24 +180,7 @@ def extract_initial(out):
 
 def extract_static(out):
     mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
-    startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
-        if ri.any():
-            if startr is None:
-                startr = i
-        elif startr is not None:
-            endr = i
-            break
-
-    startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
-        if ri.any():
-            if startc is None:
-                startc = i
-        elif startc is not None:
-            endc = i
-            break
+    startc, endc, startr, endr = bounding_box(mask_arr)
 
     transform = get_tiff_transform(paths.mask)
     transform *= Affine.translation(startc, startr)
@@ -286,24 +211,7 @@ def extract_static(out):
 
 def extract_mask(out):
     mask_arr = Raster(paths.mask).as_bool_array
-    # nr,nc = mask_arr.shape
-    startr, endr = None, None
-    for i, ri in enumerate(mask_arr):
-        if ri.any():
-            if startr is None:
-                startr = i
-        elif startr is not None:
-            endr = i
-            break
-
-    startc, endc = None, None
-    for i, ri in enumerate(mask_arr.T):
-        if ri.any():
-            if startc is None:
-                startc = i
-        elif startc is not None:
-            endc = i
-            break
+    startc, endc, startr, endr = bounding_box(mask_arr)
 
     transform = get_tiff_transform(paths.mask)
     transform *= Affine.translation(startc, startr)
