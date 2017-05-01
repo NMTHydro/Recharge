@@ -48,7 +48,6 @@ class Processes(object):
     def __init__(self, cfg):
         self.tracker = None
         self._initial_depletions = None
-
         if not paths.is_set():
             raise PathsNotSetExecption()
 
@@ -106,7 +105,7 @@ class Processes(object):
         self._winter_start_day = runspec.winter_start_day
         print '---------- CONFIGURATION ---------------'
         for attr in ('date_range', 'use_individual_kcb',
-                     'winter_evap_limiter', '_winter_end_day', 'winter_start_day',
+                     'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                      'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
