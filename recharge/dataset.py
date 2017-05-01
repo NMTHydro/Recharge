@@ -108,7 +108,6 @@ def extract_penman(day, out):
         raster = Raster.fromarray(arr)
         marr = raster.unmasked()
         marr = marr[slice(startr, endr), slice(startc, endc)]
-        print marr
         marr = marr * arr
 
         year = str(day.year)
