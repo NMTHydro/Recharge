@@ -178,12 +178,12 @@ def extract_ndvi(day, out):
     marr = marr[slice(startr, endr), slice(startc, endc)]
     marr = marr * arr
 
-    timestamp = day.strftime('%m_%d_%Y')
+    timestamp = day.strftime('%Y_%m_%d')
     year = str(day.year)
     p = os.path.join(out, 'NDVI', 'NDVI', year)
     if not os.path.isdir(p):
         os.makedirs(p)
-    p = os.path.join(p, '{}_{}.tif'.format('ndvi', timestamp))
+    p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
 
     raster.save(p, marr, geo)
 
