@@ -37,7 +37,7 @@ from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_T
     CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from recharge.raster import Raster
-from recharge.raster_tools import get_raster_geo_attributes as get_geo
+from recharge.raster_tools import get_raster_geo_attributes
 from recharge.raster_tools import make_results_dir, convert_array_to_raster
 
 
@@ -58,7 +58,7 @@ class RasterManager(object):
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
             print 'your daily outputs will be from: {}'.format(cfg.daily_outputs)
 
-        self._geo = get_geo(paths.static_inputs)
+        self._geo = get_raster_geo_attributes(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
         self._results_dir = make_results_dir()
         self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq)

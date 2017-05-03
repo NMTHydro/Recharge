@@ -28,13 +28,8 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 
 DEFAULT_CFG = '''
 ---
-input_root: /Volumes/Seagate Expansion Drive
+input_root: /Volumes/Seagate Expansion Drive/ETRM_input
 output_root: Please Set Me
-
-init_cond_root: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize
-rew_init: drew_4_19_23_11.tif
-tew_init: de_4_19_23_11.tif
-taw_init: dr_4_19_23_11.tif
 
 start_date: 12/1/2013
 end_date: 12/32/2013
@@ -56,6 +51,12 @@ swb_mode: fao
 allen_ceff: 1.0
 winter_evap_limiter: 0.3
 output_units: acre-ft
+is_reduced: False
+
+drew: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/drew_4_19_23_11.tif
+de: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/de_4_19_23_11.tif
+dr: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/dr_4_19_23_11.tif
+
 
 '''
 
@@ -82,8 +83,8 @@ class RunSpec:
     swb_mode = 'swb'
     allen_ceff = 1.0
     winter_evap_limiter = 0.3
-    winter_end_day = 92
-    winter_start_day = 306
+    winter_end_day = 92  # To Do: this value does not get set properly if it's not included in the config file
+    winter_start_day = 306  # To Do: this value does not get set properly if it's not included in the config file
     output_units = 'acre-ft'
     is_reduced = False
 

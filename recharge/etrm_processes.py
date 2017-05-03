@@ -39,11 +39,11 @@ class Processes(object):
     _date_range = None
     _use_individual_kcb = None
     _ro_reinf_frac = 0.0
-    _swb_mode = 'swb'
+    _swb_mode = 'fao'
     _allen_ceff = 1.0
     _winter_evap_limiter = 0.3
-    _winter_end_day = 92
-    _winter_start_day = 306
+    _winter_end_day = 92  # These defaults are not setting properly; 'None' if not set in Config file
+    _winter_start_day = 306  # These defaults are not setting properly; 'None' if not set in Config file
 
     def __init__(self, cfg):
         self.tracker = None
@@ -110,22 +110,11 @@ class Processes(object):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
 
-    def run(self, ro_reinf_frac=None, swb_mode=None, allen_ceff=None):
+    def run(self):
         """
-
-        :param ro_reinf_frac:
-        :param swb_mode:
-        :param allen_ceff:
+        run the ETRM model
         :return:
         """
-        if ro_reinf_frac is None:
-            ro_reinf_frac = self._ro_reinf_frac
-
-        if swb_mode is None:
-            swb_mode = self._swb_mode
-
-        if allen_ceff is None:
-            allen_ceff = self._allen_ceff
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -156,16 +145,16 @@ class Processes(object):
             #     time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
 
             time_it(self._do_snow, m, c)
-            time_it(self._do_soil_ksat_adjustment, m, s)
+            # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
             time_it(self._do_dual_crop_transpiration, tm_yday, m, s, c)
             time_it(self._do_fraction_covered, m, s, c)
 
-            if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
-            elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
+            if self._swb_mode == 'fao':
+                time_it(self._do_fao_soil_water_balance, m, s, c, self._ro_reinf_frac, self._allen_ceff)
+            elif self._swb_mode == 'vertical':
+                time_it(self._do_vert_soil_water_balance, m, s, c, self._ro_reinf_frac, self._allen_ceff)
 
-            time_it(self._do_mass_balance, day, swb=swb_mode)
+            time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
             time_it(self._do_accumulations)
 
@@ -334,20 +323,7 @@ class Processes(object):
         land_cover = s['land_cover']
         soil_ksat = m['soil_ksat']
 
-        # o = ones(soil_ksat.shape)
-        # soil_ksat = where((land_cover == 41) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 41) & (water < 12.0 * ones(soil_ksat.shape)),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 42) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 42) & (water < 12.0 * o),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 43) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 43) & (water < 12.0 * o),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-
+        # TO DO: Fix limits to match mm/day units
         for lc, wthres, ksat_scalar in ((41, 50.0, 2.0),
                                         (41, 12.0, 1.2),
 
@@ -367,13 +343,14 @@ class Processes(object):
 
         kcb = m['kcb']
         etrs = m['etrs']
+        pdr = m['dr']
 
         ####
         # transpiration:
         # ks- stress coeff- ASCE pg 226, Eq 10.6
         # TAW could be zero at lakes.
         taw = maximum(s['taw'], 0.001)
-        ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
+        ks = ((taw - pdr) / ((1 - c['p']) * taw))
         ks = minimum(1 + 0.001, ks)  # this +0.001 may be unneeded
         ks = maximum(0, ks)
         m['ks'] = ks
@@ -389,6 +366,8 @@ class Processes(object):
             transp *= self._winter_evap_limiter
             m['transp_adj'] = True
 
+        # limit transpiration so it doesn't exceed the amount of water available in the root zone
+        transp = minimum(transp, (taw - pdr))
         m['transp'] = transp
 
     def _do_fraction_covered(self, m, s, c):
@@ -429,14 +408,14 @@ class Processes(object):
 
         # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
-        st_1_dur = minimum(st_1_dur, 0.99)
+        st_1_dur = minimum(st_1_dur, 1.0)
         m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
-        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
+        m['st_2_dur'] = st_2_dur = (1.0 - st_1_dur)
 
         # kr- evaporation reduction coefficient Allen 2011 Eq
         # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
         tew_rew_diff = maximum(tew - rew, 0.001)
-        kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0.001)
+        kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
 
@@ -448,16 +427,25 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
+        print 'kcmax: {}, kr: {}, st_1_dur: {}'.format(kc_max, kr, st_1_dur)
         ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
-        ke = maximum(0.01, minimum(ke, 1))
+        print 'ke: {}'.format(ke)
+        print 'few*ckmax: {}'.format(few * kc_max)
+        ke = maximum(0.0, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
-        m['evap_1'] = e1 = st_1_dur * ke_init * etrs
-        m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
+        e1 = st_1_dur * ke_init * etrs
+        m['evap_1'] = minimum(e1, rew - pdrew)
+        e2 = st_2_dur * kr * ke_init * etrs
+        m['evap_2'] = minimum(e2, (tew - pde) - e1)
 
         # Allen 2011
         evap = ke * etrs
+
+        # limit evap so it doesn't exceed the amount of soil moisture available in the TEW
+        transp = m['transp']
+        m['evap'] = evap = minimum(evap, (tew - pde))
 
         # limit evap so it doesn't exceed the amount of soil moisture available after transp occurs
         transp = m['transp']
@@ -475,7 +463,7 @@ class Processes(object):
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
-        # Only used if Experimental stage 2 reduction is used
+        # Dry days are only used if Experimental stage 2 reduction is used
         dd = m['dry_days']
         dd[water < 0.1] = dd + 1
         dd[water >= 0.1] = 1
@@ -497,6 +485,8 @@ class Processes(object):
 
         # Calculate depletion in REW, skin layer
         m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap / few, 0), rew)
+        print 'drew: {}'.format(m['drew'])
+        print 'ceff: {}'.format(ceff)
 
         m['soil_storage'] = (pdr - dr)
 
@@ -678,10 +668,6 @@ class Processes(object):
         ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
         print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
 
-    def _output_function(self, v):
-        if not self._cfg.output_units == MM:
-            v = millimeter_to_acreft(v)
-        return v
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -789,6 +775,7 @@ class Processes(object):
             elif k == 'transp_adj':
                 v = median(v)
             else:
+                v = v.mean()
                 v = self._output_function(v)
             return v
 
@@ -796,6 +783,13 @@ class Processes(object):
         # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
+
+
+    def _output_function(self, v):
+        if not self._cfg.output_units == MM:
+            v = millimeter_to_acreft(v)
+        return v
+
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
