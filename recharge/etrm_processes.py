@@ -28,6 +28,10 @@ from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb,
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
 
+class NotConfiguredError(BaseException):
+    def __str__(self):
+        return 'The model has not been configured. Processes.configure_run must be called before Processes.run'
+
 
 class Processes(object):
     """
@@ -36,14 +40,18 @@ class Processes(object):
     See function explanations.
 
     """
+
+    # Config values. Default values should be specified in RunSpec not here.
     _date_range = None
     _use_individual_kcb = None
-    _ro_reinf_frac = 0.0
-    _swb_mode = 'fao'
-    _allen_ceff = 1.0
-    _winter_evap_limiter = 0.3
-    _winter_end_day = 92  # These defaults are not setting properly; 'None' if not set in Config file
-    _winter_start_day = 306  # These defaults are not setting properly; 'None' if not set in Config file
+    _ro_reinf_frac = None
+    _swb_mode = None
+    _allen_ceff = None
+    _winter_evap_limiter = None
+    _winter_end_day = None
+    _winter_start_day = None
+
+    _is_configured = False
 
     def __init__(self, cfg):
         self.tracker = None
@@ -87,6 +95,7 @@ class Processes(object):
         :param runspec: RunSpec
         :return:
         """
+
         self._info('Configuring Processes')
 
         if runspec.save_dates:
@@ -109,12 +118,15 @@ class Processes(object):
                      'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
+        self._is_configured = True
 
     def run(self):
         """
         run the ETRM model
         :return:
         """
+        if not self._is_configured:
+            raise NotConfiguredError()
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 

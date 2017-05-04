@@ -22,7 +22,7 @@ import os
 from affine import Affine
 
 from app.paths import paths, PathsNotSetExecption
-from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman
+from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman, get_prism
 from recharge.raster import Raster
 from recharge.raster_tools import get_tiff_transform_func, get_tiff_transform
 from recharge.tools import day_generator
@@ -35,45 +35,31 @@ def generate_dataset(daterange, out):
         raise PathsNotSetExecption
 
     geo, bounds = setup_geo()
-    extract_initial(out, geo, bounds)
-    extract_static(out, geo, bounds)
-    extract_mask(out, geo, bounds)
+    args = out, geo, bounds
+    extract_initial(*args)
+    extract_static(*args)
+    extract_mask(*args)
 
     for day in day_generator(*daterange):
-        extract_prism(day, out, geo, bounds)
-        extract_ndvi(day, out, geo, bounds)
-        extract_penman(day, out, geo, bounds)
+        extract_prism(day, *args)
+        extract_ndvi(day, *args)
+        extract_penman(day, *args)
         print '----------------- day {} -------------------'.format(day.strftime('%m_%d_%Y'))
 
 
 # ============= data extract ==================================================
 def extract_prism(day, out, geo, bounds):
-    mint = 'Minimum_standard'
-    maxt = 'Maximum_standard'
-    precip = '800m_std_all'
-
-    keys = ('min_temp', 'max_temp', 'temp', 'precip')
-    bases = (os.path.join('Temp', mint),
-             os.path.join('Temp', maxt),
-             None,
-             os.path.join('precip', precip))
-
-    # build directories
-    for a, b in (('precip', precip), ('Temp', maxt), ('Temp', mint)):
-        p = os.path.join(out, 'PRISM', a, b)
-        print 'build prism directory', p
-        if not os.path.isdir(p):
-            print 'making', p
-            os.makedirs(p)
-
+    out_root = os.path.join(out, 'PRISM')
     timestamp = day.strftime('%Y%m%d')
-    for k, base, arr in zip(keys, bases, get_prisms(day)):
-        # skip temp
-        if k == 'temp':
-            continue
 
-        p = os.path.join(out, 'PRISM', base, '{}_{}.tif'.format(k, timestamp))
+    pp = os.path.join(out_root, 'precip', '800m_std_all')
+    matp = os.path.join(out_root, 'Temp', 'Maximum_standard')
+    mitp = os.path.join(out_root, 'Temp', 'Minimum_standard')
 
+    for base, key, arr in ((pp, 'precip'), (mitp, 'min_temp'), (matp, 'max_temp')):
+        arr = get_prism(day, key)
+        name = '{}_{}.tif'.format(key, timestamp)
+        p = os.path.join(base, name)
         slice_and_save(p, arr, geo, *bounds)
 
 
@@ -92,24 +78,22 @@ def extract_penman(day, out, geo, bounds):
             p = os.path.join(out, 'PM_RAD', '{}{}'.format('rad', year))
             name = '{}_{}_{:03n}.tif'.format('RTOT', year, yday)
 
-        if not os.path.isdir(p):
-            os.makedirs(p)
-        p = os.path.join(p, name)
+        # if not os.path.isdir(p):
+        #     os.makedirs(p)
 
+        p = os.path.join(p, name)
         slice_and_save(p, arr, geo, *bounds)
 
 
 def extract_ndvi(day, out, geo, bounds):
-
     arr = get_individ_ndvi(day)
 
     timestamp = day.strftime('%Y_%m_%d')
     year = str(day.year)
     p = os.path.join(out, 'NDVI', 'NDVI', year)
-    if not os.path.isdir(p):
-        os.makedirs(p)
+    # if not os.path.isdir(p):
+    #     os.makedirs(p)
     p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
-
     slice_and_save(p, arr, geo, *bounds)
 
 
@@ -127,9 +111,8 @@ def save_initial(p, raster, transform, startc, endc, startr, endr):
 
 
 def extract_initial(*args):
-
     pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
-    _extract('initialize',pairs, *args)
+    _extract('initialize', pairs, *args)
 
 
 def extract_static(*args):
@@ -138,7 +121,6 @@ def extract_static(*args):
 
 
 def extract_mask(out, *args):
-
     raster = Raster(paths.mask)
     p = make_reduced_path(out, 'Mask', 'mask')
     arr = raster.masked()
@@ -186,17 +168,22 @@ def bounding_box(arr, padding=1):
 
 
 def slice_and_save(p, arr, geo, startc, endc, startr, endr):
+    if not os.path.isdir(os.path.dirname(p)):
+        os.makedirs(os.path.dirname(p))
+
     raster = Raster.fromarray(arr)
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
     marr = marr * arr
+
+    print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 
 
 def make_reduced_path(out, tag, k):
     p = os.path.join(out, tag)
-    if not os.path.isdir(p):
-        os.makedirs(p)
+    # if not os.path.isdir(p):
+    #     os.makedirs(p)
     p = os.path.join(p, '{}_reduced.tif'.format(k))
     return p
 

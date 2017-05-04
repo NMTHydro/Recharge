@@ -28,13 +28,13 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 
 DEFAULT_CFG = '''
 ---
-input_root: /Volumes/Seagate Expansion Drive/ETRM_input
-output_root: Please Set Me
+input_root: Please Set Me      ## /Volumes/Seagate Expansion Drive/ETRM_input
+output_root: Please Set Me     ## /Users/ross/Desktop
 
-start_date: 12/1/2013
-end_date: 12/32/2013
+start_date: Please Set Me      ## 12/1/2013
+end_date: Please Set Me        ## 12/31/2013
 
-mask: masks/please_set_me.tif
+mask: Please Set Me            ## masks/my_mask.tif
 polygons: Blank_Geo
 
 save_dates: []
@@ -52,11 +52,9 @@ allen_ceff: 1.0
 winter_evap_limiter: 0.3
 output_units: acre-ft
 is_reduced: False
-
-drew: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/drew_4_19_23_11.tif
-de: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/de_4_19_23_11.tif
-dr: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize/dr_4_19_23_11.tif
-
+winter_end_day: 92
+winter_start_day: 306
+use_verify_paths: True
 
 '''
 
@@ -80,11 +78,11 @@ class RunSpec:
     use_verify_paths = None
     taw_modification = 1.0
     ro_reinf_frac = 0.0
-    swb_mode = 'swb'
+    swb_mode = 'fao'
     allen_ceff = 1.0
     winter_evap_limiter = 0.3
-    winter_end_day = 92  # To Do: this value does not get set properly if it's not included in the config file
-    winter_start_day = 306  # To Do: this value does not get set properly if it's not included in the config file
+    winter_end_day = 92
+    winter_start_day = 306
     output_units = 'acre-ft'
     is_reduced = False
 
