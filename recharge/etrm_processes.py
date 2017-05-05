@@ -155,19 +155,19 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            # if sensitivity_matrix_column:
-            #     time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
-
             time_it(self._do_snow, m, c)
             # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
             time_it(self._do_dual_crop_transpiration, tm_yday, m, s, c)
             time_it(self._do_fraction_covered, m, s, c)
 
-            if self._swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, self._ro_reinf_frac, self._rew_ceff, self._evap_ceff)
-            elif self._swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, self._ro_reinf_frac, self._rew_ceff)
-
+            # if self._swb_mode == 'fao':
+            #     time_it(self._do_fao_soil_water_balance, m, s, c)
+            # elif self._swb_mode == 'vertical':
+            #     time_it(self._do_vert_soil_water_balance, m, s, c)
+            
+            func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
+            time_it(func, m, s, c)
+            
             time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
             time_it(self._do_accumulations)
@@ -403,10 +403,19 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, rew_ceff=1.0, evap_ceff=1.0):
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None, evap_ceff=None):
         """ Calculate evap and all soil water balance at each time step.
 
         """
+        if ro_local_reinfilt_frac is None:
+            ro_local_reinfilt_frac = self._ro_reinf_frac
+
+        if rew_ceff is None:
+            rew_ceff = self._rew_ceff
+
+        if evap_ceff is None:
+            evap_ceff = self._evap_ceff
+
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
@@ -502,11 +511,18 @@ class Processes(object):
 
         m['soil_storage'] = (pdr - dr)
 
-    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
 
         :return: None
         """
+
+        if ro_local_reinfilt_frac is None:
+            ro_local_reinfilt_frac = self._ro_reinf_frac
+
+        if rew_ceff is None:
+            rew_ceff = self._rew_ceff
+
         kcb = m['kcb']
         etrs = m['etrs']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
@@ -599,8 +615,8 @@ class Processes(object):
         m['ro'] = ro
         # water balance through the stage 1 evaporation layer #
         # capture efficiency of soil- some water may bypass REW even before it fills
-        water_av_rew = water * ceff
-        water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
+        water_av_rew = water * rew_ceff
+        water_av_tew = water * (1.0 - rew_ceff)  # May not be initializing as an array?
 
         # # fill depletion in REW if possible
         water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
@@ -617,8 +633,8 @@ class Processes(object):
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
-        water_av_tew *= ceff
-        water_av_taw += water_av_tew * (1.0 - ceff)
+        water_av_tew *= rew_ceff
+        water_av_taw += water_av_tew * (1.0 - rew_ceff)
 
         # # fill depletion in TEW if possible
         water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
