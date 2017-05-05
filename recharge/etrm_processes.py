@@ -46,7 +46,8 @@ class Processes(object):
     _use_individual_kcb = None
     _ro_reinf_frac = None
     _swb_mode = None
-    _allen_ceff = None
+    _rew_ceff = None
+    _evap_ceff = None
     _winter_evap_limiter = None
     _winter_end_day = None
     _winter_start_day = None
@@ -108,14 +109,15 @@ class Processes(object):
         self._use_individual_kcb = runspec.use_individual_kcb
         self._ro_reinf_frac = runspec.ro_reinf_frac
         self._swb_mode = runspec.swb_mode
-        self._allen_ceff = runspec.allen_ceff
+        self._rew_ceff = runspec.rew_ceff
+        self._evap_ceff = runspec.evap_ceff
         self._winter_evap_limiter = runspec.winter_evap_limiter
         self._winter_end_day = runspec.winter_end_day
         self._winter_start_day = runspec.winter_start_day
         print '---------- CONFIGURATION ---------------'
         for attr in ('date_range', 'use_individual_kcb',
                      'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                     'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
+                     'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff'):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
         self._is_configured = True
@@ -162,9 +164,9 @@ class Processes(object):
             time_it(self._do_fraction_covered, m, s, c)
 
             if self._swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, self._ro_reinf_frac, self._allen_ceff)
+                time_it(self._do_fao_soil_water_balance, m, s, c, self._ro_reinf_frac, self._rew_ceff, self._evap_ceff)
             elif self._swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, self._ro_reinf_frac, self._allen_ceff)
+                time_it(self._do_vert_soil_water_balance, m, s, c, self._ro_reinf_frac, self._rew_ceff)
 
             time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
@@ -374,7 +376,7 @@ class Processes(object):
         m['transp_adj'] = False
         if self._winter_end_day > tm_yday or tm_yday > self._winter_start_day:
             # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
-            # Using 30% DC 2/20/17
+            # Using 30% DDC 2/20/17
             transp *= self._winter_evap_limiter
             m['transp_adj'] = True
 
@@ -401,7 +403,7 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, rew_ceff=1.0, evap_ceff=1.0):
         """ Calculate evap and all soil water balance at each time step.
 
         """
@@ -456,8 +458,7 @@ class Processes(object):
         evap = ke * etrs
 
         # limit evap so it doesn't exceed the amount of soil moisture available in the TEW
-        transp = m['transp']
-        m['evap'] = evap = minimum(evap, (tew - pde))
+        evap = minimum(evap, (tew - pde))
 
         # limit evap so it doesn't exceed the amount of soil moisture available after transp occurs
         transp = m['transp']
@@ -493,12 +494,11 @@ class Processes(object):
         m['dr'] = dr = minimum(maximum(pdr - (water - ro) + et_actual + dp, 0), taw)
 
         # Calculate depletion in TEW, full evaporative layer
-        m['de'] = de = minimum(maximum(pde - (water - ro) + evap / few, 0), tew)
+        # ceff, capture efficiency, reduces depletion recovery as representation of bypass flow through macropores
+        m['de'] = de = minimum(maximum(pde - ((water - ro) * evap_ceff) + evap / few, 0), tew)
 
-        # Calculate depletion in REW, skin layer
-        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap / few, 0), rew)
-        print 'drew: {}'.format(m['drew'])
-        print 'ceff: {}'.format(ceff)
+        # Calculate depletion in REW, skin layer; ceff, capture efficiency, reduces depletion recovery
+        m['drew'] = minimum(maximum(pdrew - ((water - ro) * rew_ceff) + evap / few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 

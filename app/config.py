@@ -48,7 +48,8 @@ daily_outputs:
 
 ro_reinf_frac: 0.0
 swb_mode: fao
-allen_ceff: 1.0
+rew_ceff: 1.0
+evap_ceff: 1.0
 winter_evap_limiter: 0.3
 output_units: acre-ft
 is_reduced: False
@@ -79,7 +80,8 @@ class RunSpec:
     taw_modification = 1.0
     ro_reinf_frac = 0.0
     swb_mode = 'fao'
-    allen_ceff = 1.0
+    rew_ceff = 1.0
+    evap_ceff = 1.0
     winter_evap_limiter = 0.3
     winter_end_day = 92
     winter_start_day = 306
@@ -93,7 +95,7 @@ class RunSpec:
                  'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
                  'y_cord_name',
                  'taw_modification',
-                 'ro_reinf_frac', 'swb_mode', 'allen_ceff',
+                 'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                  'output_units', 'is_reduced')
 
