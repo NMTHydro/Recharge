@@ -26,7 +26,7 @@ from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi
 from recharge.raster import Raster
 from recharge.raster_tools import get_tiff_transform_func, get_tiff_transform
 from recharge.tools import day_generator
-from recharge.dict_setup import make_pairs
+from recharge.dict_setup import make_pairs, tiff_list
 from recharge import STATIC_KEYS, INITIAL_KEYS
 
 
@@ -145,6 +145,11 @@ def extract_mask(out, geo, bounds):
 def setup_geo():
     raster = Raster(paths.mask)
     mask_arr = raster.as_bool_array
+
+    # get raster to provide geo data (need one that is not "Byte")
+    root = paths.initial_inputs
+    name = tiff_list(root)[0]
+    raster = Raster(name, root=root)
     geo = raster.geo
 
     startc, endc, startr, endr = bounding_box(mask_arr)
@@ -182,12 +187,10 @@ def bounding_box(arr, padding=1):
 def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     if not os.path.isdir(os.path.dirname(p)):
         os.makedirs(os.path.dirname(p))
-
     raster = Raster.fromarray(arr)
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
     marr = marr * arr
-
     # print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 
