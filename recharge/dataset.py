@@ -56,7 +56,7 @@ def extract_prism(day, out, geo, bounds):
     matp = os.path.join(out_root, 'Temp', 'Maximum_standard')
     mitp = os.path.join(out_root, 'Temp', 'Minimum_standard')
 
-    for base, key, arr in ((pp, 'precip'), (mitp, 'min_temp'), (matp, 'max_temp')):
+    for base, key in ((pp, 'precip'), (mitp, 'min_temp'), (matp, 'max_temp')):
         arr = get_prism(day, key)
         name = '{}_{}.tif'.format(key, timestamp)
         p = os.path.join(base, name)
@@ -112,19 +112,31 @@ def save_initial(p, raster, transform, startc, endc, startr, endr):
 
 def extract_initial(*args):
     pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
-    _extract('initialize', pairs, *args)
+    root = paths.initial_inputs
+    _extract('initialize', pairs, root, *args)
 
 
 def extract_static(*args):
     pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
-    _extract('static', pairs, *args)
+    root = paths.static_inputs
+    _extract('static', pairs, root, *args)
 
 
-def extract_mask(out, *args):
+def _extract(tag, pairs, root, out, geo, bounds):
+    for k, pair in pairs:
+        raster = Raster(pair, root=root)
+        p = make_reduced_path(out, tag, k)
+        arr = raster.masked()
+        slice_and_save(p, arr, geo, *bounds)
+
+        print '{} {} reduced'.format(tag, k)
+
+
+def extract_mask(out, geo, bounds):
     raster = Raster(paths.mask)
     p = make_reduced_path(out, 'Mask', 'mask')
     arr = raster.masked()
-    slice_and_save(p, arr, *args)
+    slice_and_save(p, arr, geo, *bounds)
 
     print 'mask reduced'
 
@@ -176,7 +188,7 @@ def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     marr = marr[slice(startr, endr), slice(startc, endc)]
     marr = marr * arr
 
-    print 'saving {}'.format(p)
+    # print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 
 
@@ -193,17 +205,6 @@ def get_transform(startc, startr):
     transform *= Affine.translation(startc, startr)
     transform = transform.to_gdal()
     return transform
-
-
-def _extract(tag, pairs, out, geo, bounds):
-    for k, pair in pairs:
-        raster = Raster(pair, root=paths.static_inputs)
-
-        p = make_reduced_path(out, tag, k)
-        arr = raster.masked()
-        slice_and_save(p, arr, geo, *bounds)
-
-        print '{} {} reduced'.format(tag, k)
 
 
 if __name__ == '__main__':
