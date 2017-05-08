@@ -39,6 +39,7 @@ def generate_dataset(daterange, out):
     extract_initial(*args)
     extract_static(*args)
     extract_mask(*args)
+    make_blank_geo_folder(out)
 
     for day in day_generator(*daterange):
         extract_prism(day, *args)
@@ -119,7 +120,7 @@ def extract_initial(*args):
 def extract_static(*args):
     pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
     root = paths.static_inputs
-    _extract('static', pairs, root, *args)
+    _extract('statics', pairs, root, *args)
 
 
 def _extract(tag, pairs, root, out, geo, bounds):
@@ -139,6 +140,12 @@ def extract_mask(out, geo, bounds):
     slice_and_save(p, arr, geo, *bounds)
 
     print 'mask reduced'
+
+
+def make_blank_geo_folder(out):
+    p = os.path.join(out,'Blank_Geo')
+    if not os.path.isdir(p):
+        os.makedirs(p)
 
 
 # ============= helpers =========================================

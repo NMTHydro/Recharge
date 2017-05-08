@@ -106,8 +106,8 @@ def run():
             'help': run_help, 'commands': run_commands,
             'dataset':run_dataset}
 
-    run_dataset()
-    return
+    # run_dataset()
+    # return
 
     welcome()
 
