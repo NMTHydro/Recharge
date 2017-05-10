@@ -122,7 +122,6 @@ def initialize_static_dict(pairs=None):
         print 'static {:<20s} {}'.format(k, p)
         raster = Raster(p, root=paths.static_inputs)
         arr = raster.masked()
-        print arr
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)

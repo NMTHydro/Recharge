@@ -20,13 +20,16 @@ from pandas import concat, DataFrame
 from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series # from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series
 from recharge.etrm_processes import Processes   # from recharge.etrm_processes import Processes
 from app.paths import paths
+from app.generic_runner import run_model
+from app.config import Config
 
 BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
-                 '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
-                 '3': {'Coords': '339552 3800667', 'Name': 'Sevilleta_Shrub'},
-                 '4': {'Coords': '343495 3803640', 'Name': 'Sevilleta_Grass'},
-                 '5': {'Coords': '386288 3811461', 'Name': 'Heritage_Pinyon_Juniper'},
-                 '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_Juniper_Savanna'}}
+                 # '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
+                 # '3': {'Coords': '339552 3800667', 'Name': 'Sevilleta_Shrub'},
+                 # '4': {'Coords': '343495 3803640', 'Name': 'Sevilleta_Grass'},
+                 # '5': {'Coords': '386288 3811461', 'Name': 'Heritage_Pinyon_Juniper'},
+                 # '6': {'Coords': '420840 3809672', 'Name': 'Tablelands_Juniper_Savanna'}
+                 }
 
 
 def run(input_root, simulation_period):
@@ -35,12 +38,29 @@ def run(input_root, simulation_period):
     amf_dict = amf_obs_time_series(BASE_AMF_DICT,
                                    complete_days_only=True,
                                    return_low_err=True)
+    # get_etrm_time_series(paths.amf_extract, dict_=amf_dict)
+    for k, v in amf_dict.iteritems():
+        for kk, vv in v.iteritems():
+            if isinstance(vv, DataFrame):
+                p = os.path.join(paths.amf_output_root,'{}_{}.csv'.format(k, kk))
+                print 'writing to {}'.format(p)
+                vv.to_csv(p)
+    val = amf_dict.values()[0]
 
-    get_etrm_time_series(paths.amf_extract, dict_=amf_dict)
-    for key, val in amf_dict.iteritems():
-        etrm = Processes(simulation_period)
-        etrm.run(ro_reinf_frac=0.7, allen_ceff=0.8)
-        save_run(etrm, val)
+    cfg = Config()
+    for runspec in cfg.runspecs:
+        paths.build(runspec.input_root, runspec.output_root)
+
+        etrm = Processes(runspec)
+        etrm.configure_run(runspec)
+        etrm.run()
+
+    save_run(etrm, val)
+
+    # for key, val in amf_dict.iteritems():
+        # etrm = Processes(cfg.runspecs[0])
+        # etrm.run(ro_reinf_frac=0.7, allen_ceff=0.8)
+        # save_run(etrm, val)
 
 
 def save_run(etrm, val):
@@ -57,7 +77,8 @@ def save_run(etrm, val):
 
 if __name__ == '__main__':
     # ir = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
-    ir = os.path.join('/Volumes', 'Seagate Expansion Drive')
+    # ir = os.path.join('/Volumes', 'Seagate Expansion Drive')
+    ir = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel/ETRM_inputs_Ameriflux')
     sim = datetime(2007, 1, 1), datetime(2013, 12, 29)
 
     run(ir, sim)

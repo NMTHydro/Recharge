@@ -450,10 +450,7 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
-        print 'kcmax: {}, kr: {}, st_1_dur: {}'.format(kc_max, kr, st_1_dur)
         ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
-        print 'ke: {}'.format(ke)
-        print 'few*ckmax: {}'.format(few * kc_max)
         ke = maximum(0.0, minimum(ke, 1))
         m['ke'] = ke
 
@@ -474,10 +471,6 @@ class Processes(object):
         m['evap'] = evap = minimum(evap, (taw - pdr) - transp)
 
         m['eta'] = et_actual = evap + transp
-        for k, v in (('evap 1', e1), ('evap 2', e2),
-                     ('evap', evap), ('transp', transp),
-                     ('ET', et_actual)):
-            print '{} = {}'.format(k, v)
 
         # Start Water Balance
         water = m['rain'] + m['melt']
@@ -487,8 +480,7 @@ class Processes(object):
 
         # Dry days are only used if Experimental stage 2 reduction is used
         dd = m['dry_days']
-        dd[water < 0.1] = dd + 1
-        dd[water >= 0.1] = 1
+        dd = where(water < 0.1, dd + 1, 1)
         m['dry_days'] = dd
 
         # Surface runoff (Hortonian- using storm duration modified ksat values)
@@ -803,7 +795,6 @@ class Processes(object):
             elif k == 'transp_adj':
                 v = median(v)
             else:
-                v = v.mean()
                 v = self._output_function(v)
             return v
 
