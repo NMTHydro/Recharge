@@ -22,13 +22,13 @@ import pandas as pd
 import numpy as np
 from runners.paths import Paths
 from recharge.etrm_processes import Processes
-from recharge.raster_tools import get_mask, convert_raster_to_array
+
 import xlwt
 from utils.pixel_coord_finder import coord_getter
 from runners.config import Config
-from recharge.raster_tools import apply_mask, get_mask, get_raster_geo_attributes, remake_array, convert_raster_to_array, convert_array_to_raster
 
-from runners.taw_csv_gen2 import extract_keys, tiff_framer
+
+from recharge.raster_tools import extract_keys, tiff_framer, get_mask, convert_raster_to_array, convert_array_to_raster, remake_array, get_raster_geo_attributes, apply_mask
 
 # ============= local library imports ===========================
 
@@ -38,7 +38,7 @@ def taw_func(root):
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
 
-    northing, easting = coord_getter(os.path.join(mask_path, 'zuni_1.tif'))
+    northing, easting = coord_getter(os.path.join(mask_path, 'unioned_raster_output.tif'))
 
     home = os.path.expanduser('~')
     cp1 = os.path.join(home, 'ETRM_CONFIG.yml') # for an unmodified taw
@@ -113,7 +113,7 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     print 'depletion ->', d
     print 'depletion shape', d.shape
 
-    ones = np.ones(32787,) # 32768 needs to be 32787
+    ones = np.ones(d.shape) # was 32787 now 3056 because the mask size changed you dummy!
 
     taw_unmod = taw.ix[:, 2]
     taw_unmod = taw_unmod.values.tolist()[0:]
@@ -153,7 +153,7 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     print 'unmod shape', unmod_soil_arr.shape
     print unmod_soil_arr
     unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
-    convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
+    convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/newtestfile.tif', unmod_soil_arr, geo_thing)
 
 
 
@@ -168,7 +168,7 @@ def run():
     mp = os.path.join(inputs_path, 'Mask')
     tiff_root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_03_13/daily_rasters'
     mask_path = os.path.join(mp)  # mp, 'zuni_1.tif'
-    tiff_path = os.path.join(mask_path, 'zuni_1.tif')
+    tiff_path = os.path.join(mask_path, 'unioned_raster_output.tif')
 
     # -----DATES-----
     # TODO - get the date list form the config object
@@ -189,8 +189,8 @@ def run():
     taw_df, taw_data_dict = taw_func(root)
 
     # ----- Take Stock ----
-    tiff_frame.to_excel('/Users/Gabe/Desktop/tiff_frame.xls')
-    taw_df.to_excel('/Users/Gabe/Desktop/taw_df.xls')
+    #tiff_frame.to_excel('/Users/Gabe/Desktop/tiff_frame.xls')
+    #taw_df.to_excel('/Users/Gabe/Desktop/taw_df.xls')
 
     # ------ RZSM = 1- (D/TAW) -------
     rzsm_mapper(tiff_frame, taw_df, inputs_path, mask_path)
