@@ -18,6 +18,14 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 import os
+import sys
+
+from datetime import datetime
+
+
+class PathsNotSetExecption(BaseException):
+    def __str__(self):
+        return 'paths.build(in_root, out_root) needs to be called before the model will run'
 
 
 class Paths:
@@ -29,6 +37,7 @@ class Paths:
     ndvi_std_all = None
     ndvi_individ = None
     ndvi_spline = None
+    ndvi_statics = None
     static_inputs = None
     initial_inputs = None
     polygons = None
@@ -41,19 +50,28 @@ class Paths:
     amf_ex_sac_extract = None
     amf_ex_sac_output_root = None
     amf_ex_sac_trackers = None
+    results_root = None
 
     def __init__(self):
+        self._is_set = False
         self.config = os.path.join(os.path.expanduser('~'), 'ETRM_CONFIG.yml')
 
-    def build(self, input_root, output_root=None, taw_output_root=None):
-        self.etrm_input_root = etrm_input_root = os.path.join(input_root,
-                                                              'ETRM_Inputs')
+    def build(self, input_root, output_root=None):
+        self._is_set = True
+        self.etrm_input_root = etrm_input_root = input_root
         if output_root is None:
-            output_root = input_root
+            output_root = os.path.join(input_root, 'ETRM_Results')
 
-        self.etrm_output_root = os.path.join(output_root, 'ETRM_Results')
+        self.etrm_output_root = output_root
+
+        now = datetime.now()
+        tag = now.strftime('%y%m%d_%H_%M')
+
+        self.results_root = os.path.join(self.etrm_output_root, tag)
+
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
+        self.ndvi_statics = os.path.join(etrm_input_root, 'NDVI_statics')
         self.ndvi_std_all = os.path.join(self.ndvi, 'NDVI_std_all')
         self.ndvi_individ = os.path.join(self.ndvi, 'NDVI')
         self.ndvi_spline = os.path.join(self.ndvi, 'NDVI_spline')
@@ -80,6 +98,32 @@ class Paths:
     def set_polygons_path(self, p):
         self.polygons = self.input_path(p)
 
+    def verify(self):
+        attrs = ('etrm_input_root',
+                 'etrm_output_root',
+                 'prism',
+                 'ndvi',
+                 'ndvi_std_all',
+                 'ndvi_individ',
+                 'ndvi_spline',
+                 'penman',
+                 'static_inputs',
+                 'initial_inputs')
+
+        nonfound = []
+        for attr in attrs:
+            v = getattr(self, attr)
+            if not os.path.exists(v):
+                print 'NOT FOUND {}: {}'.format(attr, v)
+                nonfound.append((attr, v))
+
+        if nonfound:
+            sys.exit(1)
+
+    def is_set(self):
+        return self._is_set
 
 paths = Paths()
+
+
 # ============= EOF =============================================

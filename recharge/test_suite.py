@@ -16,12 +16,21 @@
 
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
-from setuptools import setup
+import unittest
 
-setup(name='Recharge',
-      version='0.1',
-      py_modules=[],
-      packages=['recharge', 'app'],
-      test_suite='recharge.test_suite.suite', requires=['numpy', 'pandas', 'matplotlib'])
 
+def suite():
+    from tests.test_case import ConfigTestCase
+
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+
+    tests = (ConfigTestCase, )
+    for t in tests:
+        suite.addTest(loader.loadTestsFromTestCase(t))
+    return suite
+
+
+if __name__ == '__main__':
+    unittest.TextTestRunner(verbosity=2).run(suite())
 # ============= EOF =============================================

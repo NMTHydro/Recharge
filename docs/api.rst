@@ -9,12 +9,17 @@ The ETRM Model
    :members:
    :private-members:
 
-The ETRM Raster Object
+Rasters
 ----------------------
 
-.. autoclass:: recharge.raster_manager.Rasters
+.. autoclass:: recharge.raster_manager.RasterManager
    :members:
    :private-members:
+
+.. autoclass:: recharge.raster.Raster
+   :members:
+   :private-members:
+
 
 Helper Funcs
 ------------
@@ -46,3 +51,7 @@ raster_tools
 .. automodule:: recharge.raster_tools
    :members:
 
+tools
+++++++++++++
+.. automodule:: recharge.tools
+   :members:

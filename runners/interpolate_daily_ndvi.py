@@ -22,7 +22,7 @@ import scipy.ndimage as ndimage
 
 from recharge import NUMS, NUMSIZE
 from recharge.tools import write_map, read_map
-from runners.paths import paths
+from app.paths import paths
 
 C = 2272
 R = 2525

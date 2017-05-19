@@ -21,7 +21,7 @@ from dateutil import rrule
 from pandas import DataFrame, date_range
 from numpy import nan
 from recharge.dynamic_raster_finder import get_kcb, get_penman, get_prism
-from runners.paths import paths
+from app.paths import paths
 
 
 def get_dynamic_inputs_from_shape(shapefile,  simulation_period, out_location):

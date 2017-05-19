@@ -18,62 +18,112 @@ The purpose of this module is to provide some simple tools needed for raster pro
 
 
 """
-from osgeo import gdal
-from numpy import array, asarray
-from numpy.ma import masked_where, nomask, filled
-from datetime import datetime
 import os
+from datetime import datetime
+from pprint import pformat
 
+import rasterio
+from affine import Affine
+from numpy import array, asarray
+from numpy.ma import masked_where, nomask
+from osgeo import gdal
 from pandas import DataFrame
 
-from utils.pixel_coord_finder import coord_getter
+from app.paths import paths
 
 
-def extract_keys(tiff_list):
-    tiff_keys = [tname.split('_')[0] for tname in tiff_list]
-    keys = ['x', 'y']
-    [keys.append(item) for item in tiff_keys]
-    # for item in tiff_keys:
-    #     keys.append(item)
-    # keys.append(tiff_keys)
-    print 'keys!', keys
-    return keys
+def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_path, mask):
+    """
+        Root Zone Soil Mapper, which takes two dataframe objects, depletions, taw and gets soil moiture using
+        RZSM = 1- (D/TAW) for each pixel of the model. The RZSM will be converted to an array and refitted into
+        a map using convert_array_to_raster()
+    """
+    geo = get_raster_geo_attributes(os.path.dirname(taw_path))
 
+    taw_mod = convert_raster_to_array(taw_path)
+    taw_unmod = convert_raster_to_array(taw_unmod_path)
+    de = convert_raster_to_array(de_path)
+    dr = convert_raster_to_array(dr_path)
+    drew = convert_raster_to_array(drew_path)
 
-def tiff_framer(root, mask_path, tiff_list, tiff_path):
-    print 'started tiff framer'
-    mask_arr = get_mask(mask_path)
-    print mask_arr
+    taw_mod = apply_mask(mask, taw_mod)
+    taw_unmod = apply_mask(mask, taw_unmod)
+    de = apply_mask(mask, de)
+    dr = apply_mask(mask, dr)
+    drew = apply_mask(mask, drew)
 
-    # TODO - build the mask into the config object.
-    northing, easting = coord_getter(tiff_path)  # mask_arr
-    print 'got n/e'
+    # de = depletions.as_matrix(columns='de') # why won't this work?
 
-    arrs = [convert_raster_to_array(root, tiff_name) for tiff_name in tiff_list]
-    print 'got arrs'
+    # de = depletions.ix[:, 2]
+    # de = de.values.tolist()[0:]
+    # de = array(de)
+    print 'de shape', de.shape
+    print 'de', de
 
-    ref_arr = arrs[0]
-    nrows, ncols = ref_arr.shape
+    # dr = depletions.ix[:, 3]
+    # dr = dr.values.tolist()[0:]
+    # dr = array(dr)
+    print'dr shape', dr.shape
 
-    rows = []
-    for ri in xrange(nrows):
-        for ci in xrange(ncols):
-            mask_values = mask_arr[ri, ci]
-            if mask_values:
-                x = int(easting[ri, ci])
-                y = int(northing[ri, ci])
-                data = [arr[ri, ci] for arr in arrs]
-                data.insert(0, y)
-                data.insert(0, x)
+    # drew = depletions.ix[:, 4]
+    # drew = drew.values.tolist()[0:]
+    # drew = array(drew)
+    print'drew shape', drew.shape
 
-                rows.append(data)
-    keys = extract_keys(tiff_list)
-    df = DataFrame(rows, columns=keys)
+    d = de + dr + drew
+    print 'depletion ->', d
+    print 'depletion shape', d.shape
 
-    return df
+    # ones = np.ones(32787,) # 32768 needs to be 32787
+
+    # taw_unmod = taw.ix[:, 2]
+    # taw_unmod = taw_unmod.values.tolist()[0:]
+
+    # taw_unmod = [float(value) for value in taw_unmod]
+    # for value in taw_unmod:
+    #     value = int(value)
+
+    # taw_unmod = array(taw_unmod, dtype=float)
+    print 'taw_unmod shape', taw_unmod.shape
+    print 'taw_unmod', taw_unmod
+    quotient = d / taw_unmod
+    print 'Quotient', quotient
+    unmod_soil_arr = 1.0 - quotient
+    print 'unmodified rzsm array', unmod_soil_arr
+
+    # print 'taw shape', taw_unmod.shape
+
+    # taw_mod = taw.ix[:, 3]
+    # taw_mod = taw_mod.values.tolist()[0:]
+    # taw_mod = [float(value) for value in taw_mod]
+    # taw_mod = array(taw_mod, dtyle=float)
+
+    quotient = d / taw_mod
+    mod_soil_arr = 1.0 - quotient
+
+    print 'modified rzsm array', mod_soil_arr
+
+    # ---- Get Arrays Back into shape! -----
+    convert_array_to_raster(os.path.join(output_path, 'unmod.tif'), unmod_soil_arr, geo)
+    convert_array_to_raster(os.path.join(output_path, 'mod.tif'), mod_soil_arr, geo)
+
+    # print 'paths.static_inputs',
+    # should be able to get the paths thing to work.
+    # geo_path = Paths()
+    # geo_path = os.path.join(inputs_path, 'statics')
+    # geo_thing = get_raster_geo_attributes(geo_path)
+    # print 'GEO THING', geo_thing
+    # print 'unmod shape', unmod_soil_arr.shape
+    # print unmod_soil_arr
+    # unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
+    # convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
+    if not os.path.isfile(output_path):
+        print 'Not a valid file: {}. Raster could not be written!'.format(output_path)
+        return
+
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
@@ -85,18 +135,22 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     del out_data_set, output_band
 
 
-def convert_raster_to_array(input_raster_path, raster, band=1):
+def convert_raster_to_array(input_raster_path, raster=None, band=1):
     """
     Convert .tif raster into a numpy numerical array.
 
     :param input_raster_path: Path to raster.
-    :param raster: Raster name with *.tif
+    :param raster: Raster name with \*.tif
     :param band: Band of raster sought.
+
     :return: Numpy array.
     """
     # print "input raster path", input_raster_path
     # print "raster", raster
-    p = os.path.join(input_raster_path, raster)
+    p = input_raster_path
+    if raster is not None:
+        p = os.path.join(p, raster)
+
     # print "filepath", os.path.isfile(p)
     # print p
     if not os.path.isfile(p):
@@ -135,11 +189,23 @@ def apply_mask(mask_path, arr):
 
 
 def get_mask(path):
-    idxs = None
-    file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
+    if os.path.isfile(path):
+        path, file_name = os.path.dirname(path), os.path.basename(path)
+    else:
+
+        file_name = next((fn for fn in os.listdir(path) if fn.endswith('.tif')), None)
+
     if file_name is not None:
-        mask = convert_raster_to_array(path, file_name)
-        idxs = asarray(mask, dtype=bool)
+        return get_mask_arr(path, file_name)
+        # if file_name is not None:
+        #     mask = convert_raster_to_array(path, file_name)
+        #     idxs = asarray(mask, dtype=bool)
+        # return idxs
+
+
+def get_mask_arr(path, name):
+    mask = convert_raster_to_array(path, name)
+    idxs = asarray(mask, dtype=bool)
     return idxs
 
 
@@ -203,7 +269,7 @@ def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, 
 #             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
 
 
-def make_results_dir(out_root, shapes):
+def make_results_dir(out_root=None, shapes=None):
     """
     Creates a directory tree of empty folders that will recieve ETRM model output rasters.
 
@@ -214,10 +280,12 @@ def make_results_dir(out_root, shapes):
 
     empties = ('annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
                'monthly_tabulated', 'daily_tabulated', 'daily_rasters')
-    now = datetime.now()
-    tag = now.strftime('%Y_%m_%d')
 
-    out_root = os.path.join(out_root, 'ETRM_Results_{}'.format(tag))
+    if out_root is None:
+        out_root = paths.results_root
+
+    if shapes is None:
+        shapes = paths.polygons
 
     results_directories = {'root': out_root}
 
@@ -231,22 +299,77 @@ def make_results_dir(out_root, shapes):
     else:
         results_directories = {item: os.path.join(out_root, item) for item in empties}
 
-    region_types = os.listdir(shapes)
-    for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
-        d = {}
-        for region_type in region_types:
-            a, b = region_type.split('_P')
-            dst = os.path.join(out_root, tab_folder, a)
-            os.makedirs(dst)
-            d[a] = dst
+    if shapes and os.path.isdir(shapes):
+        region_types = os.listdir(shapes)
+        for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
+            d = {}
+            for region_type in region_types:
+                a, b = region_type.split('_P')
+                dst = os.path.join(out_root, tab_folder, a)
+                os.makedirs(dst)
+                d[a] = dst
 
-    results_directories[tab_folder] = d
+            results_directories[tab_folder] = d
 
-    print 'results dirs: \n{}'.format(results_directories)
+    print 'results dirs: {}'.format(pformat(results_directories, indent=2))
     return results_directories
 
 
+def get_tiff_transform(tiff_path):
+    with rasterio.open(tiff_path) as rfile:
+        t0 = rfile.affine  # upper-left pixel corner affine transform
+        return t0
+
+
+def get_tiff_transform_func(tiff_path, tx=0.5, ty=0.5):
+    with rasterio.open(tiff_path) as rfile:
+        t0 = rfile.affine  # upper-left pixel corner affine transform
+        t1 = t0 * Affine.translation(tx, ty)
+        return lambda pt: pt * t1
+
+
+def tiff_framer(mask_path, tiff_list):
+    """
+    this function stacks tiffs depth-wise, applys a mask and creates a DataFrame
+
+    E,N,Tiff0,Tiff1,...TiffN
+
+    :param mask_path: path to mask tiff
+    :param tiff_list: list of tiff paths
+
+    :return DataFrame
+    """
+
+    mask_arr = get_mask_arr(*os.path.split(mask_path))
+
+    import time
+
+    transform = get_tiff_transform_func(mask_path)
+
+    st = time.time()
+    arrs = [convert_raster_to_array(*os.path.split(tiff_path)) for tiff_path in tiff_list]
+    print 'get arrays', time.time() - st
+
+    nrows, ncols = arrs[0].shape
+
+    def rowfactory(r, c):
+        gps_pt = transform((c, r))
+        return (int(gps_pt[0]), int(gps_pt[1])) + tuple(a[r, c] for a in arrs)
+
+    st = time.time()
+    rows = [rowfactory(ri, ci) for ri in xrange(nrows) for ci in xrange(ncols) if mask_arr[ri, ci]]
+    print 'get rows', time.time() - st
+
+    df = DataFrame(rows)
+    return df
+
+
 if __name__ == '__main__':
-    pass
+    rr = '/Users/ross/Sandbox/ETRM'
+    tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
+    tnames = ['de_30_12_2013.tif', 'dr_30_12_2013.tif']
+
+    mp = os.path.join(rr, 'mask', 'zuni_1.tif')
+    print tiff_framer(mp, [os.path.join(rr, ti) for ti in tnames])
 
 # =================================== EOF =========================
