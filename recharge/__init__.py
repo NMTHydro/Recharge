@@ -21,11 +21,22 @@ NUMSIZE = len(NUMS)
 
 PRISM_YEARS = (2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
 
-STATIC_KEYS = ('bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew')
+STATIC_KEYS = 'bed_ksat', 'land_cover', 'plant_height', 'quat_deposits', 'rew', 'root_z', 'soil_ksat', 'taw', 'tew'
+INITIAL_KEYS = 'de', 'dr', 'drew'
 
-OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb', 'dr', 'de', 'drew')
-DAILY_OUTPUTS = ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb', 'dr', 'de', 'drew')
+OUTPUTS = 'tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_kcb'
 
+MM = 'mm'
+
+CURRENT_DAY = 'current_day'
+CURRENT_MONTH = 'current_month'
+CURRENT_YEAR = 'current_year'
+
+ANNUAL_TRACKER_KEYS = CURRENT_YEAR, 'last_year'
+MONTHLY_TRACKER_KEYS = CURRENT_MONTH, 'last_month'
+DAILY_TRACKER_KEYS = CURRENT_DAY, 'yesterday'
+
+TRACKER_KEYS = ANNUAL_TRACKER_KEYS + MONTHLY_TRACKER_KEYS + DAILY_TRACKER_KEYS
 # ============= EOF =============================================
 
 

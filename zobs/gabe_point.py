@@ -32,7 +32,7 @@ from recharge.time_series_manager import get_etrm_time_series
 
 
 # I need to replace the BASE_AMF_DICT with a different dict which I must make from GDAL somehow.
-from runners.paths import paths
+from app.paths import paths
 
 
 def run(input_root, coords_path):

@@ -18,7 +18,19 @@ import os
 import time
 
 import gdal
+from datetime import datetime
+from dateutil import rrule
 from numpy import linspace, isnan
+
+
+def day_generator(start, end):
+    if isinstance(start, (str, unicode)):
+        start = datetime.strptime(start, '%m/%d/%Y')
+
+    if isinstance(end, (str, unicode)):
+        end = datetime.strptime(end, '%m/%d/%Y')
+
+    return rrule.rrule(rrule.DAILY, dtstart=start, until=end)
 
 
 def add_extension(p, ext='.txt'):
@@ -28,11 +40,10 @@ def add_extension(p, ext='.txt'):
 
 
 def millimeter_to_acreft(param):
-    return '{:.2e}'.format((param.sum() / 1000) * (250**2) / 1233.48)
+    return (param.sum() / 1000.0) * (250.0 ** 2) / 1233.48
 
 
 def save_master_tracker(tracker, raster_out_root):
-
     csv_path_filename = os.path.join(raster_out_root, 'etrm_master_tracker.csv')
     print 'this should be your master tracker csv: {}'.format(csv_path_filename)
     tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')

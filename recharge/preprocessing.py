@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2016 Jake Ross
+# Copyright 2017 ross
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,23 @@
 # limitations under the License.
 # ===============================================================================
 
+# ============= enthought library imports =======================
 # ============= standard library imports ========================
-# ============= local library imports  ==========================
-from setuptools import setup
+from numpy import where
 
-setup(name='Recharge',
-      version='0.1',
-      py_modules=[],
-      packages=['recharge', 'app'],
-      test_suite='recharge.test_suite.suite', requires=['numpy', 'pandas', 'matplotlib'])
+from recharge.raster import Raster
+
+
+def generate_rew_tiff(sand_tif, clay_tif, output):
+    sand = Raster(sand_tif)
+    clay = Raster(clay_tif)
+
+    # From ASCE pg 195, equations from Ritchie et al., 1989
+    rew = 8 + 0.08 * clay
+    rew = where(sand > 80.0, 20.0 - 0.15 * sand, rew)
+    rew = where(clay > 50, 11 - 0.06 * clay, rew)
+
+    out = Raster.fromarray(rew, sand.geo)
+    out.save(output)
 
 # ============= EOF =============================================

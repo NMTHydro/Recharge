@@ -16,15 +16,14 @@
 import os
 from datetime import datetime
 from recharge.etrm_processes import Processes
-from runners.config import Config
+from app.config import Config
 
 
 def dist_daily_run():
     cfg = Config()
-    cfg.load()
     etrm = Processes(cfg)
     etrm.set_save_dates(cfg.save_dates)
-    etrm.run()
+    etrm.run(ro_reinf_frac=0.0, rew_ceff=1.0, evap_ceff=1.0)
 
 def dist_daily_taw_run():
     cfg2 = Config()

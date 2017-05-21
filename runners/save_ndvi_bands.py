@@ -20,7 +20,7 @@ from dateutil import rrule
 from recharge import NUMS
 from recharge.raster_tools import convert_raster_to_array
 from recharge.tools import write_map, read_map
-from runners.paths import paths
+from app.paths import paths
 
 
 def get_kcb(in_path, date_object):
