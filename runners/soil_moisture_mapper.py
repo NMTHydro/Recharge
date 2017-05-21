@@ -156,8 +156,7 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
     convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
-
-
+    # test change for soil_mapper new....
 
 def run():
 
