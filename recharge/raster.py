@@ -109,10 +109,13 @@ class Raster(object):
 
     def unmasked(self):
         idxs = self._get_masked_indices()
-        masked_arr = masked_where(idxs == 0, idxs)
+        if idxs is not None:
+            masked_arr = masked_where(idxs == 0, idxs)
 
-        masked_arr[~masked_arr.mask] = self._arr.ravel()
-        masked_arr.mask = nomask
+            masked_arr[~masked_arr.mask] = self._arr.ravel()
+            masked_arr.mask = nomask
+        else:
+            masked_arr = self._arr.ravel()
 
         return masked_arr.filled(0)
 
@@ -123,7 +126,11 @@ class Raster(object):
         :return:
         """
         idxs = self._get_masked_indices()
-        return self._arr[idxs].flatten()
+        arr = self._arr
+        if idxs is not None:
+            arr = arr[idxs]
+
+        return arr.flatten()
 
     def open(self, path, band=1):
         """
@@ -169,10 +176,11 @@ class Raster(object):
     def _get_masked_indices(self):
         global gmask_path, gmask
         if gmask is None or gmask_path != paths.mask:
-            print 'caching mask: {}'.format(paths.mask)
-            mask = Raster(paths.mask)
-            gmask = mask.as_bool_array
-            gmask_path = paths.mask
+            if os.path.isfile(paths.mask):
+                print 'caching mask: {}'.format(paths.mask)
+                mask = Raster(paths.mask)
+                gmask = mask.as_bool_array
+                gmask_path = paths.mask
 
         return gmask
 
