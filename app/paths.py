@@ -91,6 +91,7 @@ class Paths:
 
     def set_mask_path(self, path):
         self.mask = self.input_path(path)
+        print 'here is the mask path {}'.format(self.mask)
 
     def input_path(self, path):
         return os.path.join(self.etrm_input_root, path)

@@ -44,10 +44,13 @@ def run_dataset():
 
 def run_model(cfg_path=None):
     print 'Running Model'
+    print 'this is the cfg_path {}'.format(cfg_path)
     cfg = Config(cfg_path)
     for runspec in cfg.runspecs:
+        print runspec.input_root
+        print runspec.output_root
         paths.build(runspec.input_root, runspec.output_root)
-
+        print '1'
         etrm = Processes(runspec)
         etrm.configure_run(runspec)
         etrm.run()

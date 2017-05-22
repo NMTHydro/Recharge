@@ -16,24 +16,26 @@
 
 # ============= standard library imports ========================
 import os
-import os
 
 import pandas as pd
 import numpy as np
-from runners.paths import Paths
+
+from app.config import Config
+from app.paths import paths
 from recharge.etrm_processes import Processes
 
-import xlwt
+
 from utils.pixel_coord_finder import coord_getter
-from runners.config import Config
 
 
-from recharge.raster_tools import extract_keys, tiff_framer, get_mask, convert_raster_to_array, convert_array_to_raster, remake_array, get_raster_geo_attributes, apply_mask
+from recharge.raster_tools import tiff_framer, get_mask, convert_array_to_raster, remake_array, get_raster_geo_attributes, apply_mask
 
 # ============= local library imports ===========================
 
 def taw_func(root):
     """Function gets a masked original taw and a masked modified taw"""
+    #TODO- maybe just use dict_setup code to read in taw and modify.
+    #TODO- make an initialize taw function.
 
     mask_path = os.path.join(root, 'Mask')
     mask_arr = get_mask(mask_path)
@@ -41,23 +43,23 @@ def taw_func(root):
     northing, easting = coord_getter(os.path.join(mask_path, 'unioned_raster_output.tif'))
 
     home = os.path.expanduser('~')
-    cp1 = os.path.join(home, 'ETRM_CONFIG.yml') # for an unmodified taw
-    cp2 = os.path.join(home, 'ETRM_CONFIG_TAW.yml') # for a modified taw
+    #cp1 = os.path.join(home, 'ETRM_CONFIG_TAW.yml') # for a modified taw
+    cp1 = os.path.join(home, 'ETRM_CONFIG.yml')  # for an unmodified taw
 
     # modified taw
-    cfg1 = Config()
-    print 'cp2!!!!!!!!!!!--->', cp2
-    cfg1.load(cp2)
-    etrm_new = Processes(cfg1)
-    print 'config taw_mod------->', cfg1.taw_modification
-    taw_new = etrm_new.modify_taw(cfg1.taw_modification, return_taw=True)
+    cfg1 = Config(path=cp1)
+    runspec1 = cfg1.runspecs[0]
+    paths.build(runspec1.input_root, runspec1.output_root)
+    etrm_new = Processes(runspec1)
+    print 'config taw_mod------->', runspec1.taw_modification
+    taw_new = etrm_new.modify_taw(runspec1.taw_modification)
     print 'new taw newwww', taw_new
     taw_new = remake_array(mask_path, taw_new)
 
     # unmodified taw
-    cfg2 = Config()
-    cfg2.load(cp1)
-    etrm_unmod = Processes(cfg2)
+
+    runspec2 = cfg1.runspecs[1]
+    etrm_unmod = Processes(runspec2)
     print "etrm taw shape ---->>> ", etrm_unmod.get_taw().shape
     taw_unmod = etrm_unmod.get_taw()
     taw_unmod = remake_array(mask_path, taw_unmod)
@@ -113,6 +115,7 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     print 'depletion ->', d
     print 'depletion shape', d.shape
 
+    # TODO - you don't need an array for this. scalar will work.
     ones = np.ones(d.shape) # was 32787 now 3056 because the mask size changed you dummy!
 
     taw_unmod = taw.ix[:, 2]
@@ -152,7 +155,7 @@ def rzsm_mapper(depletions, taw, inputs_path, mask_path):
     print 'GEO THING', geo_thing
     print 'unmod shape', unmod_soil_arr.shape
     print unmod_soil_arr
-    unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
+    unmod_soil_arr = remake_array(os.path.dirname(mask_path), unmod_soil_arr)
     convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/newtestfile.tif', unmod_soil_arr, geo_thing)
 
 
@@ -167,8 +170,8 @@ def run():
     inputs_path = os.path.join(hard_drive_path, 'ETRM_inputs')
     mp = os.path.join(inputs_path, 'Mask')
     tiff_root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_03_13/daily_rasters'
-    mask_path = os.path.join(mp)  # mp, 'zuni_1.tif'
-    tiff_path = os.path.join(mask_path, 'unioned_raster_output.tif')
+    mask_path = os.path.join(mp, 'unioned_raster_output.tif')  # mp, 'zuni_1.tif'
+    #tiff_path = os.path.join(mask_path, 'unioned_raster_output.tif')
 
     # -----DATES-----
     # TODO - get the date list form the config object
@@ -179,7 +182,8 @@ def run():
     # TODO - based on the date list, make a function that formats the tiff list.
     # be mindful that under the new ETRM we don't have multiple depletions....
     tiff_list = ['de_27_12_2013.tif', 'dr_27_12_2013.tif', 'drew_27_12_2013.tif']
-    tiff_frame = tiff_framer(tiff_root, mask_path, tiff_list, tiff_path)
+    tiff_list = [os.path.join(tiff_root, i) for i in tiff_list]
+    tiff_frame = tiff_framer(mask_path, tiff_list)
 
 
 

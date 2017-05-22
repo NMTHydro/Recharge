@@ -81,6 +81,7 @@ class RasterManager(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
 
         if self._write_freq == 'daily':
+            print master.keys()
             dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
@@ -160,27 +161,32 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}'.format(key, date.month, date.year)
+        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year) # TODO - date.day missing!
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
+        print 'root dictionary->'.format(rd)
         # root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
         if period == 'annual':
+            print 'current period is annual'
             name = '{}_{}.tif'.format(key, date.year)
             filename = os.path.join(rd['annual_rasters'], name)
             array_to_save = tracker[CURRENT_YEAR][key]
 
         elif period == 'monthly':
+            print 'current period is monthly'
             name = '{}_{}_{}.tif'.format(key, date.month, date.year)
             filename = os.path.join(rd['monthly_rasters'], name)
             array_to_save = tracker[CURRENT_MONTH][key]
 
         elif period == 'daily':
+            print 'current period is daily'
             name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
-            filename = os.path.join(rd['daily_rasters'], name)
+            filename = os.path.join(rd['daily_rasters'], name) # TODO - The paths here are wrong. removed 'name' from - filename = os.path.join(rd['daily_rasters'], name)
             array_to_save = tracker[CURRENT_DAY][key]
 
         elif period == 'simulation':
+            print 'current period is simulation'
             name = '{}_{}_{}.tif'.format(key, self._simulation_period[0], self._simulation_period[1])
             filename = os.path.join(rd['simulation_tot_rasters'], name)
             array_to_save = master[key]

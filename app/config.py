@@ -37,7 +37,7 @@ end_date: Please Set Me        ## 12/31/2013
 mask: Please Set Me            ## masks/my_mask.tif
 polygons: Blank_Geo
 
-save_dates: []
+save_dates: []                  ## formatted -> 'MM/DD/YYY'
 
 daily_outputs:
  - tot_infil
@@ -106,7 +106,7 @@ class RunSpec:
         if initial:
             for attr in INITIAL_KEYS:
                 setattr(self, attr, initial.get(attr))
-
+        print 'did it get here?'
         static = self._obj.get('static')
         if static:
             for attr in STATIC_KEYS:
