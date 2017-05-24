@@ -82,7 +82,13 @@ class RasterManager(object):
 
         if self._write_freq == 'daily':
             print master.keys()
+
+            print "Here is etrs in the update raster object function {}".format(master['tot_etrs'])
+
+            # TODO this is giving a boolean e.g  [('tot_infil', array([[False, False, False, ..., False, False, False],
             dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
+
+            print "Here are the dailys in update raster obj function {}".format(dailys)
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
@@ -93,6 +99,8 @@ class RasterManager(object):
                     self._set_outputs(dailys, date_object, 'daily')
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
+
+        print "Here are the outputs in the update raster obj function {}".format(outputs)
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
         if date_object.day == mo_date[1]:
@@ -105,6 +113,8 @@ class RasterManager(object):
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
+            #print 'element from set outputs {}'.format(element)
+           # print 'arr from set outputs {}'.format(arr)
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)
 
@@ -116,7 +126,7 @@ class RasterManager(object):
         print 'saving the simulation master tracker'
         self._save_tabulated_results_to_csv(self._results_dir, paths.polygons)
 
-    def _update_raster_tracker(self, vv, var, period):
+    def _update_raster_tracker(self, vv, var, period): # TODO - ones
         """ Updates the cumulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
@@ -125,6 +135,19 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
+        print 'vv -> {}'.format(vv)
+
+        counter = 0
+        for value in vv:
+            for i in value:
+                if i == True:
+                    #print 'heres true -> {}'.format(i)
+                    counter += 1
+        print 'vv counter {}'.format(counter)
+
+        print 'var -> {}'.format(var)
+
+
 
         periods = ('annual', 'daily', 'monthly')
 
@@ -135,6 +158,7 @@ class RasterManager(object):
             raise NotImplementedError(msg)
 
         tracker = self._output_tracker
+        print 'overall tracker -> {}'.format(tracker)
         if period == 'annual':
             ckey, lkey = ANNUAL_TRACKER_KEYS
         elif period == 'daily':
@@ -145,12 +169,25 @@ class RasterManager(object):
         print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
         print 'mean value master {} today: {}'.format(var, vv.mean())
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
+        print "tracker[ckey] -> {}".format(tracker[ckey]) # TODO - ones
+        print "tracker[ckey][var] {}".format(tracker[ckey][var])
+        # TODO - problem has occured before here.
+        # counter_value = 0
+        # for item in tracker[ckey][var]:
+        #     for value in item:
+        #         if value > 0:
+        #             #print 'greater than zero {}'.format(value)
+        #             counter_value += 1 # positive count 1742, values are all 1742
+
+        #print 'tracker[ckey][var] positive count {}'.format(counter_value)
+
+
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
         tracker[ckey][var] = vv - tracker[lkey][var]
         tracker[lkey][var] = vv
 
-    def _write_raster(self, key, date, period=None, master=None):
+    def _write_raster(self, key, date, period=None, master=None): # TODO - is it that master is not getting called in the previous function?
         """
         get array from tracker and save to file
 
@@ -164,6 +201,7 @@ class RasterManager(object):
         print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year) # TODO - date.day missing!
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
+
         print 'root dictionary->'.format(rd)
         # root = rd['root'] # results directory doesn't have a root; all
         tracker = self._output_tracker
@@ -184,6 +222,16 @@ class RasterManager(object):
             name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
             filename = os.path.join(rd['daily_rasters'], name) # TODO - The paths here are wrong. removed 'name' from - filename = os.path.join(rd['daily_rasters'], name)
             array_to_save = tracker[CURRENT_DAY][key]
+            print 'array to save {}'.format(array_to_save)
+
+            # array_counter = 0
+            # for value in array_to_save:
+            #     for item in value:
+            #         if item > 0 and item != 1.0:
+            #             array_counter += 1
+            #             print 'item in array', item
+            #
+            # print "array counter {}".format(array_counter)
 
         elif period == 'simulation':
             print 'current period is simulation'

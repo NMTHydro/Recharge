@@ -27,6 +27,7 @@ from config import Config, check_config
 from recharge.dataset import generate_dataset
 from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
+from recharge.raster_tools import make_results_dir
 
 CLI_ENABLED = False
 
@@ -42,15 +43,29 @@ def run_dataset():
         generate_dataset(runspec.date_range, runspec.output_root)
 
 
+# def run_model(cfg_path=None):
+#     print 'Running Model'
+#     print 'this is the cfg_path {}'.format(cfg_path)
+#     cfg = Config(cfg_path)
+#     for runspec in cfg.runspecs:
+#         print runspec.input_root
+#         print runspec.output_root
+#         paths.build(runspec.input_root, runspec.output_root)
+#         print '1'
+#         etrm = Processes(runspec)
+#         etrm.configure_run(runspec)
+#         etrm.run()
+
+# This version if you have lots of runs.
 def run_model(cfg_path=None):
     print 'Running Model'
     print 'this is the cfg_path {}'.format(cfg_path)
     cfg = Config(cfg_path)
-    for runspec in cfg.runspecs:
-        print runspec.input_root
-        print runspec.output_root
+    for i, runspec in enumerate(cfg.runspecs):
+        runspec.output_root = '{}{:03n}'.format(runspec.output_root, i)
+        # TODO - make a modified make_results_dir to only create of the 'outer' folder.
+        make_results_dir(runspec.output_root)
         paths.build(runspec.input_root, runspec.output_root)
-        print '1'
         etrm = Processes(runspec)
         etrm.configure_run(runspec)
         etrm.run()

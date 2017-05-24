@@ -139,7 +139,7 @@ class Processes(object):
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
-
+        big_counter = 0
         st = time.time()
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
@@ -175,9 +175,33 @@ class Processes(object):
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            time_it(rm.update_raster_obj, m, day)
-            time_it(self._update_master_tracker, m, day)
+            array_counter = 0
+            for value in rm._output_tracker['current_day']['tot_etrs']:
+                for item in value:
+                    if item > 0 and item != 1.0:
+                        array_counter += 1
+                        big_counter += 1
+                        print 'item in array', item
 
+            print "array counter {}".format(array_counter)
+            time_it(rm.update_raster_obj, m, day)
+            # after here
+            time_it(self._update_master_tracker, m, day)
+            #print 'heres the rm._output_tracker in the loop after the update {}'.format(rm._output_tracker)
+            #print 'etrs update obj {}'.format(rm._output_tracker['current_day']['tot_etrs'])
+            # array_counter = 0
+            # for value in rm._output_tracker['current_day']['tot_etrs']:
+            #     for item in value:
+            #         if item > 0 and item != 1.0:
+            #             array_counter += 1
+            #             big_counter += 1
+            #             print 'item in array', item
+
+            print "array counter {}".format(array_counter)
+        print ' big counter {}'.format(big_counter)
+        print "Here's the raster manager rm {}".format(rm)
+        print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
+        print "master dict daily {}".format(m)
         self._info('saving tabulated data')
         time_it(rm.save_csv)
 

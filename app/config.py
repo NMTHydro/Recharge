@@ -170,6 +170,11 @@ class Config:
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
         rfile.close()
 
+        # TODO - a possible way to make an automatic counter for the runspecs. Complicated.
+
+        # self.runspecs = [RunSpec(i, doc) for i, doc in enumerate(yaml.load_all(rfile))]
+        # rfile.close()
+
 
 def check_config(path=None):
     if path is None:

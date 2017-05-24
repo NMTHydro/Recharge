@@ -236,6 +236,7 @@ def initialize_raster_tracker(shape):
     """
 
     d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in TRACKER_KEYS}
+    print 'd itself', d
     return d
 
 
