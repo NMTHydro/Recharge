@@ -30,7 +30,7 @@ from calendar import monthrange
 
 import gdal
 import ogr
-from numpy import array, where, zeros
+from numpy import array, where, zeros, nonzero
 
 from app.paths import paths
 from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
@@ -59,9 +59,9 @@ class RasterManager(object):
             print 'your daily outputs will be from: {}'.format(cfg.daily_outputs)
 
         self._geo = get_raster_geo_attributes(paths.static_inputs)
-        self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']))
+        self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']), cfg.daily_outputs)
         self._results_dir = make_results_dir()
-        self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq)
+        self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq, cfg.daily_outputs)
 
     def set_save_dates(self, dates):
         self._save_dates = dates
@@ -81,6 +81,10 @@ class RasterManager(object):
         # just use the normal daily fluxes from master, aka _daily_outputs
 
         if self._write_freq == 'daily':
+
+            for element in self._cfg .daily_outputs:
+                print 'asdfas', element, master[element], nonzero(master[element])
+
             dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)

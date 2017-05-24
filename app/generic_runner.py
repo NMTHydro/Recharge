@@ -19,6 +19,7 @@
 # ============= local library imports  ==========================
 import sys
 import os
+
 pp = os.path.realpath(__file__)
 sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
@@ -29,6 +30,10 @@ from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
 
 CLI_ENABLED = False
+
+
+def run_soil_mapper():
+    print 'Running soil mapper'
 
 
 def run_dataset():
@@ -92,7 +97,7 @@ def run(cfg_path=None):
 
     cmds = {'model': run_model, 'rew': run_rew,
             'help': run_help, 'commands': run_commands,
-            'dataset':run_dataset}
+            'dataset': run_dataset}
 
     # run_dataset()
     # return
@@ -109,7 +114,8 @@ def run(cfg_path=None):
 
             func()
     else:
-        run_model(cfg_path)
+        # run_model(cfg_path)
+        run_soil_mapper()
 
 
 if __name__ == '__main__':

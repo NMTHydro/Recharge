@@ -228,18 +228,19 @@ def initialize_initial_conditions_dict(pairs=None):
     return d
 
 
-def initialize_raster_tracker(shape):
+def initialize_raster_tracker(shape, outputs):
     """
 
     :param shape:
     :return:
     """
 
-    d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in TRACKER_KEYS}
+    d = {k: {tk: zeros(shape) for tk in outputs} for k in TRACKER_KEYS}
+    print 'd itself', d
     return d
 
 
-def initialize_tabular_dict(date_range_, write_frequency):
+def initialize_tabular_dict(date_range_, write_frequency, outputs):
     """
 
     :param date_range_:
@@ -248,7 +249,6 @@ def initialize_tabular_dict(date_range_, write_frequency):
     """
     units = ('AF', 'CBM')
 
-    outputs = OUTPUTS
     outputs_arr = [o for output in outputs for o in (output, output)]
 
     # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'

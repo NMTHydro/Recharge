@@ -88,7 +88,10 @@ class RunSpec:
     output_units = 'acre-ft'
     is_reduced = False
 
-    def __init__(self, obj):
+    index = 0
+
+    def __init__(self, i, obj):
+        self.index = i
         self._obj = obj
         attrs = ('mask', 'polygons', 'use_individual_kcb',
                  'input_root', 'output_root', 'output_path', 'write_freq', 'use_verify_paths',
@@ -167,7 +170,7 @@ class Config:
         else:
             rfile = path
 
-        self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        self.runspecs = [RunSpec(i, doc) for i, doc in enumerate(yaml.load_all(rfile))]
         rfile.close()
 
 

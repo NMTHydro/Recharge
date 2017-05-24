@@ -29,7 +29,7 @@ gmask = None
 gmask_path = None
 
 
-class Raster(object):
+class Raster(object): # TODO - Dont think the problem is here
     _band = 1
     _path = None
     _arr = None
@@ -109,7 +109,9 @@ class Raster(object):
 
     def unmasked(self):
         idxs = self._get_masked_indices()
+
         if idxs is not None:
+            idxs = asarray(idxs, int)
             masked_arr = masked_where(idxs == 0, idxs)
 
             masked_arr[~masked_arr.mask] = self._arr.ravel()
