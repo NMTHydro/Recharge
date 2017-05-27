@@ -22,7 +22,7 @@ import os
 from affine import Affine
 
 from app.paths import paths, PathsNotSetExecption
-from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman, get_prism
+from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman, get_prism, get_spline_ndvi
 from recharge.raster import Raster
 from recharge.raster_tools import get_tiff_transform_func, get_tiff_transform
 from recharge.tools import day_generator
@@ -92,6 +92,18 @@ def extract_ndvi(day, out, geo, bounds):
     timestamp = day.strftime('%Y_%m_%d')
     year = str(day.year)
     p = os.path.join(out, 'NDVI', 'NDVI', year)
+    # if not os.path.isdir(p):
+    #     os.makedirs(p)
+    p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
+    slice_and_save(p, arr, geo, *bounds)
+
+
+def extract_ndvi_spline(day, out, geo, bounds):
+    arr = get_spline_ndvi(day)
+
+    timestamp = day.strftime('%Y_%m_%d')
+    year = str(day.year)
+    p = os.path.join(out, 'NDVI', 'NDVI_spline', year)
     # if not os.path.isdir(p):
     #     os.makedirs(p)
     p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
@@ -197,7 +209,7 @@ def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     raster = Raster.fromarray(arr)
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
-    marr = marr * arr
+    # marr = marr * arr
     # print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 

@@ -58,13 +58,7 @@ def get_spline_kcb(date_object, previous_kcb=None):
     :param previous_kcb: Previous day's kcb value.
     :return: numpy array object
     """
-    year = str(date_object.year)
-
-    tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
-    path = os.path.join(year, tail)
-
-    raster = Raster(path, root=paths.ndvi_spline)
-    ndvi = raster.masked()
+    ndvi = get_spline_ndvi(date_object)
     return post_process_ndvi(ndvi, previous_kcb=previous_kcb)
 
 
@@ -83,6 +77,14 @@ def get_individ_kcb(date_object, previous_kcb=None):
 
     name = os.path.join(year, tail)
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
+
+
+def get_spline_ndvi(date_object):
+    year = str(date_object.year)
+    tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
+    path = os.path.join(year, tail)
+    raster = Raster(path, root=paths.ndvi_spline)
+    return raster.masked()
 
 
 def get_individ_ndvi(date_object):
@@ -136,7 +138,7 @@ def get_kcb(date_object, previous_kcb=None):
     return post_process_ndvi(name, paths.ndvi_std_all, previous_kcb, band)
 
 
-def get_prisms(date, is_reduced = False):
+def get_prisms(date, is_reduced=False):
     """
     return all prism variables
 
@@ -162,7 +164,7 @@ def get_geo(date_object):
     return raster.geo
 
 
-def get_prism(date_object, variable='precip', is_reduced = False):
+def get_prism(date_object, variable='precip', is_reduced=False):
     """
     Find PRISM image.
 
