@@ -44,6 +44,7 @@ def generate_dataset(daterange, out):
     for day in day_generator(*daterange):
         extract_prism(day, *args)
         extract_ndvi(day, *args)
+        extract_ndvi_spline(day, *args)
         extract_penman(day, *args)
         print '----------------- day {} -------------------'.format(day.strftime('%m_%d_%Y'))
 
