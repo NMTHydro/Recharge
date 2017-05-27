@@ -77,6 +77,7 @@ class RunSpec:
     output_path = None
     write_freq = None
     use_verify_paths = None
+    uniform_taw = None # TODO - uniform
     taw_modification = 1.0
     ro_reinf_frac = 0.0
     swb_mode = 'fao'
@@ -97,7 +98,7 @@ class RunSpec:
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                 'output_units', 'is_reduced')
+                 'output_units', 'is_reduced', 'uniform_taw') # TODO - uniform
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
@@ -106,7 +107,6 @@ class RunSpec:
         if initial:
             for attr in INITIAL_KEYS:
                 setattr(self, attr, initial.get(attr))
-        print 'did it get here?'
         static = self._obj.get('static')
         if static:
             for attr in STATIC_KEYS:

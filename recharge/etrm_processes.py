@@ -17,8 +17,8 @@
 import os
 import shutil
 import time
-
-from numpy import maximum, minimum, where, isnan, exp, median
+import numpy
+from numpy import maximum, minimum, where, isnan, exp, median, full
 
 from app.paths import paths, PathsNotSetExecption
 from recharge import MM
@@ -104,6 +104,9 @@ class Processes(object):
 
         if runspec.taw_modification is not None:
             self.modify_taw(runspec.taw_modification)
+
+        if runspec.uniform_taw is not None:
+            self.uniform_taw(runspec.uniform_taw) # TODO - uniform
 
         self._date_range = runspec.date_range
         self._use_individual_kcb = runspec.use_individual_kcb
@@ -246,11 +249,28 @@ class Processes(object):
         :return: taw array
 
         """
-
+        print 'running modify_taw'
         s = self._static
         taw = s['taw']
         taw = taw * taw_modification
         s['taw'] = taw
+
+        return taw
+
+    def uniform_taw(self, taw_value):
+        """Replaces the taw array with a single value
+
+        :param taw_value: object
+        :return taw_uniform array
+
+        """
+        print '===========================\nrunning uniform_taw\n==========================='
+
+        s = self._static
+        taw = s['taw']
+        taw_shape = taw.shape
+        s['taw'] = numpy.full(taw_shape, taw_value)
+        taw = s['taw']
 
         return taw
 

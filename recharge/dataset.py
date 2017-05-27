@@ -36,6 +36,8 @@ def generate_dataset(daterange, out):
 
     geo, bounds = setup_geo()
     args = out, geo, bounds
+
+    print '* args out: {}, geo {}, bounds: {}'.format(out, geo, bounds)
     extract_initial(*args)
     extract_static(*args)
     extract_mask(*args)
@@ -114,6 +116,7 @@ def save_initial(p, raster, transform, startc, endc, startr, endr):
 def extract_initial(*args):
     pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
     root = paths.initial_inputs
+    print 'extract initial root {}'.format(root)
     _extract('initialize', pairs, root, *args)
 
 
@@ -124,10 +127,15 @@ def extract_static(*args):
 
 
 def _extract(tag, pairs, root, out, geo, bounds):
+    print 'pairs {}'.format(pairs)
     for k, pair in pairs:
         raster = Raster(pair, root=root)
+        print 'ooouuuutttt', out
         p = make_reduced_path(out, tag, k)
         arr = raster.masked()
+        print 'arrrrr {}'.format(arr)
+        print arr.shape
+        print "p: {}, arr: {}, geo: {}, *bounds{}".format(p, arr, geo, *bounds)
         slice_and_save(p, arr, geo, *bounds)
 
         print '{} {} reduced'.format(tag, k)
@@ -151,14 +159,20 @@ def make_blank_geo_folder(out):
 # ============= helpers =========================================
 def setup_geo():
     raster = Raster(paths.mask)
+    print 'paths.mask', paths.mask
     mask_arr = raster.as_bool_array
 
     # get raster to provide geo data (need one that is not "Byte")
     root = paths.initial_inputs
+    print 'root', root
     name = tiff_list(root)[0]
+    print 'name', name
     raster = Raster(name, root=root)
+    print 'raster -> {}'.format(raster)
     geo = raster.geo
+    print 'geo', geo
 
+    print 'mask_arr', mask_arr
     startc, endc, startr, endr = bounding_box(mask_arr)
     geo['rows'] = endr - startr
     geo['cols'] = endc - startc
@@ -197,7 +211,6 @@ def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     raster = Raster.fromarray(arr)
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
-    marr = marr * arr
     # print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 
@@ -218,6 +231,6 @@ def get_transform(startc, startr):
 
 
 if __name__ == '__main__':
-    paths.build('')
-    generate_dataset('12/1/2013', '12/2/2013', '/Users/ross/Sandbox/etrm_dataset')
+    paths.build('/Volumes/Seagate Expansion Drive/ETRM_inputs')
+    generate_dataset(['1/1/2000', '12/31/2013'], '/Volumes/Seagate Expansion Drive/gabe_aoi_inputs')
 # ============= EOF =============================================

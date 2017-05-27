@@ -41,7 +41,7 @@ class Paths:
     static_inputs = None
     initial_inputs = None
     polygons = None
-    mask = None
+    mask = '/Volumes/Seagate Expansion Drive/ETRM_inputs/Mask/unioned_raster_output.tif' # TODO temporary
     amf_sites = None
     amf_extract = None
     amf_output_root = None
