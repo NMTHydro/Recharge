@@ -112,11 +112,20 @@ class Raster(object):
         idxs = asarray(idxs, int)
 
         masked_arr = masked_where(idxs == 0, idxs)
-
+        print 'arr ravel', self._arr.ravel()
         masked_arr[~masked_arr.mask] = self._arr.ravel()
+        # TODO - problem right here?
+        print 'len mask array ', len(masked_arr)
+        print 'masked array mask', masked_arr.mask
         masked_arr.mask = nomask
-
-        return masked_arr.filled(0)
+        print 'masked array mask post nomask', masked_arr.mask
+        print 'array returned', masked_arr.filled(0.0)
+        for item in masked_arr:
+            #print 'item in filled array', item
+            for value in item:
+                if value > 0:
+                    print 'value in each array', value
+        return masked_arr.filled(0.0) # 0
 
     def masked(self):
         """

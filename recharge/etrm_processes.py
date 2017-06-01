@@ -178,15 +178,17 @@ class Processes(object):
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            array_counter = 0
-            for value in rm._output_tracker['current_day']['tot_etrs']:
-                for item in value:
-                    if item > 0 and item != 1.0:
-                        array_counter += 1
-                        big_counter += 1
-                        print 'item in array', item
+            # array_counter = 0
+            # for value in rm._output_tracker['current_day']['tot_etrs']:
+            #     #print 'value ', value
+            #     for item in value:
+            #
+            #         if item != 0: #and item != 1.0
+            #             array_counter += 1
+            #             big_counter += 1
+            #             print 'item in array', item
 
-            print "array counter {}".format(array_counter)
+            # print "array counter {}".format(array_counter)
             time_it(rm.update_raster_obj, m, day)
             # after here
             time_it(self._update_master_tracker, m, day)
@@ -200,7 +202,7 @@ class Processes(object):
             #             big_counter += 1
             #             print 'item in array', item
 
-            print "array counter {}".format(array_counter)
+            # print "array counter {}".format(array_counter)
         print ' big counter {}'.format(big_counter)
         print "Here's the raster manager rm {}".format(rm)
         print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
@@ -333,6 +335,7 @@ class Processes(object):
 
         path = add_extension(path, '.csv')
         print 'this should be your csv: {}'.format(path)
+        print self.tracker, 'self. tracker'
         self.tracker.to_csv(path, na_rep='nan', index_label='Date')
 
     def _do_snow(self, m, c):

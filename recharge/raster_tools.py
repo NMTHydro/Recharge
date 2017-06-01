@@ -123,10 +123,12 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
+    print 'out dataset', out_data_set
     out_data_set.SetGeoTransform(geo['geotransform'])
     out_data_set.SetProjection(geo['projection'])
 
     output_band = out_data_set.GetRasterBand(output_band)
+    print 'heres the array to save convere_array_to_raster ', arr
     output_band.WriteArray(arr, 0, 0)
     del out_data_set, output_band
 
