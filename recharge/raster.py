@@ -19,7 +19,7 @@
 # ============= local library imports  ==========================
 import os
 
-from numpy import array, asarray
+from numpy import array, asarray, where, zeros_like, nonzero
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 
@@ -111,21 +111,31 @@ class Raster(object):
         idxs = self._get_masked_indices()
         idxs = asarray(idxs, int)
 
+
+        # return where(idxs==0, self._arr.ravel(), 0)
+
         masked_arr = masked_where(idxs == 0, idxs)
-        print 'arr ravel', self._arr.ravel()
-        masked_arr[~masked_arr.mask] = self._arr.ravel()
-        # TODO - problem right here?
-        print 'len mask array ', len(masked_arr)
-        print 'masked array mask', masked_arr.mask
-        masked_arr.mask = nomask
-        print 'masked array mask post nomask', masked_arr.mask
-        print 'array returned', masked_arr.filled(0.0)
-        for item in masked_arr:
-            #print 'item in filled array', item
-            for value in item:
-                if value > 0:
-                    print 'value in each array', value
-        return masked_arr.filled(0.0) # 0
+        narr = zeros_like(idxs, dtype=float)
+        narr[~masked_arr.mask] = self._arr.ravel()
+        #print 'narr', narr
+        # print 'nonzero narr', narr[nonzero(narr)]
+        return narr
+
+        # masked_arr = asarray(masked_where(idxs == 0, idxs)[0], float)
+        # print 'arr ravel', self._arr.ravel()
+        # masked_arr[~masked_arr.mask] = self._arr.ravel()
+        # # TODO - problem right here?
+        # # print 'len mask array ', len(masked_arr)
+        # # print 'masked array mask', masked_arr.mask
+        # masked_arr.mask = nomask
+        # print 'masked array mask post nomask', masked_arr.mask
+        # print 'array returned', masked_arr.filled(0.0)
+        # for item in masked_arr:
+        #     #print 'item in filled array', item
+        #     for value in item:
+        #         if value > 0:
+        #             print 'value in each array', value
+        # return masked_arr.filled(0.0) # 0
 
     def masked(self):
         """

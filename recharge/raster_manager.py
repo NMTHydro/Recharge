@@ -80,13 +80,19 @@ class RasterManager(object):
         # don't use 'tot_parameter' or you will sum totals
         # just use the normal daily fluxes from master, aka _daily_outputs
 
+
         if self._write_freq == 'daily':
             print master.keys()
             print 'what are daily outputs {}'.format(self._cfg.daily_outputs)
-            for element in self._cfg.daily_outputs:
-                print 'raster tuple', (element, Raster.fromarray(master[element]).unmasked())
+            # for element in self._cfg.daily_outputs:
+            #     print 'raster tuple', (element, Raster.fromarray(master[element]).unmasked())
 
-            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
+            # something like this to diff dailys
+            #TODO - we need to treat the tot_ values differently from de dr drew wrt how the dalys are output.
+            #dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
+            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs] # old verion
+
+            print 'new dailys -> {}'.format(dailys)
 
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
@@ -149,7 +155,7 @@ class RasterManager(object):
         periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
-            msg = 'invalid period "{}" cannot update tracker. period most be one of {}'.format(period, periods)
+            msg = 'invalid period "{}" cannot update tracker. period must be one of {}'.format(period, periods)
 
             print msg
             raise NotImplementedError(msg)
@@ -163,19 +169,23 @@ class RasterManager(object):
         elif period == 'monthly':
             ckey, lkey = MONTHLY_TRACKER_KEYS
 
-        print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
-        print 'mean value master {} today: {}'.format(var, vv.mean())
-        print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
-        # print "tracker[ckey] -> {}".format(tracker[ckey]) # TODO - ones
+        # print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
+        # print 'mean value master {} today: {}'.format(var, vv.mean())
+        # print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
+        # print "tracker[ckey] -> {}".format(tracker[ckey])
         # print "tracker[ckey][var] {}".format(tracker[ckey][var])
 
 
+        # print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
+        # TODO fix monthly
+        tracker[ckey][var] = vv # - tracker[lkey][var]
+        # tracker[lkey][var] =  vv
+        print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
+        print 'mean value master {} today: {}'.format(var, vv.mean())
+        print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        tracker[ckey][var] = vv - tracker[lkey][var]
-        tracker[lkey][var] = vv
-
-    def _write_raster(self, key, date, period=None, master=None): # TODO - is it that master is not getting called in the previous function?
+    def _write_raster(self, key, date, period=None, master=None):
         """
         get array from tracker and save to file
 

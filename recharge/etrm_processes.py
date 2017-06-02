@@ -138,6 +138,7 @@ class Processes(object):
         c = self._constants
         m = self._master
         s = self._static
+        print 'got your taw right here', s['taw']
         rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
@@ -267,12 +268,13 @@ class Processes(object):
 
         """
         print '===========================\nrunning uniform_taw\n==========================='
-
+        m = self._master # testing 6/2/17
         s = self._static
         taw = s['taw']
         taw_shape = taw.shape
         s['taw'] = numpy.full(taw_shape, taw_value)
         taw = s['taw']
+        m['pdr'] = m['dr'] = taw
 
         return taw
 
@@ -296,8 +298,9 @@ class Processes(object):
         """
         self._info('Initialize initial model state')
         m = self._master
-
-        m['pdr'] = m['dr'] = self._initial['dr']
+        print 'initial dr {}'.format(self._initial['dr'])
+        #m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
+        m['pdr'] = m['dr'] = self._static['taw'] # This makes the whole state start totally dry
         m['pde'] = m['de'] = self._initial['de']
         m['pdrew'] = m['drew'] = self._initial['drew']
 
@@ -307,7 +310,7 @@ class Processes(object):
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
 
-        self._initial_depletions = m['dr'] + m['de'] + m['drew']
+        self._initial_depletions = m['dr'] #+ m['de'] + m['drew']
 
     def save_mask(self):
         self._info('saving mask to results')
@@ -726,7 +729,7 @@ class Processes(object):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
-        m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
+        m['soil_storage_all'] = self._initial_depletions - (m['pdr']) # removed m['pde'] + m['pdrew'] 6/2/17
 
         func = self._output_function
         ms = [func(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
