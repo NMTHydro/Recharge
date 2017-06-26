@@ -258,11 +258,7 @@ def frameit(mod_dict, obs_dict):
         together_frame[pixel] = frame
 
     print together_frame
-
-
-
-
-
+    return together_frame
 
 
 def run():
@@ -287,7 +283,9 @@ def run():
 
     final_mod, final_obs = formatter(obs_value_dict, model_value_dict) # should return a list of pixel by pixel dataframes
 
-    frame_list = frameit(final_mod, final_obs)
+    frame_dict = frameit(final_mod, final_obs)
+
+    # TODO - func to write frames to xml and save so pixel_plotter can work w em.
 
 
 if __name__ == "__main__":
