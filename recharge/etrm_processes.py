@@ -556,8 +556,6 @@ class Processes(object):
         # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
         # TEW is zero at lakes.
         tew = maximum(s['tew'], 0.001)
-        # rew = s['rew']
-        # tew_rew_diff = maximum(tew - rew, 0.001)
         kr = maximum(minimum((tew - m['pde']) / tew, 1), 0.001)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
@@ -570,8 +568,8 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
-        ke = maximum(0.01, ke)
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
+        ke = maximum(0.0, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
@@ -589,9 +587,9 @@ class Processes(object):
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
 
-        rew = s['rew']
-        tew = s['tew']
-        taw = s['taw']
+        rew = m['rew'] = s['rew']
+        tew = m['tew'] = s['tew']
+        taw = m['taw'] = s['taw']
 
         # impose limits on vaporization according to present depletions #
         # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
@@ -634,38 +632,38 @@ class Processes(object):
         # water balance through the stage 1 evaporation layer #
         # capture efficiency of soil- some water may bypass REW even before it fills
         water_av_rew = water * rew_ceff
-        water_av_tew = water * (1.0 - rew_ceff)  # May not be initializing as an array?
+        m['drew_water'] = water_av_rew  # store value of water delivered to evap layer
+        water_av_tew = water * (1.0 - rew_ceff)
 
-        # # fill depletion in REW if possible
-        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
+        # fill depletion in REW if possible
+        # water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
 
-        # # fill depletion in REW if possible
-        # evap__ = pdrew + evap_1
-        # drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
-        # drew = minimum(drew, rew)
-        #
-        # # add excess water to the water available to TEW (Is this coding ok?)
-        # water_av_tew = where(water_av_rew >= evap__,
-        #                      water_av_tew + water_av_rew - evap__,
-        #                      water_av_tew)
+        # fill depletion in REW if possible
+        depletion = pdrew + evap_1
+        drew = where(water_av_rew >= depletion, 0, depletion - water_av_rew)
+        # drew = minimum(drew, rew) # redundant check
+
+        # add excess water to the water available to TEW (Is this coding ok?)
+        water_av_tew = where(water_av_rew >= depletion, water_av_tew + water_av_rew - depletion, water_av_tew)
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
-        water_av_tew *= rew_ceff
-        water_av_taw += water_av_tew * (1.0 - rew_ceff)
+        water_av_taw = water_av_taw + (water_av_tew * (1.0 - rew_ceff))
+        water_av_tew = water_av_tew * rew_ceff
+        m['de_water'] = water_av_tew  # store value of water delivered to evap layer
 
-        # # fill depletion in TEW if possible
-        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
+        # fill depletion in TEW if possible
+        # water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
 
-        # # fill depletion in TEW if possible
-        # evap2__ = pde + evap_2
-        # de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
-        # de = minimum(de, tew)
-        #
-        # # add excess water to the water available to TAW (Help coding this more cleanly?)
-        # water_av_taw = where(water_av_tew >= evap2__,
-        #                      water_av_taw + water_av_tew - evap2__,
-        #                      water_av_taw)
+        # fill depletion in TEW if possible
+        depletion = pde + evap_2
+        de = where(water_av_tew >= depletion, 0, depletion - water_av_tew)
+        # de = minimum(de, tew) # redundant check
+
+        # add excess water to the water available to TAW (Help coding this more cleanly?)
+        water_av_taw = where(water_av_tew >= depletion,
+                             water_av_taw + water_av_tew - depletion,
+                             water_av_taw)
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone
@@ -673,9 +671,8 @@ class Processes(object):
         # fill depletion in TAW if possible
         depletion = pdr + transp
 
-        dd = water_av_taw - depletion
-        m['infil'] = where(water_av_taw >= depletion, dd, 0)
-        dr = where(water_av_taw >= depletion, 0, dd * -1)
+        m['infil'] = where(water_av_taw >= depletion, water_av_taw - depletion, 0)
+        dr = where(water_av_taw >= depletion, 0, depletion - water_av_taw)
 
         m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
@@ -812,28 +809,30 @@ class Processes(object):
     #     m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, m, date):
-        def factory(k):
-            v = m[k]
+        def aggregate_data(key):
+            param = m[key]
 
-            if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
+            if key in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
                      'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
-                v = v.mean()
-            elif k == 'transp_adj':
-                v = median(v)
+                param = param.mean()
+            elif key == 'transp_adj':
+                param = median(param)
             else:
-                v = self._output_function(v)
-            return v
+                param = self._output_function(param)
+            return param
 
-        tracker_from_master = [factory(key) for key in sorted(m)]
+        tracker_from_master = [aggregate_data(key) for key in sorted(m)]
         # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
 
 
-    def _output_function(self, v):
+    def _output_function(self, param):
+        if self._cfg.output_units == MM:
+            param = param.mean()
         if not self._cfg.output_units == MM:
-            v = millimeter_to_acreft(v)
-        return v
+            param = millimeter_to_acreft(param)
+        return param
 
 
     def _get_tracker_summary(self, tracker, name):

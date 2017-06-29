@@ -29,7 +29,7 @@ gmask = None
 gmask_path = None
 
 
-class Raster(object): # TODO - Dont think the problem is here
+class Raster(object):
     _band = 1
     _path = None
     _arr = None

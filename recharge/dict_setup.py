@@ -103,7 +103,8 @@ def initialize_static_dict(pairs=None):
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return maximum(r, 0.01) * 86.4  # KSat raster is in um/s; convert using 1 um/s = 86.4 mm/day
+        return maximum(r, 0.01) * 86.4 / 10  # KSat raster is in um/s; convert using 1 um/s = 86.4 mm/day
+                                     # This / 10 is temporary, to reduce k-sat until better estimate can be obtained
 
     def initial_tew(r):
         return maximum(minimum(r, 10), 0.001)
