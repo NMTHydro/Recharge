@@ -301,14 +301,16 @@ def initialize_point_tracker(master, point_arr):
     arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
 
     print 'stuff', arr_elements
-    tracker_list = []
+    # tracker_list = []
 
+    cols = sorted(master.keys())
+    tracker = {}
     for item in arr_elements:
         print 'item in arr elements lllslsls', item
-        tracker_list.append([item, DataFrame(columns=sorted(master.keys()))])
-
+        # tracker_list.append([item, DataFrame(columns=sorted(master.keys()))])
+        tracker[item] = DataFrame(columns=cols)
     #print 'tracker list', tracker_list
-    return tracker_list
+    return tracker
 
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will
