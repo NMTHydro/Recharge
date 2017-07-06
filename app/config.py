@@ -77,7 +77,7 @@ class RunSpec:
     output_path = None
     write_freq = None
     use_verify_paths = None
-    uniform_taw = None # TODO - uniform
+    uniform_taw = None
     taw_modification = 1.0
     ro_reinf_frac = 0.0
     swb_mode = 'fao'
@@ -88,6 +88,8 @@ class RunSpec:
     winter_start_day = 306
     output_units = 'acre-ft'
     is_reduced = False
+    binary_shapefile = None # TODO point_tracker
+    new_mexico_extent = False
 
     def __init__(self, obj):
         self._obj = obj
@@ -98,7 +100,7 @@ class RunSpec:
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                 'output_units', 'is_reduced', 'uniform_taw') # TODO - uniform
+                 'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
@@ -170,7 +172,6 @@ class Config:
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
         rfile.close()
 
-        # TODO - a possible way to make an automatic counter for the runspecs. Complicated.
 
         # self.runspecs = [RunSpec(i, doc) for i, doc in enumerate(yaml.load_all(rfile))]
         # rfile.close()

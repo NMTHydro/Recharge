@@ -19,7 +19,7 @@ import os
 from datetime import datetime
 from pprint import pprint, pformat
 
-from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum, ones
+from numpy import zeros, isnan, count_nonzero, where, median, minimum, maximum, ones, nonzero, argwhere
 from osgeo import ogr
 from pandas import DataFrame, date_range, MultiIndex
 
@@ -284,6 +284,31 @@ def initialize_tabular_dict(date_range_, write_frequency):
 
     return tab_dict
 
+# TODO - point_tracker: define initialize_point_tracker
+
+def initialize_point_tracker(master, point_arr):
+    """Create multiple DataFrames to plot point time series for selected pixels in the point_arr
+    Returns a list of tuples of a (Dataframe, point_arr.index)
+    :param master:
+    :param point_arr:
+    :return:
+    """
+    # TODO iterate through array and get array address out.
+    #stuff = where(nonzero(point_arr))
+
+    print "shape of array -> {}".format(point_arr.shape)
+    # I'm nor sure that argwhere will get the pixels in the order that I want them in.
+    arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
+
+    print 'stuff', arr_elements
+    tracker_list = []
+
+    for item in arr_elements:
+        print 'item in arr elements lllslsls', item
+        tracker_list.append([item, DataFrame(columns=sorted(master.keys()))])
+
+    #print 'tracker list', tracker_list
+    return tracker_list
 
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will

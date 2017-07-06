@@ -18,6 +18,10 @@ import os
 import shutil
 import time
 import numpy
+import gdal
+import ogr
+import osgeo
+from subprocess import call
 from numpy import maximum, minimum, where, isnan, exp, median, full
 
 from app.paths import paths, PathsNotSetExecption
@@ -27,6 +31,10 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
+from recharge.raster_tools import convert_raster_to_array
+
+from recharge.dict_setup import initialize_point_tracker
+
 
 class NotConfiguredError(BaseException):
     def __str__(self):
@@ -56,6 +64,7 @@ class Processes(object):
 
     def __init__(self, cfg):
         self.tracker = None
+        self.point_tracker = None
         self._initial_depletions = None
         if not paths.is_set():
             raise PathsNotSetExecption()
@@ -65,6 +74,9 @@ class Processes(object):
         # set global mask and polygons paths
         paths.set_polygons_path(cfg.polygons)
         paths.set_mask_path(cfg.mask)
+        paths.set_point_shape_path(cfg.binary_shapefile) # TODO - point_tracker
+
+        print 'point path', paths.point_shape
 
         if cfg.use_verify_paths:
             paths.verify()
@@ -78,7 +90,7 @@ class Processes(object):
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
-        # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
+        # as defined in self._outputs. Don't initialize point_tracker until a time step has passed #TODO - point_tracker?
         self._static = initialize_static_dict(cfg.static_pairs)
         self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
 
@@ -134,16 +146,22 @@ class Processes(object):
             raise NotConfiguredError()
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
+        print 'here is the shapefile path again', paths.point_shape
+
+        #self._shapefile_to_array(paths.point_shape) # TODO point_tracker - should be made to work directly from shapefile
+
+        point_arr = self._pixels_of_interest_to_array(paths.point_shape) # TODO - this will be obsolete soon. (NOW WHAT?!?!)
+        print 'point array', point_arr
 
         c = self._constants
         m = self._master
         s = self._static
-        print 'got your taw right here', s['taw']
+        #print 'got your taw right here', s['taw']
         rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
-        big_counter = 0
+        # big_counter = 0
         st = time.time()
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
@@ -179,32 +197,17 @@ class Processes(object):
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            # array_counter = 0
-            # for value in rm._output_tracker['current_day']['tot_etrs']:
-            #     #print 'value ', value
-            #     for item in value:
-            #
-            #         if item != 0: #and item != 1.0
-            #             array_counter += 1
-            #             big_counter += 1
-            #             print 'item in array', item
-
-            # print "array counter {}".format(array_counter)
+            if self.point_tracker is None:
+                self.point_tracker = initialize_point_tracker(m, point_arr)
+            # TODO update_point_tracker
             time_it(rm.update_raster_obj, m, day)
-            # after here
             time_it(self._update_master_tracker, m, day)
-            #print 'heres the rm._output_tracker in the loop after the update {}'.format(rm._output_tracker)
-            #print 'etrs update obj {}'.format(rm._output_tracker['current_day']['tot_etrs'])
-            # array_counter = 0
-            # for value in rm._output_tracker['current_day']['tot_etrs']:
-            #     for item in value:
-            #         if item > 0 and item != 1.0:
-            #             array_counter += 1
-            #             big_counter += 1
-            #             print 'item in array', item
+            self._update_point_tracker(m, day)
 
-            # print "array counter {}".format(array_counter)
-        print ' big counter {}'.format(big_counter)
+        # print ' big counter {}'.format(big_counter)
+
+        print "Here's your guy {}".format(self.point_tracker)
+
         print "Here's the raster manager rm {}".format(rm)
         print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
         print "master dict daily {}".format(m)
@@ -212,7 +215,7 @@ class Processes(object):
         time_it(rm.save_csv)
 
         self.save_mask()
-
+        # TODO - point_tracker
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
@@ -319,7 +322,7 @@ class Processes(object):
         path = paths.mask
         name = os.path.basename(path)
         shutil.copyfile(path, os.path.join(paths.results_root, name))
-
+    # TODO - save_point_tracker
     def save_tracker(self, path=None):
         """
 
@@ -835,8 +838,81 @@ class Processes(object):
     #     m['kcb'] *= zeta
     #     m['soil_ksat'] *= theta
 
+    # TODO - point_tracker : set it to start w/ shapefile like below...
+    # def _shapefile_to_array(self, point_shape):
+    #     """
+    #     takes a point shapefile that has any number of points of attribute value 1.
+    #     :param point_shape:
+    #     :return:
+    #     This function converts the shapefile into a .tif of the entire model domain with pixel values of 1
+    #     corresponding to the points in the shapefile and zeros everywhere else.
+    #     Then, the .tif is converted into an array with the convert_raster_to_array function and that output array is
+    #     returned.
+    #     """
+    #     print 'shapefile path', point_shape
+    #     point_data = ogr.Open(point_shape)
+    #
+    #     print 'point_data', point_data
+    #
+    #     print 'cfg.new_mexico_extent', self._cfg.new_mexico_extent
+    #     #convert_raster_to_array()
+    #     if self._cfg.new_mexico_extent == True:
+    #         rasterize = 'gdal_rasterize -a id -ts 2272 2525 -tr 250 250 -te 114757 3471163 682757 4102413 -l pixel_shapefile_for_mask {} /Users/Gabe/Desktop/exp/pixel_mask_for_array.tif'.format(point_shape)
+    #         print rasterize
+    #         call(rasterize)
+    #
+    #     else:
+    #         print '_shapefile_to_array only formatted to work with a new_mexico extent of \n \
+    #               -te 114757 3471163 682757 4102413 -ts 2272 2525 -tr 250 250. If different extent needed,\n \
+    #           edit _shapefile_to_array function '
+    #         pass
+    #
+    #     # rasterize = 'gdal_rasterize -a id -ts 2272 -tr 250 250 -te 114757 3471163 682757 4102413 \
+    #     #              -l pixel_shapefile_for_mask /Users/Gabe/Desktop/RZSM_analysis/pixel_shapefile_for_mask.shp \
+    #     #               /Users/Gabe/Desktop/experimental_rasterize/pixel_mask_for_array.tif'
+    #     # gdal_rasterize - a
+    #     # id - l
+    #     # pixel_shapefile_for_mask / Users / Gabe / Desktop / RZSM_analysis / pixel_shapefile_for_mask.shp
+
+    def _pixels_of_interest_to_array(self, point_tif):
+
+        print 'point tif', point_tif
+
+        point_arr = convert_raster_to_array(point_tif)
+
+        return point_arr
+
+    def _update_point_tracker(self, m, date):
+
+        #print self.point_tracker
+        for item in self.point_tracker:
+
+            print 'item in point tracker', item
+
+            print 'list thing', [m[key] for key in sorted(m)]
+
+            for key in sorted(m):
+                print 'm[key]', m[key]
+
+            index = item[0]
+            index = (int(index[0]), int(index[1]))
+            #index = (int(item[0]))
+
+            print 'index lskdhfjha', index
+
+            print 'type', type(index) #type(m[key])
+            #item_tracker = [m[key][index] for key in sorted(m) if isinstance(m[key], arr)] # todo stuck here may have to do with the true-false part.
+
+            item[1].loc[date] = item_tracker
+
+
+
     def _update_master_tracker(self, m, date):
         def factory(k):
+
+            # print 'k', k
+            # print 'm[k]', m[k]
+
             v = m[k]
 
             if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
@@ -844,6 +920,10 @@ class Processes(object):
                 v = v.mean()
             elif k == 'transp_adj':
                 v = median(v)
+            #========= July 4, 2017 testing
+            elif k == 'de':
+                print 'de in tracker', v
+            #=========
             else:
                 v = self._output_function(v)
             return v

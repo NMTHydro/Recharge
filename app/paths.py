@@ -51,6 +51,7 @@ class Paths:
     amf_ex_sac_output_root = None
     amf_ex_sac_trackers = None
     results_root = None
+    point_shape = None # TODO point_tracker
 
     def __init__(self):
         self._is_set = False
@@ -92,6 +93,10 @@ class Paths:
     def set_mask_path(self, path):
         self.mask = self.input_path(path)
         print 'here is the mask path {}'.format(self.mask)
+
+    def set_point_shape_path(self, path):
+        self.point_shape = self.input_path(path)
+        print 'here is the shapefile path {}'.format(self.point_shape)
 
     def input_path(self, path):
         return os.path.join(self.etrm_input_root, path)

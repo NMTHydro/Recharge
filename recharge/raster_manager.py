@@ -95,6 +95,7 @@ class RasterManager(object):
             print 'new dailys -> {}'.format(dailys)
 
             for element, arr in dailys:
+                print 'arr shape', arr.shape
                 self._sum_raster_by_shape(element, date_object, arr)
 
             if self._save_dates:
