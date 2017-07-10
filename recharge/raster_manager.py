@@ -83,7 +83,7 @@ class RasterManager(object):
 
         if self._write_freq == 'daily':
             print master.keys()
-            print 'what are daily outputs {}'.format(self._cfg.daily_outputs)
+            #print 'what are daily outputs {}'.format(self._cfg.daily_outputs)
             # for element in self._cfg.daily_outputs:
             #     print 'raster tuple', (element, Raster.fromarray(master[element]).unmasked())
 
@@ -92,7 +92,7 @@ class RasterManager(object):
             #dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
             dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs] # old verion
 
-            print 'new dailys -> {}'.format(dailys)
+            #print 'new dailys -> {}'.format(dailys)
 
             for element, arr in dailys:
                 print 'arr shape', arr.shape
@@ -104,7 +104,7 @@ class RasterManager(object):
                     self._set_outputs(dailys, date_object, 'daily')
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
-        print 'outputs rm {}'.format(outputs)
+        #print 'outputs rm {}'.format(outputs)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual

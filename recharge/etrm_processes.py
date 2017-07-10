@@ -35,6 +35,8 @@ from recharge.raster_tools import convert_raster_to_array
 
 from recharge.dict_setup import initialize_point_tracker
 
+from recharge.raster_tools import apply_mask
+
 
 class NotConfiguredError(BaseException):
     def __str__(self):
@@ -74,7 +76,7 @@ class Processes(object):
         # set global mask and polygons paths
         paths.set_polygons_path(cfg.polygons)
         paths.set_mask_path(cfg.mask)
-        paths.set_point_shape_path(cfg.binary_shapefile)  # TODO - point_tracker
+        paths.set_point_shape_path(cfg.binary_shapefile) # TODO - point_tracker
 
         print 'point path', paths.point_shape
 
@@ -118,7 +120,7 @@ class Processes(object):
             self.modify_taw(runspec.taw_modification)
 
         if runspec.uniform_taw is not None:
-            self.uniform_taw(runspec.uniform_taw)  # TODO - uniform
+            self.uniform_taw(runspec.uniform_taw) # TODO - uniform
 
         self._date_range = runspec.date_range
         self._use_individual_kcb = runspec.use_individual_kcb
@@ -146,18 +148,17 @@ class Processes(object):
             raise NotConfiguredError()
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
-        print 'here is the shapefile path again', paths.point_shape
+        #print 'here is the shapefile path again', paths.point_shape
 
-        # self._shapefile_to_array(paths.point_shape) # TODO point_tracker - should be made to work directly from shapefile
+        #self._shapefile_to_array(paths.point_shape) # TODO point_tracker - should be made to work directly from shapefile
 
-        point_arr = self._pixels_of_interest_to_array(
-            paths.point_shape)  # TODO - this will be obsolete soon. (NOW WHAT?!?!)
+        point_arr = self._pixels_of_interest_to_array(paths.point_shape) # TODO - this will be obsolete soon. (NOW WHAT?!?!)
         print 'point array', point_arr
 
         c = self._constants
         m = self._master
         s = self._static
-        # print 'got your taw right here', s['taw']
+        #print 'got your taw right here', s['taw']
         rm = self._raster_manager
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
@@ -187,10 +188,10 @@ class Processes(object):
             #     time_it(self._do_fao_soil_water_balance, m, s, c)
             # elif self._swb_mode == 'vertical':
             #     time_it(self._do_vert_soil_water_balance, m, s, c)
-
+            
             func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
             time_it(func, m, s, c)
-
+            
             time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
             time_it(self._do_accumulations)
@@ -199,27 +200,13 @@ class Processes(object):
                 self.tracker = initialize_master_tracker(m)
 
             if self.point_tracker is None:
-                self.point_arr = point_arr
+                self.point_tracker = initialize_point_tracker(m, point_arr)
 
-                path = paths.point_tracker_output
-                cnt = 0
-                while 1:
-                    if not os.path.isfile(path):
-                        break
-
-                    root, name = os.path.split(path)
-                    name, ext = os.path.splitext(name)
-                    path = os.path.join(root, '{}{:04n}{}'.format(name, cnt, ext))
-                    cnt += 1
-
-                paths.point_tracker_output = path
-
-                    # self.point_wfile = open(paths.point_tracker_output, 'w')  # TODO setup point_tracker_output in Config and Paths
-                    # self.point_tracker = initialize_point_tracker(m, point_arr)
-            # TODO update_point_tracker
             time_it(rm.update_raster_obj, m, day)
             time_it(self._update_master_tracker, m, day)
             self._update_point_tracker(m, day)
+
+            #print 'heres point tracker', self.point_tracker
 
         # print ' big counter {}'.format(big_counter)
 
@@ -232,7 +219,7 @@ class Processes(object):
         time_it(rm.save_csv)
 
         self.save_mask()
-        # TODO - point_tracker
+        self.save_point_tracker() # TODO - Test point tracker vs raster dates.
         self.save_tracker()
         self._info('Execution time: {}'.format(time.time() - st))
 
@@ -288,7 +275,7 @@ class Processes(object):
 
         """
         print '===========================\nrunning uniform_taw\n==========================='
-        m = self._master  # testing 6/2/17
+        m = self._master # testing 6/2/17
         s = self._static
         taw = s['taw']
         taw_shape = taw.shape
@@ -319,8 +306,8 @@ class Processes(object):
         self._info('Initialize initial model state')
         m = self._master
         print 'initial dr {}'.format(self._initial['dr'])
-        # m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
-        m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
+        #m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
+        m['pdr'] = m['dr'] = self._static['taw'] # This makes the whole state start totally dry
         m['pde'] = m['de'] = self._initial['de']
         m['pdrew'] = m['drew'] = self._initial['drew']
 
@@ -330,7 +317,7 @@ class Processes(object):
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
 
-        self._initial_depletions = m['dr']  # + m['de'] + m['drew']
+        self._initial_depletions = m['dr'] #+ m['de'] + m['drew']
 
     def save_mask(self):
         self._info('saving mask to results')
@@ -340,7 +327,28 @@ class Processes(object):
         name = os.path.basename(path)
         shutil.copyfile(path, os.path.join(paths.results_root, name))
 
-    # TODO - save_point_tracker
+    def save_point_tracker(self, path=None):
+
+        output_loc = paths.etrm_output_root
+        count = 0
+        for tuple in self.point_tracker:
+
+            base = 'etrm_tracker_{:03n}'.format(count)
+
+            if path is None:
+                path = add_extension(os.path.join(output_loc, base), '.csv')
+
+            if os.path.isfile(path):
+                path = unique_path(output_loc, base, '.csv')
+
+            path = add_extension(path, '.csv')
+            print 'this should be your csv: {}'.format(path)
+            print tuple, 'self. point tracker'
+            tuple[1].to_csv(path, na_rep='nan', index_label='Date')
+            count += 1
+
+
+
     def save_tracker(self, path=None):
         """
 
@@ -492,6 +500,7 @@ class Processes(object):
         m['pdrew'] = pdrew = m['drew']
 
         taw = maximum(s['taw'], 0.001)
+        m['taw'] = taw  # add taw to master dict - Jul 9 2017, GELP
         tew = maximum(s['tew'], 0.001)  # TEW is zero at lakes in our data set
         rew = s['rew']
 
@@ -573,6 +582,8 @@ class Processes(object):
         m['drew'] = minimum(maximum(pdrew - ((water - ro) * rew_ceff) + evap / few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
+
+        m['rzsm'] = 1 - (dr/taw) # add root zone soil moisture (RZSM) to master dict - Jul 9, 2017 GELP
 
     def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
@@ -750,7 +761,7 @@ class Processes(object):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
-        m['soil_storage_all'] = self._initial_depletions - (m['pdr'])  # removed m['pde'] + m['pdrew'] 6/2/17
+        m['soil_storage_all'] = self._initial_depletions - (m['pdr']) # removed m['pde'] + m['pdrew'] 6/2/17
 
         func = self._output_function
         ms = [func(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
@@ -758,6 +769,7 @@ class Processes(object):
 
         ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
         print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
+
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -855,7 +867,7 @@ class Processes(object):
     #     m['kcb'] *= zeta
     #     m['soil_ksat'] *= theta
 
-    # TODO - point_tracker : set it to start w/ shapefile like below...
+    # TODO - eventually make point_tracker work from a shapefile. Code is below -vvv-
     # def _shapefile_to_array(self, point_shape):
     #     """
     #     takes a point shapefile that has any number of points of attribute value 1.
@@ -893,61 +905,36 @@ class Processes(object):
 
     def _pixels_of_interest_to_array(self, point_tif):
 
-        print 'point tif', point_tif
+        #=========== Jul 8, 2017
+        #print 'point tif', point_tif
 
         point_arr = convert_raster_to_array(point_tif)
+        point_arr = apply_mask(paths.mask, point_arr)
+
+        # print 'new point arr', point_arr
+        # print 'new point arr shape', point_arr.shape
 
         return point_arr
+        #============
 
     def _update_point_tracker(self, m, date):
-        ls = []
-        with open(paths.point_tracker_output, 'a') as wfile:
-            for item in self.point_arr:
-                ds = []
-                for k, v in m.iteritems():
-                    arr = v[item]
-                    ds.append('{:0.9f}'.format(arr))
-                line = ','.join(ds)
-                ls.append(line)
 
-            ls = ','.join(ls)
-            line = '{},{}'.format(date, ls)
+        #print self.point_tracker
+        for index, dataframe in self.point_tracker:
 
-            wfile.write(line)
+            #print 'item in point tracker', item
 
-            # for key in sorted(m):
-            #     arr = m[key]
-            #     for item in self.point_arr:
-            #         data = ','.join(arr[item])
-            #         line = '{},{}'.format(date, data)
-            #         self.point_wfile.write(line)
-
-            # wfile = self.point_tracker_open_file
-            # #print self.point_tracker
-            # for item in self.point_tracker:
-            #     print 'item in point tracker', item
-            #     for key, arr in m.iteritems():
-            #         print arr[item]
-            #         wfile.write('date', arr[item])
-            #
-            # item.loc[date] = arr[item]
-
-            # print 'list thing', m.values()
             # print 'list thing', [m[key] for key in sorted(m)]
+            # for key in m:
+            #     print key, m[key]
 
-            # for key in sorted(m):
-            #     print 'm[key]', m[key]
+            item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj', )] # todo stuck here may have to do with the true-false part.
 
-            # index = item[0]
-            # index = (int(index[0]), int(index[1]))
-            # #index = (int(item[0]))
-            #
-            # print 'index lskdhfjha', index
-            #
-            # print 'type', type(index) #type(m[key])
-            # item_tracker = [m[key][index] for key in sorted(m) if isinstance(m[key], arr)] # todo stuck here may have to do with the true-false part.
-            #
-            # item[1].loc[date] = item_tracker
+            dataframe.loc[date] = item_tracker
+
+
+
+
 
     def _update_master_tracker(self, m, date):
         def factory(k):
@@ -962,10 +949,10 @@ class Processes(object):
                 v = v.mean()
             elif k == 'transp_adj':
                 v = median(v)
-            # ========= July 4, 2017 testing
+            #========= July 4, 2017 testing
             elif k == 'de':
                 print 'de in tracker', v
-            # =========
+            #=========
             else:
                 v = self._output_function(v)
             return v
@@ -975,10 +962,12 @@ class Processes(object):
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
 
+
     def _output_function(self, v):
         if not self._cfg.output_units == MM:
             v = millimeter_to_acreft(v)
         return v
+
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]

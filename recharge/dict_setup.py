@@ -121,6 +121,7 @@ def initialize_static_dict(pairs=None):
     for k, p in pairs:
         print 'static {:<20s} {}'.format(k, p)
         raster = Raster(p, root=paths.static_inputs)
+        print 'raster jjj', raster
         arr = raster.masked()
 
         if k == 'plant_height':
@@ -298,19 +299,32 @@ def initialize_point_tracker(master, point_arr):
 
     print "shape of array -> {}".format(point_arr.shape)
     # I'm nor sure that argwhere will get the pixels in the order that I want them in.
-    arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
-
+    # arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
+    arr_elements = nonzero(point_arr)[0]
     print 'stuff', arr_elements
-    # tracker_list = []
+    tracker_list = []
 
-    cols = sorted(master.keys())
-    tracker = {}
+    keys = master.keys()
+    print 'masterkeyshape' , master[keys[0]].shape # Here's a problem. master key shape is different \
+    # from the array shape.
+
+    columns = [key for key in keys if key not in ('transp_adj', )] # Just like you do in \
+    #  _update_point_tracker so cols are the same
+
+    # add columns for TAW and RZSM - July 9 2017
+    # columns.append('TAW')
+    # columns.append('RZSM')
+
+    #item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj', )]
+
+    columns = sorted(columns)
+
     for item in arr_elements:
         print 'item in arr elements lllslsls', item
-        # tracker_list.append([item, DataFrame(columns=sorted(master.keys()))])
-        tracker[item] = DataFrame(columns=cols)
+        tracker_list.append((item, DataFrame(columns=columns)))
+
     #print 'tracker list', tracker_list
-    return tracker
+    return tracker_list
 
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will
