@@ -36,6 +36,7 @@ from recharge.raster_tools import convert_raster_to_array
 from recharge.dict_setup import initialize_point_tracker
 
 from recharge.raster_tools import apply_mask
+from utils.tracker_plot import run_tracker_plot
 
 
 class NotConfiguredError(BaseException):
@@ -68,6 +69,7 @@ class Processes(object):
         self.tracker = None
         self.point_tracker = None
         self._initial_depletions = None
+
         if not paths.is_set():
             raise PathsNotSetExecption()
 
@@ -95,6 +97,10 @@ class Processes(object):
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed #TODO - point_tracker?
         self._static = initialize_static_dict(cfg.static_pairs)
         self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
+
+        self.xplot = self._cfg.xplot
+        self.yplot = self._cfg.yplot
+        self.plot_output = self._cfg.plot_output
 
         shape = self._static['taw'].shape
         self._master = initialize_master_dict(shape)
@@ -207,11 +213,7 @@ class Processes(object):
             self._update_point_tracker(m, day)
 
             #print 'heres point tracker', self.point_tracker
-
-        # print ' big counter {}'.format(big_counter)
-
         print "Here's your guy {}".format(self.point_tracker)
-
         print "Here's the raster manager rm {}".format(rm)
         print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
         print "master dict daily {}".format(m)
@@ -219,8 +221,13 @@ class Processes(object):
         time_it(rm.save_csv)
 
         self.save_mask()
-        self.save_point_tracker() # TODO - Test point tracker vs raster dates.
+        self.csv_list = self.save_point_tracker()
         self.save_tracker()
+        count = 0
+        for csv in self.csv_list:
+            print 'heres the csv', csv
+            run_tracker_plot(csv, self.xplot, self.yplot, self.plot_output, count, multi=True) #multi=True is default
+            count += 1
         self._info('Execution time: {}'.format(time.time() - st))
 
     def set_save_dates(self, dates):
@@ -331,6 +338,8 @@ class Processes(object):
 
         output_loc = paths.etrm_output_root
         count = 0
+
+        csv_pathlist = []
         for tuple in self.point_tracker:
 
             base = 'etrm_tracker_{:03n}'.format(count)
@@ -346,6 +355,9 @@ class Processes(object):
             print tuple, 'self. point tracker'
             tuple[1].to_csv(path, na_rep='nan', index_label='Date')
             count += 1
+
+            csv_pathlist.append(path)
+        return csv_pathlist
 
 
 

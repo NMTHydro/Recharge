@@ -90,6 +90,9 @@ class RunSpec:
     is_reduced = False
     binary_shapefile = None # TODO point_tracker
     new_mexico_extent = False
+    xplot = None
+    yplot = None
+    plot_output = None
 
     def __init__(self, obj):
         self._obj = obj
@@ -100,7 +103,8 @@ class RunSpec:
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                 'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent')
+                 'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent',
+                 'xplot', 'yplot','plot_output')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
