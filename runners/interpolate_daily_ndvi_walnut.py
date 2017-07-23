@@ -35,7 +35,7 @@ def time_interpolation(base_dir, day, finalyear):
     #base_dir = 'G:\\Walnut\\Modis\\'
     # output  'F:\\ETRM_Inputs\\NDVI_spline\\'
 
-    cnt = day.timetuple().     tm_yday
+    cnt = day.timetuple().tm_yday
     i = 0
     first_date = 0
     while first_date == 0:
@@ -85,18 +85,21 @@ def time_interpolation(base_dir, day, finalyear):
         raster_next_date = datetime(newyear, 1, 1) + td
 
     rfd = raster_first_date.timetuple()
-    tail = '{}_{:02n}_{:02n}.tif'.format(year, rfd.tm_mon, rfd.tm_mday)
+    # tail = '{}_{:02n}_{:02n}.tif'.format(year, rfd.tm_mon, rfd.tm_mday)
+    tail = '{}{:03n}.tif'.format(year, rfd.tm_yday)
 
-    raster_now = os.path.join(base_dir, '{}'.format(year), 'NDVI{}'.format(tail))
+
+    raster_now = os.path.join(base_dir, '{}'.format(tail))
     print('First raster to interpolate: ', raster_now)
 
     # resX, resY, cols, rows, Lon, Lat, ndvi, prj, FillVal = read_map(os.path.join(base_dir, raster_now), 'Gtiff')
     ndvi = read_map(os.path.join(base_dir, raster_now), 'Gtiff')[6]
 
     rnd = raster_next_date.timetuple()
-    tail2 = '{}_{:02n}_{:02n}.tif'.format(newyear, rnd.tm_mon, rnd.tm_mday)
+    # tail2 = '{}_{:02n}_{:02n}.tif'.format(newyear, rnd.tm_mon, rnd.tm_mday)
+    tail2 = '{}{:03n}.tif'.format(newyear, rnd.tm_yday)
 
-    raster_next = os.path.join(base_dir, '{}'.format(newyear), 'NDVI{}'.format(tail2))
+    raster_next = os.path.join(base_dir, '{}'.format(tail2))
     print('Future raster to interpolate with: ', raster_next)
 
     # resX, resY, cols, rows, Lon, Lat, ndvinext, prj, FillVal = read_map(os.path.join(base_dir, raster_next), 'Gtiff')
@@ -163,15 +166,14 @@ def time_interpolation(base_dir, day, finalyear):
 def main():
     paths.build('F:')
 
-    startday = datetime(2013, 12, 17, 0)
-    endday = datetime(2013, 12, 31, 0)
-    finalyear = 2013
+    startday = datetime(2002, 1, 1, 0)
+    endday = datetime(2016, 1, 1, 0)
+    finalyear = 2016
 
     base_dir = 'G:\\Walnut\\Modis\\'#paths.ndvi_individ
     output ='G:\\Walnut\\Modis\\Inter'#paths.ndvi_spline
 
-    year = '2000'
-    ref_map = os.path.join(base_dir, year, 'NDVI2000_01_01.tif')
+    ref_map = os.path.join(base_dir, '2000049.tif')
     _, _, _, _, lon, lat, linke, prj, fill_val = read_map(ref_map, 'Gtiff')
 
     srs = osr.SpatialReference(prj)

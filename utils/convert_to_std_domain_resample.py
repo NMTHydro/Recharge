@@ -8,7 +8,7 @@ extent = 'F:\\Reference_shape\\NM_poly500mbuf\\NM_poly500mbuf.shp'
 
 os.chdir(input_folder)
 
-projection = 26913  # NAD83 UTM Zone 13 North
+projection = 26913  # NAD83 UTM Zone 12 North
 x_min = 114757
 y_min = 3471163
 x_max = 682757
@@ -24,7 +24,6 @@ def find_rasters(path, filter_):
     for root, dirs, files in os.walk(path):
         for file_ in fnmatch.filter(files, filter_):
             yield file_
-
 
 for raster in find_rasters(input_folder, '*.tif'):
     FOLDER, raster_name = os.path.split(raster)
