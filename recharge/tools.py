@@ -40,7 +40,7 @@ def add_extension(p, ext='.txt'):
 
 
 def millimeter_to_acreft(param):
-    return '{:.2e}'.format((param.sum() / 1000) * (250 ** 2) / 1233.48)
+    return (param.sum() / 1000.0) * (250.0 ** 2) / 1233.48
 
 
 def save_master_tracker(tracker, raster_out_root):

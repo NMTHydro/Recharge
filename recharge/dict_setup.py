@@ -103,7 +103,8 @@ def initialize_static_dict(pairs=None):
         return minimum(r, 100)
 
     def initial_soil_ksat(r):
-        return maximum(r, 0.01) * 86.4  # KSat raster is in um/s; convert using 1 um/s = 86.4 mm/day
+        return maximum(r, 0.01) * 86.4 / 10  # KSat raster is in um/s; convert using 1 um/s = 86.4 mm/day
+                                     # This / 10 is temporary, to reduce k-sat until better estimate can be obtained
 
     def initial_tew(r):
         return maximum(minimum(r, 10), 0.001)
@@ -125,12 +126,14 @@ def initialize_static_dict(pairs=None):
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)
+            print arr
         elif k == 'rew':
             arr = initial_rew(arr)
         elif k == 'root_z':
             arr = initial_root_z(arr)
         elif k == 'soil_ksat':
             arr = initial_soil_ksat(arr)
+            print arr
         elif k == 'tew':
             arr = initial_tew(arr)
 
@@ -145,34 +148,36 @@ def initialize_static_dict(pairs=None):
 
     # apply high TAW to unconsolidated Quaternary deposits
     min_val = 250
-    taw = where(q > 0.0, min_val, taw)
+    taw = where(q > 0.0, maximum(min_val, taw), taw)
 
     # apply bounds to TAW
-    min_val = 50.0
-    max_val = 320.0
+    # min_val = 50.0
+    # max_val = 320.0
+    #data = d['taw']
+    #taw = where(data < min_val, min_val, taw)
+    #taw = where(data > max_val, max_val, taw)
 
-    data = d['taw']
-    taw = where(data < min_val, min_val, taw)
-    taw = where(data > max_val, max_val, taw)
+    # v = tew + d['rew']
+    taw = where(taw < tew, tew, taw)
 
-    v = tew + d['rew']
-    taw = where(taw < v, v, taw)
-
-    non_zero = count_nonzero(data < min_val)
-    print 'taw has {} cells below the minimum'.format(non_zero, min_val)
+    # non_zero = count_nonzero(data < min_val)
+    # print 'taw has {} cells below the minimum'.format(non_zero, min_val)
     print 'taw median: {}, mean {}, max {}, min {}\n'.format(median(taw), taw.mean(), taw.max(), taw.min())
     d['taw'] = taw
 
     # apply tew adjustment
-    tew = where(land_cover == 41, tew * 0.25, tew)
-    tew = where(land_cover == 42, tew * 0.25, tew)
-    tew = where(land_cover == 43, tew * 0.25, tew)
-    d['tew'] = where(land_cover == 52, tew * 0.75, tew)
+    # tew = where(land_cover == 41, tew * 0.25, tew)
+    # tew = where(land_cover == 42, tew * 0.25, tew)
+    # tew = where(land_cover == 43, tew * 0.25, tew)
+    # d['tew'] = where(land_cover == 52, tew * 0.75, tew)
 
     return d
 
 
 def make_pairs(root, keys):
+    """
+    tiff files must be in right alphabetical order, and no capitals, in order to work
+    """
     fs = tiff_list(root)
     return [(k, s) for k, s in zip(keys, fs)]
 
@@ -224,18 +229,19 @@ def initialize_initial_conditions_dict(pairs=None):
     return d
 
 
-def initialize_raster_tracker(shape):
+def initialize_raster_tracker(shape, outputs):
     """
 
     :param shape:
     :return:
     """
 
-    d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in TRACKER_KEYS}
+    d = {k: {tk: zeros(shape) for tk in outputs} for k in TRACKER_KEYS}
+    print 'd itself', d
     return d
 
 
-def initialize_tabular_dict(date_range_, write_frequency):
+def initialize_tabular_dict(date_range_, write_frequency, outputs):
     """
 
     :param date_range_:
@@ -244,7 +250,6 @@ def initialize_tabular_dict(date_range_, write_frequency):
     """
     units = ('AF', 'CBM')
 
-    outputs = OUTPUTS
     outputs_arr = [o for output in outputs for o in (output, output)]
 
     # if the write frequency of flux sums over input_root is daily, use normal master keys rather than 'tot_param'

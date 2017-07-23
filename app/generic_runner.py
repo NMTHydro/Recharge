@@ -19,6 +19,7 @@
 # ============= local library imports  ==========================
 import sys
 import os
+
 pp = os.path.realpath(__file__)
 sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
@@ -31,15 +32,8 @@ from recharge.preprocessing import generate_rew_tiff
 CLI_ENABLED = False
 
 
-def run_dataset():
-    print 'Running Dataset'
-
-    cfg = Config()
-    for runspec in cfg.runspecs:
-        paths.build(runspec.input_root, runspec.output_root)
-        paths.set_mask_path(runspec.mask)
-
-        generate_dataset(runspec.date_range, runspec.output_root)
+def run_soil_mapper():
+    print 'Running soil mapper'
 
 
 def run_dataset():
@@ -53,9 +47,9 @@ def run_dataset():
         generate_dataset(runspec.date_range, runspec.output_root)
 
 
-def run_model():
+def run_model(cfg_path=None):
     print 'Running Model'
-    cfg = Config()
+    cfg = Config(cfg_path)
     for runspec in cfg.runspecs:
         paths.build(runspec.input_root, runspec.output_root)
 
@@ -81,9 +75,8 @@ def run_commands():
 def welcome():
     print '''====================================================================================
  _______  _______  ______    __   __
-|       ||       ||    _ |  |  |_|  |
-|    ___||_     _||   | ||  |       |
-|   |___   |   |  |   |_||_ |       |
+|    ___||       ||    _ |  |  |_|  |
+|   |___ |_     _||   |_||_ |       |
 |    ___|  |   |  |    __  ||       |
 |   |___   |   |  |   |  | || ||_|| |
 |_______|  |___|  |___|  |_||_|   |_|
@@ -98,16 +91,16 @@ For more information regarding a specific command use "help <command>". Replace 
 '''
 
 
-def run():
+def run(cfg_path=None):
     # check for a configuration file
-    check_config()
+    check_config(cfg_path)
 
     cmds = {'model': run_model, 'rew': run_rew,
             'help': run_help, 'commands': run_commands,
-            'dataset':run_dataset}
+            'dataset': run_dataset}
 
-    run_dataset()
-    return
+    # run_dataset()
+    # return
 
     welcome()
 
@@ -121,9 +114,14 @@ def run():
 
             func()
     else:
-        run_model()
+        # run_model(cfg_path)
+        run_soil_mapper()
 
 
 if __name__ == '__main__':
-    run_dataset()
+    if len(sys.argv) == 1:
+        run()
+    else:
+        run(cfg_path=sys.argv[1])
+
 # ============= EOF =============================================

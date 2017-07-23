@@ -28,18 +28,13 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 
 DEFAULT_CFG = '''
 ---
-input_root: /Volumes/Seagate Expansion Drive
-output_root: Please Set Me
+input_root: Please Set Me      ## /Volumes/Seagate Expansion Drive/ETRM_input
+output_root: Please Set Me     ## /Users/ross/Desktop
 
-init_cond_root: /Volumes/Seagate Expansion Drive/ETRM_inputs/initialize
-rew_init: drew_4_19_23_11.tif
-tew_init: de_4_19_23_11.tif
-taw_init: dr_4_19_23_11.tif
+start_date: Please Set Me      ## 12/1/2013
+end_date: Please Set Me        ## 12/31/2013
 
-start_date: 12/1/2013
-end_date: 12/32/2013
-
-mask: masks/please_set_me.tif
+mask: Please Set Me            ## masks/my_mask.tif
 polygons: Blank_Geo
 
 save_dates: []
@@ -53,9 +48,14 @@ daily_outputs:
 
 ro_reinf_frac: 0.0
 swb_mode: fao
-allen_ceff: 1.0
+rew_ceff: 1.0
+evap_ceff: 1.0
 winter_evap_limiter: 0.3
 output_units: acre-ft
+is_reduced: False
+winter_end_day: 92
+winter_start_day: 306
+use_verify_paths: True
 
 '''
 
@@ -79,23 +79,28 @@ class RunSpec:
     use_verify_paths = None
     taw_modification = 1.0
     ro_reinf_frac = 0.0
-    swb_mode = 'swb'
-    allen_ceff = 1.0
+    swb_mode = 'fao'
+    rew_ceff = 1.0
+    evap_ceff = 1.0
     winter_evap_limiter = 0.3
     winter_end_day = 92
     winter_start_day = 306
     output_units = 'acre-ft'
+    is_reduced = False
 
-    def __init__(self, obj):
+    index = 0
+
+    def __init__(self, i, obj):
+        self.index = i
         self._obj = obj
         attrs = ('mask', 'polygons', 'use_individual_kcb',
                  'input_root', 'output_root', 'output_path', 'write_freq', 'use_verify_paths',
                  'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
                  'y_cord_name',
                  'taw_modification',
-                 'ro_reinf_frac', 'swb_mode', 'allen_ceff',
+                 'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                 'output_units')
+                 'output_units', 'is_reduced')
 
         for attr in attrs:
             setattr(self, attr, self._obj.get(attr))
@@ -165,7 +170,7 @@ class Config:
         else:
             rfile = path
 
-        self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        self.runspecs = [RunSpec(i, doc) for i, doc in enumerate(yaml.load_all(rfile))]
         rfile.close()
 
 

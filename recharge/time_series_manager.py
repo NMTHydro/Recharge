@@ -97,7 +97,8 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     # RGL  = incoming longwave
     # RGLout = outgoing longwave
     """
-    path = paths.etrm_input_root
+    path = paths.amf_sites
+    print path
 
     def day_fraction_to_hr_min(fractional_day, year):
         """
@@ -108,6 +109,7 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
         """
 
         def ext(d, scalar):
+            d = str(d)
             a, b = d.split('.')
             aa, bb = int(a), float('.{}'.format(b))
             return aa, bb * scalar
@@ -124,12 +126,7 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
         # hour, hour_part = int(hour_split[0]), float('.{}'.format(hour_split[1]))
         # min_part = str(hour_part * 60).split('.')
         #
-        # min_ = int(min_part[0])
-        # if min_ == 29:
-        #     min_ = 30
-        # if min_ == 59:
-        #     min_ = 0
-        #
+
         if minutes == 29:
             minutes = 30
         elif minutes == 59:
@@ -146,23 +143,13 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     for key, val in dict_.iteritems():  # Changes here
         amf_name = val['Name']
         print 'name: {}'.format(amf_name)
-        folder = os.path.join(path, amf_name)
-        print path
-        print amf_name
+        folder = os.path.join(path,'AMF_Data',amf_name)
 
-        folder_list = os.listdir(folder)
-        csv_list = [os.path.join(path, amf_name, item) for item in folder_list]
+        folder_contents = os.listdir(folder)
+        print "this is the folder contents: {}".format(folder_contents)
 
-        # new_list = []
-        # for item in folder_list:
-        #     new_list.append(os.path.join(path, amf_name, item))
-
-        print "this is the folder list: {}".format(folder_list)
+        csv_list = [os.path.join(folder, item) for item in folder_contents]
         print "this is the new list: {}".format(csv_list)
-
-        # csv_list = new_list
-        # print folder
-        # print 'csv list: \n{}'.format(csv_list)
 
         # amf_data = array([]).reshape(0, ncols)
 

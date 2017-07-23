@@ -18,7 +18,7 @@ import os
 import shutil
 import time
 
-from numpy import maximum, minimum, where, isnan, exp, median
+from numpy import maximum, minimum, where, isnan, exp, median, nonzero
 
 from app.paths import paths, PathsNotSetExecption
 from recharge import MM
@@ -28,6 +28,10 @@ from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb,
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
 
+class NotConfiguredError(BaseException):
+    def __str__(self):
+        return 'The model has not been configured. Processes.configure_run must be called before Processes.run'
+
 
 class Processes(object):
     """
@@ -36,14 +40,19 @@ class Processes(object):
     See function explanations.
 
     """
+
+    # Config values. Default values should be specified in RunSpec not here.
     _date_range = None
     _use_individual_kcb = None
-    _ro_reinf_frac = 0.0
-    _swb_mode = 'swb'
-    _allen_ceff = 1.0
-    _winter_evap_limiter = 0.3
-    _winter_end_day = 92
-    _winter_start_day = 306
+    _ro_reinf_frac = None
+    _swb_mode = None
+    _rew_ceff = None
+    _evap_ceff = None
+    _winter_evap_limiter = None
+    _winter_end_day = None
+    _winter_start_day = None
+
+    _is_configured = False
 
     def __init__(self, cfg):
         self.tracker = None
@@ -87,6 +96,7 @@ class Processes(object):
         :param runspec: RunSpec
         :return:
         """
+
         self._info('Configuring Processes')
 
         if runspec.save_dates:
@@ -99,33 +109,26 @@ class Processes(object):
         self._use_individual_kcb = runspec.use_individual_kcb
         self._ro_reinf_frac = runspec.ro_reinf_frac
         self._swb_mode = runspec.swb_mode
-        self._allen_ceff = runspec.allen_ceff
+        self._rew_ceff = runspec.rew_ceff
+        self._evap_ceff = runspec.evap_ceff
         self._winter_evap_limiter = runspec.winter_evap_limiter
         self._winter_end_day = runspec.winter_end_day
         self._winter_start_day = runspec.winter_start_day
         print '---------- CONFIGURATION ---------------'
         for attr in ('date_range', 'use_individual_kcb',
                      'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
-                     'ro_reinf_frac', 'swb_mode', 'allen_ceff'):
+                     'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff'):
             print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
         print '----------------------------------------'
+        self._is_configured = True
 
-    def run(self, ro_reinf_frac=None, swb_mode=None, allen_ceff=None):
+    def run(self):
         """
-
-        :param ro_reinf_frac:
-        :param swb_mode:
-        :param allen_ceff:
+        run the ETRM model
         :return:
         """
-        if ro_reinf_frac is None:
-            ro_reinf_frac = self._ro_reinf_frac
-
-        if swb_mode is None:
-            swb_mode = self._swb_mode
-
-        if allen_ceff is None:
-            allen_ceff = self._allen_ceff
+        if not self._is_configured:
+            raise NotConfiguredError()
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
@@ -136,7 +139,7 @@ class Processes(object):
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
-
+        big_counter = 0
         st = time.time()
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
@@ -152,29 +155,55 @@ class Processes(object):
             else:
                 m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
-            # if sensitivity_matrix_column:
-            #     time_it(self._do_parameter_adjustment, m, s, sensitivity_matrix_column)
-
             time_it(self._do_snow, m, c)
-            time_it(self._do_soil_ksat_adjustment, m, s)
+            # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
             time_it(self._do_dual_crop_transpiration, tm_yday, m, s, c)
             time_it(self._do_fraction_covered, m, s, c)
 
-            if swb_mode == 'fao':
-                time_it(self._do_fao_soil_water_balance, m, s, c, ro_reinf_frac)
-            elif swb_mode == 'vertical':
-                time_it(self._do_vert_soil_water_balance, m, s, c, ro_reinf_frac, allen_ceff)
-
-            time_it(self._do_mass_balance, day, swb=swb_mode)
+            # if self._swb_mode == 'fao':
+            #     time_it(self._do_fao_soil_water_balance, m, s, c)
+            # elif self._swb_mode == 'vertical':
+            #     time_it(self._do_vert_soil_water_balance, m, s, c)
+            
+            func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
+            time_it(func, m, s, c)
+            
+            time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
             time_it(self._do_accumulations)
 
             if self.tracker is None:
                 self.tracker = initialize_master_tracker(m)
 
-            time_it(rm.update_raster_obj, m, day)
-            time_it(self._update_master_tracker, m, day)
+            # array_counter = 0
+            # for value in rm._output_tracker['current_day']['tot_etrs']:
+            #     for item in value:
+            #         if item > 0 and item != 1.0:
+            #             array_counter += 1
+            #             big_counter += 1
+            #             print 'item in array', item
 
+            # print "array counter {}".format(array_counter)
+            print m['tot_etrs'], nonzero(m['tot_etrs'])
+
+            time_it(rm.update_raster_obj, m, day)
+            # after here
+            time_it(self._update_master_tracker, m, day)
+            #print 'heres the rm._output_tracker in the loop after the update {}'.format(rm._output_tracker)
+            #print 'etrs update obj {}'.format(rm._output_tracker['current_day']['tot_etrs'])
+            # array_counter = 0
+            # for value in rm._output_tracker['current_day']['tot_etrs']:
+            #     for item in value:
+            #         if item > 0 and item != 1.0:
+            #             array_counter += 1
+            #             big_counter += 1
+            #             print 'item in array', item
+
+            # print "array counter {}".format(array_counter)
+        print ' big counter {}'.format(big_counter)
+        print "Here's the raster manager rm {}".format(rm)
+        print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
+        print "master dict daily {}".format(m)
         self._info('saving tabulated data')
         time_it(rm.save_csv)
 
@@ -334,20 +363,7 @@ class Processes(object):
         land_cover = s['land_cover']
         soil_ksat = m['soil_ksat']
 
-        # o = ones(soil_ksat.shape)
-        # soil_ksat = where((land_cover == 41) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 41) & (water < 12.0 * ones(soil_ksat.shape)),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 42) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 42) & (water < 12.0 * o),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 43) & (water < 50.0 * o),
-        #                   soil_ksat * 2.0 * o, soil_ksat)
-        # soil_ksat = where((land_cover == 43) & (water < 12.0 * o),
-        #                   soil_ksat * 1.2 * o, soil_ksat)
-
+        # TO DO: Fix limits to match mm/day units
         for lc, wthres, ksat_scalar in ((41, 50.0, 2.0),
                                         (41, 12.0, 1.2),
 
@@ -367,13 +383,14 @@ class Processes(object):
 
         kcb = m['kcb']
         etrs = m['etrs']
+        pdr = m['dr']
 
         ####
         # transpiration:
         # ks- stress coeff- ASCE pg 226, Eq 10.6
         # TAW could be zero at lakes.
         taw = maximum(s['taw'], 0.001)
-        ks = ((taw - m['pdr']) / ((1 - c['p']) * taw))
+        ks = ((taw - pdr) / ((1 - c['p']) * taw))
         ks = minimum(1 + 0.001, ks)  # this +0.001 may be unneeded
         ks = maximum(0, ks)
         m['ks'] = ks
@@ -385,10 +402,12 @@ class Processes(object):
         m['transp_adj'] = False
         if self._winter_end_day > tm_yday or tm_yday > self._winter_start_day:
             # super-important winter evap limiter. Jan suggested 0.03 (aka 3%) but that doesn't match ameriflux.
-            # Using 30% DC 2/20/17
+            # Using 30% DDC 2/20/17
             transp *= self._winter_evap_limiter
             m['transp_adj'] = True
 
+        # limit transpiration so it doesn't exceed the amount of water available in the root zone
+        transp = minimum(transp, (taw - pdr))
         m['transp'] = transp
 
     def _do_fraction_covered(self, m, s, c):
@@ -410,10 +429,19 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None, evap_ceff=None):
         """ Calculate evap and all soil water balance at each time step.
 
         """
+        if ro_local_reinfilt_frac is None:
+            ro_local_reinfilt_frac = self._ro_reinf_frac
+
+        if rew_ceff is None:
+            rew_ceff = self._rew_ceff
+
+        if evap_ceff is None:
+            evap_ceff = self._evap_ceff
+
         m['pdr'] = pdr = m['dr']
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
@@ -429,14 +457,14 @@ class Processes(object):
 
         # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
-        st_1_dur = minimum(st_1_dur, 0.99)
+        st_1_dur = minimum(st_1_dur, 1.0)
         m['st_1_dur'] = st_1_dur = maximum(st_1_dur, 0)
-        m['st_2_dur'] = st_2_dur = (1 - st_1_dur)
+        m['st_2_dur'] = st_2_dur = (1.0 - st_1_dur)
 
         # kr- evaporation reduction coefficient Allen 2011 Eq
         # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
         tew_rew_diff = maximum(tew - rew, 0.001)
-        kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0.001)
+        kr = maximum(minimum((tew - m['pde']) / (tew_rew_diff), 1), 0)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
 
@@ -449,25 +477,26 @@ class Processes(object):
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
         ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
-        ke = maximum(0.01, minimum(ke, 1))
+        ke = maximum(0.0, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
-        m['evap_1'] = e1 = st_1_dur * ke_init * etrs
-        m['evap_2'] = e2 = st_2_dur * kr * ke_init * etrs
+        e1 = st_1_dur * ke_init * etrs
+        m['evap_1'] = minimum(e1, rew - pdrew)
+        e2 = st_2_dur * kr * ke_init * etrs
+        m['evap_2'] = minimum(e2, (tew - pde) - e1)
 
         # Allen 2011
         evap = ke * etrs
+
+        # limit evap so it doesn't exceed the amount of soil moisture available in the TEW
+        evap = minimum(evap, (tew - pde))
 
         # limit evap so it doesn't exceed the amount of soil moisture available after transp occurs
         transp = m['transp']
         m['evap'] = evap = minimum(evap, (taw - pdr) - transp)
 
         m['eta'] = et_actual = evap + transp
-        for k, v in (('evap 1', e1), ('evap 2', e2),
-                     ('evap', evap), ('transp', transp),
-                     ('ET', et_actual)):
-            print '{} = {}'.format(k, v)
 
         # Start Water Balance
         water = m['rain'] + m['melt']
@@ -475,10 +504,9 @@ class Processes(object):
         # if snow is melting, set ksat to 24 hour value
         m['soil_ksat'] = soil_ksat = where(m['melt'] > 0.0, s['soil_ksat'], m['soil_ksat'])
 
-        # Only used if Experimental stage 2 reduction is used
+        # Dry days are only used if Experimental stage 2 reduction is used
         dd = m['dry_days']
-        dd[water < 0.1] = dd + 1
-        dd[water >= 0.1] = 1
+        dd = where(water < 0.1, dd + 1, 1)
         m['dry_days'] = dd
 
         # Surface runoff (Hortonian- using storm duration modified ksat values)
@@ -493,18 +521,26 @@ class Processes(object):
         m['dr'] = dr = minimum(maximum(pdr - (water - ro) + et_actual + dp, 0), taw)
 
         # Calculate depletion in TEW, full evaporative layer
-        m['de'] = de = minimum(maximum(pde - (water - ro) + evap / few, 0), tew)
+        # ceff, capture efficiency, reduces depletion recovery as representation of bypass flow through macropores
+        m['de'] = de = minimum(maximum(pde - ((water - ro) * evap_ceff) + evap / few, 0), tew)
 
-        # Calculate depletion in REW, skin layer
-        m['drew'] = minimum(maximum(pdrew - ((water - ro) * ceff) + evap / few, 0), rew)
+        # Calculate depletion in REW, skin layer; ceff, capture efficiency, reduces depletion recovery
+        m['drew'] = minimum(maximum(pdrew - ((water - ro) * rew_ceff) + evap / few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
 
-    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=0.0, ceff=1.0):
+    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
 
         :return: None
         """
+
+        if ro_local_reinfilt_frac is None:
+            ro_local_reinfilt_frac = self._ro_reinf_frac
+
+        if rew_ceff is None:
+            rew_ceff = self._rew_ceff
+
         kcb = m['kcb']
         etrs = m['etrs']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
@@ -520,8 +556,6 @@ class Processes(object):
         # Slightly different from 7ASCE pg 193, eq 9.21, but the Fstage coefficients come into the ke calc.
         # TEW is zero at lakes.
         tew = maximum(s['tew'], 0.001)
-        # rew = s['rew']
-        # tew_rew_diff = maximum(tew - rew, 0.001)
         kr = maximum(minimum((tew - m['pde']) / tew, 1), 0.001)
         # EXPERIMENTAL: stage two evap has been too high, force slowdown with decay
         # kr *= (1 / m['dry_days'] **2)
@@ -534,8 +568,8 @@ class Processes(object):
 
         # ke evaporation efficency; Allen 2011, Eq 13a
         few = m['few']
-        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max, 1)
-        ke = maximum(0.01, ke)
+        ke = minimum((st_1_dur + st_2_dur * kr) * (kc_max - (ks * kcb)), few * kc_max)
+        ke = maximum(0.0, minimum(ke, 1))
         m['ke'] = ke
 
         # Ketchum Thesis eq 36, 37
@@ -553,9 +587,9 @@ class Processes(object):
         m['pde'] = pde = m['de']
         m['pdrew'] = pdrew = m['drew']
 
-        rew = s['rew']
-        tew = s['tew']
-        taw = s['taw']
+        rew = m['rew'] = s['rew']
+        tew = m['tew'] = s['tew']
+        taw = m['taw'] = s['taw']
 
         # impose limits on vaporization according to present depletions #
         # we can't vaporize more than present difference between current available and limit (i.e. taw - dr) #
@@ -597,39 +631,39 @@ class Processes(object):
         m['ro'] = ro
         # water balance through the stage 1 evaporation layer #
         # capture efficiency of soil- some water may bypass REW even before it fills
-        water_av_rew = water * ceff
-        water_av_tew = water * (1.0 - ceff)  # May not be initializing as an array?
+        water_av_rew = water * rew_ceff
+        m['drew_water'] = water_av_rew  # store value of water delivered to evap layer
+        water_av_tew = water * (1.0 - rew_ceff)
 
-        # # fill depletion in REW if possible
-        water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
+        # fill depletion in REW if possible
+        # water_av_tew, drew = self._fill_depletions(water_av_rew, water_av_tew, rew, pdrew + evap_1)
 
-        # # fill depletion in REW if possible
-        # evap__ = pdrew + evap_1
-        # drew = where(water_av_rew >= evap__, 0, evap__ - water_av_rew)
-        # drew = minimum(drew, rew)
-        #
-        # # add excess water to the water available to TEW (Is this coding ok?)
-        # water_av_tew = where(water_av_rew >= evap__,
-        #                      water_av_tew + water_av_rew - evap__,
-        #                      water_av_tew)
+        # fill depletion in REW if possible
+        depletion = pdrew + evap_1
+        drew = where(water_av_rew >= depletion, 0, depletion - water_av_rew)
+        # drew = minimum(drew, rew) # redundant check
+
+        # add excess water to the water available to TEW (Is this coding ok?)
+        water_av_tew = where(water_av_rew >= depletion, water_av_tew + water_av_rew - depletion, water_av_tew)
 
         # water balance through the stage 2 evaporation layer #
         # capture efficiency of soil- some water may bypass TEW even before it fills
-        water_av_tew *= ceff
-        water_av_taw += water_av_tew * (1.0 - ceff)
+        water_av_taw = water_av_taw + (water_av_tew * (1.0 - rew_ceff))
+        water_av_tew = water_av_tew * rew_ceff
+        m['de_water'] = water_av_tew  # store value of water delivered to evap layer
 
-        # # fill depletion in TEW if possible
-        water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
+        # fill depletion in TEW if possible
+        # water_av_taw, de = self._fill_depletions(water_av_tew, water_av_taw, tew, pde + evap_2)
 
-        # # fill depletion in TEW if possible
-        # evap2__ = pde + evap_2
-        # de = where(water_av_tew >= evap2__, 0, evap2__ - water_av_tew)
-        # de = minimum(de, tew)
-        #
-        # # add excess water to the water available to TAW (Help coding this more cleanly?)
-        # water_av_taw = where(water_av_tew >= evap2__,
-        #                      water_av_taw + water_av_tew - evap2__,
-        #                      water_av_taw)
+        # fill depletion in TEW if possible
+        depletion = pde + evap_2
+        de = where(water_av_tew >= depletion, 0, depletion - water_av_tew)
+        # de = minimum(de, tew) # redundant check
+
+        # add excess water to the water available to TAW (Help coding this more cleanly?)
+        water_av_taw = where(water_av_tew >= depletion,
+                             water_av_taw + water_av_tew - depletion,
+                             water_av_taw)
 
         # water balance through the root zone layer #
         m['dr_water'] = water_av_taw  # store value of water delivered to root zone
@@ -637,9 +671,8 @@ class Processes(object):
         # fill depletion in TAW if possible
         depletion = pdr + transp
 
-        dd = water_av_taw - depletion
-        m['infil'] = where(water_av_taw >= depletion, dd, 0)
-        dr = where(water_av_taw >= depletion, 0, dd * -1)
+        m['infil'] = where(water_av_taw >= depletion, water_av_taw - depletion, 0)
+        dr = where(water_av_taw >= depletion, 0, depletion - water_av_taw)
 
         m['soil_storage'] = (pdr + pde + pdrew - dr - de - drew)
 
@@ -678,10 +711,6 @@ class Processes(object):
         ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
         print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
 
-    def _output_function(self, v):
-        if not self._cfg.output_units == MM:
-            v = millimeter_to_acreft(v)
-        return v
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -743,7 +772,7 @@ class Processes(object):
         kcb = time_it(func, date, m['pkcb'])
 
         m['kcb'] = kcb
-        min_temp, max_temp, temp, precip = time_it(get_prisms, date)
+        min_temp, max_temp, temp, precip = time_it(get_prisms, date, self._cfg.is_reduced)
         m['min_temp'] = min_temp
         m['max_temp'] = max_temp
         m['temp'] = temp
@@ -780,22 +809,31 @@ class Processes(object):
     #     m['soil_ksat'] *= theta
 
     def _update_master_tracker(self, m, date):
-        def factory(k):
-            v = m[k]
+        def aggregate_data(key):
+            param = m[key]
 
-            if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
+            if key in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
                      'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
-                v = v.mean()
-            elif k == 'transp_adj':
-                v = median(v)
+                param = param.mean()
+            elif key == 'transp_adj':
+                param = median(param)
             else:
-                v = self._output_function(v)
-            return v
+                param = self._output_function(param)
+            return param
 
-        tracker_from_master = [factory(key) for key in sorted(m)]
+        tracker_from_master = [aggregate_data(key) for key in sorted(m)]
         # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
+
+
+    def _output_function(self, param):
+        if self._cfg.output_units == MM:
+            param = param.mean()
+        if not self._cfg.output_units == MM:
+            param = millimeter_to_acreft(param)
+        return param
+
 
     def _get_tracker_summary(self, tracker, name):
         s = self._static[name]
