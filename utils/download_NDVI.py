@@ -16,10 +16,17 @@
 
 import os
 from subprocess import call
+import fnmatch
+
+
+
 '''For downloading data, please use the pyModis script:
         modis_download.py
     It is very easy to operate.'''
 
+'''Note:
+        There is no G:\\Modis\\ anymore         
+'''
 # rename the files
 folder = 'G:\\Modis\\'
 output_folder = 'G:\\Modis\\'
@@ -62,12 +69,27 @@ for haha in files:
         file_o = 'G:\\Modis\\' + name + '.tif'
         output_w = 'G:\\Walnut\\Modis\\' + name[0:7] + '.tif'
         output_nm = 'G:\\NewMexico\\Modis\\' + name[0:7] + '.tif'
-        WGEW = 'gdalwarp -overwrite -s_srs EPSG:26913 -t_srs EPSG:26712 -te 576863 3501109 637613 3519609 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_w,c = 'average')
+        WGEW = 'gdalwarp -overwrite -s_srs EPSG:26912 -t_srs EPSG:26712 -te 576863 3501109 637613 3519609 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_w,c = 'average')
         call(WGEW)
-        NM = 'gdalwarp  -overwrite -s_srs EPSG:26913 -te 107500 3470500 683500 4259000 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_nm,c = 'average')
+        NM = 'gdalwarp  -overwrite -s_srs EPSG:26912 -te 107500 3470500 683500 4259000 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_nm,c = 'average')
         call(NM)
         print "Done processing {a}".format(a=name)
 
 
 
-from datetime import date
+#Reproject interpolated wrong-projected Modis Data
+
+folder_o = 'G:\\Walnut\\Modis\\'
+os.chdir(folder_o)
+files = os.listdir(folder_o)
+for haha in files:
+    if haha.startswith('20'):
+        name = haha[0:-4]
+        file_o = 'G:\\Walnut\\Modis\\' + name + '.tif'
+        output_w = 'G:\\Walnut\\Modis\\R' + name[0:7] + '.tif'
+
+        repro = 'gdalwarp -overwrite -s_srs EPSG:26712 -t_srs EPSG:26912 -of GTiff "{a}" {b}'.format(a=file_o, b=output_w)
+        call(repro)
+
+        print "Done processing {a}".format(a=name)
+

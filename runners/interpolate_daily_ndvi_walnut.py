@@ -166,14 +166,14 @@ def time_interpolation(base_dir, day, finalyear):
 def main():
     paths.build('F:')
 
-    startday = datetime(2002, 1, 1, 0)
+    startday = datetime(2000, 2, 18, 0)
     endday = datetime(2016, 1, 1, 0)
     finalyear = 2016
 
     base_dir = 'G:\\Walnut\\Modis\\'#paths.ndvi_individ
     output ='G:\\Walnut\\Modis\\Inter'#paths.ndvi_spline
 
-    ref_map = os.path.join(base_dir, '2000049.tif')
+    ref_map = os.path.join(base_dir, 'R2000049.tif')
     _, _, _, _, lon, lat, linke, prj, fill_val = read_map(ref_map, 'Gtiff')
 
     srs = osr.SpatialReference(prj)
@@ -187,7 +187,7 @@ def main():
         ndvi_daily = time_interpolation(base_dir, day, finalyear)
 
         # Write daily values to new daily rasters
-        daily_doy = 'ndvi{}_{}.tif'.format(year, nr)
+        daily_doy = 'ndvi{}_{}.tif'.format(year, nr) # or modis, lol
         outpath = os.path.join(output, year)
 
         if not os.path.exists(outpath):
