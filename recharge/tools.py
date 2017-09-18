@@ -118,60 +118,54 @@ def read_map(filename, fileformat):
     return res_x, res_y, cols, rows, x, y, data, prj, fill_val
 
 
-def write_map(filename, fileformat, x, y, data, prj, fillval):
+def write_map(fileName, fileFormat, x, y, data, prj, FillVal):
     """
-    Write geographical data into file. Also replace NaN by fillval
+    Write geographical data into file. Also replave NaN bu FillVall
 
-    :param filename:
-    :param fileformat:
+    :param fileName:
+    :param fileFormat:
     :param x:
     :param y:
     :param data:
-    :param fillval:
+    :param FillVal:
     :return:
     """
 
     verbose = False
     gdal.AllRegister()
     driver1 = gdal.GetDriverByName('GTiff')
+    driver2 = gdal.GetDriverByName(fileFormat)
 
-    driver2 = gdal.GetDriverByName(fileformat)
-
-    tiffname = '{}.tif'.format(filename)
-    data[isnan(data)] = fillval
+    data[isnan(data)] = FillVal
     # Processing
     if verbose:
-        print 'Writing to temporary file {}'.format(tiffname)
-        print 'Output format: {}'.format(fileformat)
-
+        print 'Writing to temporary file ' + fileName + '.tif'
+        print "Output format: " + fileFormat
     # Create Output filename from (FEWS) product name and date and open for writing
-    temp_dataset = driver1.Create(tiffname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
+    TempDataset = driver1.Create(fileName + '.tif', data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
     # Give georeferences
     xul = x[0] - (x[1] - x[0]) / 2
     yul = y[0] + (y[0] - y[1]) / 2
 
-    temp_dataset.SetGeoTransform([xul, x[1] - x[0], 0, yul, 0, y[1] - y[0]])
-    temp_dataset.SetProjection(prj)
+    TempDataset.SetGeoTransform([xul, x[1] - x[0], 0, yul, 0, y[1] - y[0]])
+    TempDataset.SetProjection(prj)
     # get rasterband entry
-    temp_band = temp_dataset.GetRasterBand(1)
+    TempBand = TempDataset.GetRasterBand(1)
     # fill rasterband with array
-    temp_band.WriteArray(data, 0, 0)
-    temp_band.FlushCache()
-    temp_band.SetNoDataValue(fillval)
+    TempBand.WriteArray(data, 0, 0)
+    TempBand.FlushCache()
+    TempBand.SetNoDataValue(FillVal)
     # Create data to write to correct format (supported by 'CreateCopy')
     if verbose:
-        print 'Writing to {}'.format(filename)
-
-    out = driver2.CreateCopy(filename, temp_dataset, 0)
+        print 'Writing to ' + fileName
+    outDataset = driver2.CreateCopy(fileName, TempDataset, 0)
+    TempDataset = None
+    outDataset = None
+    if verbose:
+        print 'Removing temporary file ' + fileName + '.tif'
+    os.remove(fileName + '.tif');
 
     if verbose:
-        print 'Removing temporary file {}.tiff'.format(filename)
-    os.remove(filename + '.tif');
-
-    if verbose:
-        print 'Writing to {} is done!'.format(filename)
-
-    del out
-    del temp_dataset
+        print 'Writing to ' + fileName + ' is done!'
 
 # =================================== EOF =========================

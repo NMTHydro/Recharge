@@ -20,6 +20,7 @@ from pandas import concat, DataFrame
 from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series # from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series
 from recharge.etrm_processes import Processes   # from recharge.etrm_processes import Processes
 
+'''This is totally nothing'''
 
 BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
                  '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},

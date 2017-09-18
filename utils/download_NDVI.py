@@ -69,9 +69,9 @@ for haha in files:
         file_o = 'G:\\Modis\\' + name + '.tif'
         output_w = 'G:\\Walnut\\Modis\\' + name[0:7] + '.tif'
         output_nm = 'G:\\NewMexico\\Modis\\' + name[0:7] + '.tif'
-        WGEW = 'gdalwarp -overwrite -s_srs EPSG:26912 -t_srs EPSG:26712 -te 576863 3501109 637613 3519609 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_w,c = 'average')
+        WGEW = 'gdalwarp -overwrite -s_srs EPSG:26913 -t_srs EPSG:26912 -te 576863 3501109 637613 3519609 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_w,c = 'average')
         call(WGEW)
-        NM = 'gdalwarp  -overwrite -s_srs EPSG:26912 -te 107500 3470500 683500 4259000 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_nm,c = 'average')
+        NM = 'gdalwarp  -overwrite -s_srs EPSG:26913 -te 107500 3470500 683500 4259000 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_nm,c = 'average')
         call(NM)
         print "Done processing {a}".format(a=name)
 

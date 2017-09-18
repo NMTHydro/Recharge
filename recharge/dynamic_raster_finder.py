@@ -41,6 +41,7 @@ def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
     """
     raster = Raster(name, root=in_path, band=band)
     ndvi = raster.masked()
+    # ndvi *= 0.0001
     kcb = ndvi * scalar
 
     if previous_kcb is not None:

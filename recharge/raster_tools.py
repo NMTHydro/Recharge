@@ -139,6 +139,7 @@ def convert_raster_to_array(input_raster_path, raster=None, band=1):
     """
     Convert .tif raster into a numpy numerical array.
 
+    :rtype: object
     :param input_raster_path: Path to raster.
     :param raster: Raster name with \*.tif
     :param band: Band of raster sought.
