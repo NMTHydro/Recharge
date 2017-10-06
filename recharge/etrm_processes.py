@@ -34,7 +34,6 @@ from recharge.tools import millimeter_to_acreft, unique_path, add_extension, tim
 from recharge.raster_tools import convert_raster_to_array
 
 from recharge.dict_setup import initialize_point_tracker
-
 from recharge.raster_tools import apply_mask
 from utils.tracker_plot import run_tracker_plot
 
@@ -940,8 +939,7 @@ class Processes(object):
             # for key in m:
             #     print key, m[key]
 
-            item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj', )] # todo stuck here may have to do with the true-false part.
-
+            item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj', )]
             dataframe.loc[date] = item_tracker
 
 
