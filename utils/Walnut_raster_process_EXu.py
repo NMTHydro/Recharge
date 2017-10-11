@@ -151,35 +151,112 @@ x_max = 682757
 y_max = 4102413
 cols = 2272
 rows = 2525
-resample_method = 'cubic'
+resample_method = 'near'
 cell_size = 250
+root = 'H:\\NewMexico\\DirectSoilData\\'
+prop = 'gcmBD3rdbar'
 
 def merge_operator_2(prop):
-    #clip STATSGO
-    ssurgo = 'SU_average_weighted\\'
     statsgo = 'ST_average_weighted\\'
-    mask = root + 'noData\\'+prop+'.shp'
+    #mask = root + 'noData\\' + prop + '.shp'
     tiff_c = root + statsgo + 'STATSGO_' + prop + '_5cm_Raster_n.tif'
-    tiff_d = root + statsgo + 'Clipped_' + prop + '_5cm_Raster.tif'
-
-   # clip = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -r {h} -cutline {i} -crop_to_cutline -multi {j} {k}'.format(a=projection, h=resample_method, i=mask, j=tiff_c, k=tiff_d)
+    tiff_cc = root + statsgo + 'STATSGO_' + prop + '_5cm_Raster_cut.tif'
+    trans_0 = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+              ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                               h=resample_method, j=tiff_c, k=tiff_cc)
+    call(trans_0)
+    #trans_00 = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+               #' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                                #h=resample_method, j=mask, k=mask_c)
+    #call(trans_00)
+    #clip = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -cutline {i} {j} {k}'.format(a=projection, i=mask_c,
+                                                                                             #j=tiff_cc, k=tiff_d)
     #call(clip)
 
-    #merge SSURGO and STATSGO
-    merge = 'Merge\\'
 
+def merge_operator_3(prop):
+    #clip STATSGO
+    ssurgo = 'SU_average_weighted\\'
+    #statsgo = 'ST_average_weighted\\'
+    statsgo = 'Clipped_nobuffer\\'
+
+
+
+    #tiff_d = root + statsgo + 'Clipped_' + prop + '_5cm_Raster.tif'
+    tiff_e = root + statsgo + 'Clipped_' + prop + '_5cm_Raster_cut.tif'
     tiff_o = root + ssurgo + 'SSURGO_' + prop + '_5cm_Raster_New_n.tif'
+    tiff_oe = root + ssurgo + 'SSURGO_' + prop + '_5cm_Raster_New_cut.tif'
+
+    #even the clip line doesn't work, warp before merge
+    #trans_1 = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+         # ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                           #h=resample_method, j=tiff_d, k=tiff_e)
+    #call(trans_1)
+    trans_2 = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+          ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                           h=resample_method, j=tiff_o, k=tiff_oe)
+    call(trans_2)
+    #merge SSURGO and STATSGO
+    merge = 'Merge_New\\'
     tiff_n = root + merge + 'Merged_' + prop + '_5cm_Raster_n.tif'
 
     os.system(
         'python D:\Anaconda2\Scripts\gdal_merge.py -n -9999 -a_nodata -9999  -of GTiff -o {a} {b} {c}'.format(a=tiff_n,
-                                                                                                              b=tiff_o,
-                                                                                                              c=tiff_d))
+                                                                                                              b=tiff_oe,
+                                                                                                              c=tiff_e))
     #clip to fit the model
     tiff = root + merge + 'Merged_' + prop + '_5cm_Raster.tif'
     fin = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
            ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
                                             h=resample_method, j=tiff_n, k=tiff)
     call(fin)
-###########################################################################################
 
+
+
+
+prop = 'gcmBD3rdbar'
+raster_merge(prop)
+prop = 'OrgMatter'
+raster_merge(prop)
+prop = 'percClay'
+raster_merge(prop)
+prop = 'percSand'
+raster_merge(prop)
+prop = 'percSilt'
+raster_merge(prop)
+prop = 'umsKsat'
+raster_merge(prop)
+prop = 'WC3rdbar'
+raster_merge(prop)
+
+
+
+
+
+import os, fnmatch
+from subprocess import call
+
+
+root = 'H:\\NewMexico\\DirectSoilData\\'
+prop = 'gcmBD3rdbar'
+def raster_merge(prop):
+    ssurgo = 'SU_average_weighted\\'
+    statsgo = 'ST_average_weighted\\'
+    merge = 'Merge_Fin\\'
+
+    a = root + statsgo + 'STATSGO_' + prop + '_5cm_Raster_n.tif'
+    b = root + ssurgo + 'SSURGO_' + prop + '_5cm_Raster_New_n.tif'
+    #C: / Users / Esther / Desktop / Merged_percSand_5cm_Raster_New_te.tif
+    #C:\Users\Esther\Desktop\STATSGO_percSand_5cm_Raster_cut.tif
+    #C:\Users\Esther\Desktop\SSURGO_percSand_5cm_Raster_New_n.tif
+    #tiff_n = 'C:/Users/Esther/Desktop/Merged_percSand_5cm_Raster_New_te.tif'
+    #tiff = 'C:/Users/Esther/Desktop/Merged_percSand_5cm_Raster_New_tet.tif'
+    tiff_n = root + merge + 'Merged_' + prop + '_5cm_Raster_n.tif'
+    tiff = root + merge + 'Merged_' + prop + '_5cm_Raster.tif'
+    os.system(
+        'python D:\Anaconda2\Scripts\gdal_merge.py -n -9999 -a_nodata -9999 -of GTiff -o {a} {b} {c}'.format(a = tiff_n, b = a, c = b))
+    # clip to fit the model
+    fin = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+      ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                       h='near', j=tiff_n, k=tiff)
+    call(fin)
