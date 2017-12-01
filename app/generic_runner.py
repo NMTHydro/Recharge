@@ -114,8 +114,8 @@ def run(cfg_path=None):
 
             func()
     else:
-        # run_model(cfg_path)
-        run_soil_mapper()
+        run_model(cfg_path)
+        #run_soil_mapper()
 
 
 if __name__ == '__main__':

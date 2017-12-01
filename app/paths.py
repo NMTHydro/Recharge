@@ -80,7 +80,9 @@ class Paths:
         self.static_inputs = os.path.join(etrm_input_root, 'statics')
         self.initial_inputs = os.path.join(etrm_input_root, 'initialize')
 
-        self.amf_sites = amf_path = os.path.join(etrm_input_root, 'ameriflux_sites')  # OK
+        amf_root = os.path.dirname(etrm_input_root)
+        print 'amf_root: {}'.format(amf_root)
+        self.amf_sites = amf_path = os.path.join(amf_root, 'ETRM_inputs_Ameriflux', 'ameriflux_sites')  # OK
         self.amf_extract = os.path.join(amf_path, 'AMF_extracts')
         self.amf_output_root = os.path.join(amf_path, 'AMF_ETRM_output')
         self.amf_combo_root = os.path.join(amf_path, 'AMF_results_combo')
