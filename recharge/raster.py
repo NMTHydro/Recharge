@@ -113,13 +113,20 @@ class Raster(object):
         if idxs is not None:
             idxs = asarray(idxs, int)
             masked_arr = masked_where(idxs == 0, idxs)
+            # print 'masked_arr: {}'.format((masked_arr))
+            # print 'idxs: {}'.format((idxs))
+            # print 'self ravel: {}'.format((self._arr.reshape(72, 242)))
+            # print '~mask_etc: {}'.format((~masked_arr.mask))
 
-            masked_arr[~masked_arr.mask] = self._arr.ravel()
-            masked_arr.mask = nomask
+            masked_arr = self._arr.reshape(len(masked_arr), len(masked_arr[0]))
+            # masked_arr[~masked_arr.mask] = self._arr.ravel()
+            # masked_arr.mask = nomask
         else:
             masked_arr = self._arr.ravel()
 
-        return masked_arr.filled(0)
+        return masked_arr
+        # return masked_arr.filled(0)
+
 
     def masked(self):
         """

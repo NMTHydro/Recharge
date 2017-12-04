@@ -72,9 +72,11 @@ def get_individ_kcb(date_object, previous_kcb=None):
     :return: numpy array object
     """
     year = str(date_object.year)
-    tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
-                                             date_object.timetuple().tm_mon,
-                                             date_object.timetuple().tm_mday)
+    # Changed for Walnut gulch NDVI naming convention
+    tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
+    # tail = 'NDVI{}_{:02n}_{:02n}.tif'.format(year,
+    #                                          date_object.timetuple().tm_mon,
+    #                                          date_object.timetuple().tm_mday)
 
     name = os.path.join(year, tail)
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
@@ -179,32 +181,39 @@ def get_prism(date_object, variable='precip', is_reduced=False):
         raise NotImplementedError('Invalid PRISM variable name {}. must be in {}'.format(variable, names))
 
     year = date_object.year
-    tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
+    year_str = str(year)
+
+    tail = '{}{:02n}{:02n}.tiff'.format(year, date_object.month, date_object.day)
 
     if variable == 'precip':
-
-        root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
+        root = os.path.join('precip', '800m_std_all', year_str)  # this will need to be fixed
+        # root = os.path.join('precip', '800m_std_all')  # this will need to be fixed
         if is_reduced:
             name = 'precip_{}'.format(tail)
         else:
-            name = 'PRISMD2_NMHW2mi_{}'.format(tail)
+            name = 'Walnut_precip_{}'.format(tail)
+            # name = 'PRISMD2_NMHW2mi_{}'.format(tail)
 
     elif variable == 'min_temp':
-        root = os.path.join('Temp', 'Minimum_standard')
+        root = os.path.join('Temp', 'Minimum_standard', year_str)
+        # root = os.path.join('Temp', 'Minimum_standard')
         if is_reduced:
             name = 'min_temp_{}'.format(tail)
         else:
-            if year in PRISM_YEARS:
-                name = 'cai_tmin_us_us_30s_{}'.format(tail)
-            else:
-                name = 'TempMin_NMHW2Buff_{}'.format(tail)
+            name = 'Walnut_MinTemp_{}'.format(tail)
+            # if year in PRISM_YEARS:
+            #     name = 'cai_tmin_us_us_30s_{}'.format(tail)
+            # else:
+            #     name = 'TempMin_NMHW2Buff_{}'.format(tail)
 
     elif variable == 'max_temp':
-        root = os.path.join('Temp', 'Maximum_standard')
+        root = os.path.join('Temp', 'Maximum_standard', year_str)
+        # root = os.path.join('Temp', 'Maximum_standard')
         if is_reduced:
             name = 'max_temp_{}'.format(tail)
         else:
-            name = 'TempMax_NMHW2Buff_{}'.format(tail)
+            name = 'Walnut_MaxTemp_{}'.format(tail)
+            # name = 'TempMax_NMHW2Buff_{}'.format(tail)
 
     raster = Raster(name, root=os.path.join(paths.prism, root))
     return raster.masked()
@@ -233,7 +242,8 @@ def get_penman(date_object, variable='etrs'):
         name = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail))
 
     elif variable == 'rg':
-        name = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
+        name = os.path.join('rad{}'.format(year), 'RTOT_NM_{}'.format(tail))
+        # name = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
 
     raster = Raster(name, root=paths.penman)
     return raster.masked()
