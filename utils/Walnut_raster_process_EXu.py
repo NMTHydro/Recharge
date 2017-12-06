@@ -37,14 +37,14 @@ from subprocess import call
 #folder path and variables for Walnut
 input_folder = 'G:\\Walnut\\RealData\\'
 output_folder = 'G:\\Walnut\\WalnutData\\'
-projection = 26912  # NAD83 UTM Zone 13 North
+projection = 26912  # NAD83 UTM Zone 12 North
 x_min = 576863
 y_min = 3501109
 x_max = 637613
 y_max = 3519609
 cols = 2430
 rows = 740
-cell_size = 25
+cell_size = 250
 resample_method = 'average'
 rscale = 10
 rcols = cols/rscale
@@ -95,8 +95,68 @@ for shapefile in find_format(input_folder, '*.shp'):
                                                                             h=temp, i=out_raster)
     call(warp)
 
+#Walnut Gulch Soil Properties rasters merge
+'''The files in Walnut Gulch are originally set noData Value of -9999
+    The Projection is 26912 NAD83 Zone12'''
+root = 'H:\\Walnut\\'
+
+projection = 26912  # NAD83 UTM Zone 12 North
+x_min = 576863
+y_min = 3501109
+x_max = 637613
+y_max = 3519609
+cols = 2430
+rows = 740
+cell_size = 250
+resample_method = 'near'
+
+def Walnut_Raster_Op(root,prop):
+    #folders
+    input_folder = 'WalnutExtractedNew\\'
+    output_folder = 'WalnutSoilProperties\\'
+    #first convert cut both SU and S to the same grid
+    file_ua = root + input_folder + 'SU_'+prop+'.tif'
+    file_ub = root + input_folder + 'SU_'+prop+'_cut.tif'
+    file_ta = root + input_folder + 'ST_'+prop+'.tif'
+    file_tb = root + input_folder + 'ST_'+prop+'_cut.tif'
+    warp_u = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -tr {i} {i}\n' \
+             ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max,
+                                              h=resample_method, i=cell_size,j=file_ua, k=file_ub)
+    call(warp_u)
+    warp_t = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -tr {i} {i}\n' \
+             ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max,
+                                              h=resample_method, i = cell_size, j=file_ta, k=file_tb)
+    call(warp_t)
+    #Then, merge them
+    tiff_m = root + output_folder + 'Merged_' + prop + '_m.tif'
+    os.system(
+        'python D:\Anaconda2\Scripts\gdal_merge.py -n -9999 -a_nodata -9999  -of GTiff -o {a} {b} {c}'.format(a=tiff_m,
+                                                                                                              b=file_tb,
+                                                                                                              c=file_ub))
+    #Warp to standardized
+    tiff = root + output_folder + 'Merged_' + prop + '.tif'
+    warp_f = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -tr {i} {i}\n' \
+             ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max,
+                                              h=resample_method, i = cell_size, j=tiff_m, k=tiff)
+    call(warp_f)
 
 
+#runner
+
+prop = 'gcmBD3rdbar'
+Walnut_Raster_Op(root,prop)
+prop = 'OrgMatter'
+Walnut_Raster_Op(root,prop)
+prop = 'percClay'
+Walnut_Raster_Op(root,prop)
+prop = 'percSand'
+Walnut_Raster_Op(root,prop)
+prop = 'percSilt'
+Walnut_Raster_Op(root,prop)
+prop = 'umsKsat'
+Walnut_Raster_Op(root,prop)
+prop = 'WC3rdbar'
+Walnut_Raster_Op(root,prop)
 
 
 ###############################################################################################################################
@@ -144,7 +204,7 @@ def merge_operator_1(root, prop):
 
     #here manually extract noData masks for each properties
 
-projection = 26913  # NAD83 UTM Zone 12 North
+projection = 26913  # NAD83 UTM Zone 13 North
 x_min = 114757
 y_min = 3471163
 x_max = 682757
@@ -213,6 +273,11 @@ def merge_operator_3(prop):
 
 
 
+    ######
+    #Walnut Gulch
+
+
+
 
 prop = 'gcmBD3rdbar'
 raster_merge(prop)
@@ -260,3 +325,330 @@ def raster_merge(prop):
       ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
                                        h='near', j=tiff_n, k=tiff)
     call(fin)
+
+
+#=============================================
+#Walnut
+import os, fnmatch
+from subprocess import call
+
+input_folder = 'G:\\ETRM_inputs_Walnut\\PM_RAD_New'
+projection = 26912  # NAD83 UTM Zone 12 North
+x_min = 576863
+y_min = 3501109
+x_max = 637613
+y_max = 3519609
+cols = 243
+rows = 74
+resample_method = 'near'
+x_min_n = 576863+250
+y_min_n = 3501109+500
+cols_n = 243-1
+rows_n = 74-2
+def find_format(path, filter_):
+    for root, dirs, files in os.walk(path):
+        for file_ in fnmatch.filter(files, filter_):
+            yield file_
+input_folder = 'G:\\ETRM_inputs_Walnut\\PM_RAD_New\\'
+files = os.listdir(input_folder)
+for it in files:
+    in_folder = input_folder+it
+    in_folder = 'G:\\ETRM_inputs_Walnut\\PM2000\\'
+    os.chdir(in_folder)
+    for raster in find_format(in_folder, '*.tif'):
+        FOLDER,r_name = os.path.split(raster)
+        tiff = r_name
+        temp = "temp.tif"
+        reprojection = 'gdalwarp -overwrite -s_srs EPSG:4326 -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+         ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                       h=resample_method, j=tiff, k=temp)
+        call(reprojection)
+        cut = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+         ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                       h=resample_method, j=temp, k=tiff)
+        call(cut)
+
+
+#=============================================
+#NDVI
+import os, fnmatch
+from subprocess import call
+from recharge.raster_tools import convert_raster_to_array
+from recharge.raster_tools import convert_array_to_raster
+from recharge.raster_tools import get_raster_geo_attributes
+input_folder = 'G:\\ETRM_inputs_Walnut\\NDVI\\NDVI_Real\\'
+files = os.listdir(input_folder)
+root = "G:\\ETRM_inputs_Walnut\\PM_RAD\\PM2000\\"
+for it in files:
+    in_folder = input_folder+it+"\\"
+    os.chdir(in_folder)
+    for raster in find_format(in_folder, '*.tif'):
+        FOLDER,r_name = os.path.split(raster)
+        tiff = r_name
+        temp = "temp.tif"
+        cut = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+         ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                       h=resample_method, j=tiff, k=temp)
+        call(cut)
+        ndvi = convert_raster_to_array(in_folder, temp)
+        arr = ndvi*0.0001
+
+        geo = get_raster_geo_attributes(root)
+        output_path = in_folder+tiff
+
+        convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+###=========================
+#Prism
+
+
+#=============================================
+#Walnut
+import os, fnmatch
+from subprocess import call
+
+input_folder = 'G:\\ETRM_inputs_Walnut\\PM_RAD_New'
+projection = 26912  # NAD83 UTM Zone 12 North
+x_min = 576863
+y_min = 3501109
+x_max = 637613
+y_max = 3519609
+cols = 243
+rows = 74
+resample_method = 'near'
+x_min_n = 576863+250
+y_min_n = 3501109+500
+cols_n = 243-1
+rows_n = 74-2
+def find_format(path, filter_):
+    for root, dirs, files in os.walk(path):
+        for file_ in fnmatch.filter(files, filter_):
+            yield file_
+
+# input_folder = 'G:\\NMTECH_PRISM_UTM\\Walnut_Gulch\\ppt\\'
+# input_folder = 'G:\\NMTECH_PRISM_UTM\\Walnut_Gulch\\tmax\\'
+input_folder = 'G:\\NMTECH_PRISM_UTM\\Walnut_Gulch\\tmin\\'
+# output_folder = 'G:\\ETRM_inputs_Walnut\\PRISM\\precip\\800m_std_all\\'
+# output_folder = 'G:\\ETRM_inputs_Walnut\\PRISM\\Temp\\Maximum_standard\\'
+output_folder = 'G:\\ETRM_inputs_Walnut\\PRISM\\Temp\\Minimum_standard\\'
+files = os.listdir(input_folder)
+for it in files:
+    in_folder = input_folder+it+"\\"
+    # in_folder = input_folder
+    out_folder = output_folder+it+"\\"
+    # out_folder = output_folder +"2000\\"
+    os.chdir(in_folder)
+    for raster in find_format(in_folder, '*.tif'):
+        FOLDER,r_name = os.path.split(raster)
+        tiff = r_name
+        temp = "temp.tif"
+        cut = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+         ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                       h=resample_method, j=tiff, k=temp)
+        call(cut)
+        # tiff_n = out_folder+"Walnut_precip_" + r_name[-12:-4]+".tiff"
+        # warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+        #     ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+        #                                    h=resample_method, j=temp, k=tiff_n)
+        # call(warp)
+
+        # tiff_n = out_folder + "Walnut_MaxTemp_" + r_name[-12:-4] + ".tiff"
+        # warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+        #    ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+        #                                     h=resample_method, j=temp, k=tiff_n)
+        # call(warp)
+
+        tiff_n = out_folder + "Walnut_MinTemp_" + r_name[-12:-4] + ".tiff"
+        warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+            ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                        h=resample_method, j=temp, k=tiff_n)
+        call(warp)
+
+
+
+#------------------------------
+#For statics
+in_t = "H:\\WGEW\\ETRM_inputs\\statics\\Merge_TAW150cm_utm.tif"
+out_t = "H:\\WGEW\\ETRM_inputs\\statics\\taw_Walnut_SoilDatabase.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+taw= convert_raster_to_array("H:\\WGEW\\ETRM_inputs\\statics\\", "taw_Walnut_SoilDatabase.tif")
+taw = 15*taw
+dr = taw/2
+geo = get_raster_geo_attributes("H:\\WGEW\\ETRM_inputs\\statics\\geo")
+output_path1 = "H:\\WGEW\\ETRM_inputs\\statics\\taw_Walnut_mm.tif"
+output_path2 = "H:\\WGEW\\ETRM_inputs\\statics\\dr_half_taw_mm.tif"
+arr1 = taw
+arr2 = dr
+convert_array_to_raster(output_path1, arr1, geo, output_band=1)
+convert_array_to_raster(output_path2, arr2, geo, output_band=1)
+
+#tew===================
+in_t = "H:\\WGEW\\ETRM_inputs\\statics\\Merge_fc_cmwater_10cm_utm.tif"
+out_t = "H:\\WGEW\\ETRM_inputs\\statics\\fc_Walnut_SoilDatabase.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+in_t = "H:\\WGEW\\ETRM_inputs\\statics\\Merge_wp_cmwater_10cm_utm.tif"
+out_t = "H:\\WGEW\\ETRM_inputs\\statics\\wp_Walnut_SoilDatabase.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+fc= convert_raster_to_array("H:\\WGEW\\ETRM_inputs\\statics\\", "fc_Walnut_SoilDatabase.tif")
+wp= convert_raster_to_array("H:\\WGEW\\ETRM_inputs\\statics\\", "wp_Walnut_SoilDatabase.tif")
+tew = (fc -0.5*wp)*100
+de = tew/2
+geo = get_raster_geo_attributes("H:\\WGEW\\ETRM_inputs\\statics\\geo")
+output_path1 = "H:\\WGEW\\ETRM_inputs\\statics\\tew_Walnut_mm.tif"
+output_path2 = "H:\\WGEW\\ETRM_inputs\\statics\\de_half_tew_mm.tif"
+arr1 = tew
+arr2 = de
+convert_array_to_raster(output_path1, arr1, geo, output_band=1)
+convert_array_to_raster(output_path2, arr2, geo, output_band=1)
+
+in_t = "H:\\Walnut\\WalnutData\\Merge_percSand_5cm_utm.tif"
+out_t = "H:\\WGEW\\ETRM_inputs\\statics\\percSand.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+in_t = "H:\\Walnut\\WalnutData\\Merge_percClay_5cm_utm.tif"
+out_t = "H:\\WGEW\\ETRM_inputs\\statics\\percClay.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+
+sand= convert_raster_to_array("H:\\WGEW\\ETRM_inputs\\statics\\", "percSand.tif")
+clay= convert_raster_to_array("H:\\WGEW\\ETRM_inputs\\statics\\", "percClay.tif")
+
+idx_s_80 = sand>80
+idx_c_50 = clay>50
+rew = 8 + 0.08*clay
+
+rew[idx_s_80] = 20-0.15*sand[idx_s_80]
+rew[idx_c_50] = 11 - 0.06*clay[idx_c_50]
+drew= rew/2
+geo = get_raster_geo_attributes("H:\\WGEW\\ETRM_inputs\\statics\\geo")
+output_path1 = "H:\\WGEW\\ETRM_inputs\\statics\\rew_Walnut_mm.tif"
+output_path2 = "H:\\WGEW\\ETRM_inputs\\statics\\drew_half_rew_mm.tif"
+arr1 = rew
+arr2 = drew
+convert_array_to_raster(output_path1, arr1, geo, output_band=1)
+convert_array_to_raster(output_path2, arr2, geo, output_band=1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#-----------------------------------------------
+#quaternary and mask
+input_folder = 'G:\\ETRM_inputs_Walnut\\statics\\'
+name = "quat_deps_0.tif"
+inp = "G:\\ETRM_inputs_Walnut\\statics\\geo"
+qua = convert_raster_to_array(input_folder, name)
+arr = qua * 0
+geo = get_raster_geo_attributes(inp)
+output_path = input_folder + "quat_deps_0.tif"
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+import numpy as np
+output_path = 'G:\\ETRM_inputs_Walnut\\Mask\\mask_Walnut.tif'
+arr = np.ones((geo['rows'],geo['cols']))
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+#NLCD
+#Set 30 m nearest sampling
+resample_method = "near"
+in_t = "H:\\WGEW\\nlcd_2006_landcover_2011_edition_2014_10_10\\nlcd_2006_landcover_2011_edition_2014_10_10.img"
+out_t = "H:\\WGEW\\NLCD_Walnut_30.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:5070 -t_srs EPSG:26912 -te 576863 3501109 637613 3519619 -ts 2025 617\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h=resample_method, j=in_t, k=out_t)
+call(warp)
+nlcd = convert_raster_to_array("H:\\WGEW\\", "NLCD_Walnut_30.tif")
+from collections import Counter
+count_nlcd = Counter(nlcd.flatten())
+idx_open_water = nlcd == 11 #17
+idx_21 = nlcd == 21
+idx_22 = nlcd == 22
+idx_23 = nlcd == 23
+idx_24 = nlcd == 24
+idx_urban = idx_21+idx_22+idx_23+idx_24 #13
+idx_barren = nlcd == 31 #16
+idx_evergreen_forest = nlcd == 42 #2
+idx_mixed_forest = nlcd == 43 #5
+idx_shrub = nlcd == 52 #7
+idx_grassland = nlcd == 71 #10
+idx_81 = nlcd == 81
+idx_82 = nlcd == 82
+idx_crop = idx_81 + idx_82 #12
+idx_90 = nlcd == 90
+idx_95 = nlcd == 95
+idx_wetland = idx_90 + idx_95 #17
+
+vegetation_height=np.ones((617,2025))
+root_depth=np.ones((617,2025))
+
+vegetation_height[idx_open_water] = 0
+root_depth[idx_open_water] = 1.3
+vegetation_height[idx_urban] = 0
+root_depth[idx_urban] = 0.001
+vegetation_height[idx_barren] = (0.05+0.8)/2
+root_depth[idx_barren] = 1.0
+vegetation_height[idx_evergreen_forest] = 30.0
+root_depth[idx_evergreen_forest] = 2.5
+vegetation_height[idx_mixed_forest] = 20
+root_depth[idx_mixed_forest] = 2.0
+vegetation_height[idx_shrub] = 1.0
+root_depth[idx_shrub] = 1.0
+vegetation_height[idx_grassland] = (0.05+0.8)/2
+root_depth[idx_grassland] = 0.5
+vegetation_height[idx_crop] = (0.0+0.8)/2
+root_depth[idx_crop] = 0.7
+vegetation_height[idx_wetland] = (0.05+1.0)/2
+root_depth[idx_wetland] = 1.0
+
+geo = get_raster_geo_attributes("H:\\WGEW\\geo")
+output_path1 = "H:\\WGEW\\plnt_hgt.tif"
+output_path2 = "H:\\WGEW\\root_depth.tif"
+arr1 = vegetation_height
+arr2 = root_depth
+convert_array_to_raster(output_path1, arr1, geo, output_band=1)
+convert_array_to_raster(output_path2, arr2, geo, output_band=1)
+in_t = "H:\\WGEW\\plnt_hgt.tif"
+out_t = "H:\\WGEW\\plnt_hgt_250.tif"
+
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h="average", j=in_t, k=out_t)
+call(warp)
+in_t = "H:\\WGEW\\root_depth.tif"
+out_t = "H:\\WGEW\\root_depth_250.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h="average", j=in_t, k=out_t)
+call(warp)
+
+
+in_t = "H:\\Walnut\\Ksat.tif"
+out_t = "H:\\WGEW\\Ksat_calculated_ums.tif"
+warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g}\n' \
+           ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
+                                            h="average", j=in_t, k=out_t)
+call(warp)

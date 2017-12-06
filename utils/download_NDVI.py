@@ -79,17 +79,31 @@ for haha in files:
 
 #Reproject interpolated wrong-projected Modis Data
 
-folder_o = 'G:\\Walnut\\Modis\\'
+# folder_o = 'G:\\Walnut\\Modis\\'
+# os.chdir(folder_o)
+# files = os.listdir(folder_o)
+# for haha in files:
+#     if haha.startswith('20'):
+#         name = haha[0:-4]
+#         file_o = 'G:\\Walnut\\Modis\\' + name + '.tif'
+#         output_w = 'G:\\Walnut\\Modis\\R' + name[0:7] + '.tif'
+#
+#         repro = 'gdalwarp -overwrite -s_srs EPSG:26712 -t_srs EPSG:26912 -of GTiff "{a}" {b}'.format(a=file_o, b=output_w)
+#         call(repro)
+#
+#         print "Done processing {a}".format(a=name)
+
+
+folder_o = 'H:\\Walnut\\Modis\\'
 os.chdir(folder_o)
 files = os.listdir(folder_o)
 for haha in files:
     if haha.startswith('20'):
         name = haha[0:-4]
-        file_o = 'G:\\Walnut\\Modis\\' + name + '.tif'
-        output_w = 'G:\\Walnut\\Modis\\R' + name[0:7] + '.tif'
+        file_o = 'H:\\Walnut\\Modis\\' + name + '.tif'
+        output_w = 'H:\\Walnut\\Modis\\RR' + name[0:7] + '.tif'
 
-        repro = 'gdalwarp -overwrite -s_srs EPSG:26712 -t_srs EPSG:26912 -of GTiff "{a}" {b}'.format(a=file_o, b=output_w)
+        repro = 'gdalwarp -overwrite -s_srs EPSG:26712 -t_srs EPSG:26912 -srcnodata -3000 -dstnodata -999 -of GTiff -te 576863 3501109 637613 3519609 -tr 250 250 "{a}" {b}'.format(a=file_o, b=output_w)
         call(repro)
 
         print "Done processing {a}".format(a=name)
-

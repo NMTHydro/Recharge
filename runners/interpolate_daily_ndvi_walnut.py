@@ -170,10 +170,10 @@ def main():
     endday = datetime(2016, 1, 1, 0)
     finalyear = 2016
 
-    base_dir = 'G:\\Walnut\\Modis\\'#paths.ndvi_individ
-    output ='G:\\Walnut\\Modis\\Inter'#paths.ndvi_spline
+    base_dir = 'H:\\Walnut\\Modis\\'#paths.ndvi_individ
+    output ='H:\\Walnut\\Modis\\InterNew'#paths.ndvi_spline
 
-    ref_map = os.path.join(base_dir, 'R2000049.tif')
+    ref_map = os.path.join(base_dir, 'RR2000049.tif')
     _, _, _, _, lon, lat, linke, prj, fill_val = read_map(ref_map, 'Gtiff')
 
     srs = osr.SpatialReference(prj)
