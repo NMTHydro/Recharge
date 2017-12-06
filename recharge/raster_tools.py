@@ -120,9 +120,9 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
 
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
-    if not os.path.isfile(output_path):
-        print 'Not a valid file: {}. Raster could not be written!'.format(output_path)
-        return
+    #if not os.path.isfile(output_path):
+    #    print 'Not a valid file: {}. Raster could not be written!'.format(output_path)
+    #    return
 
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],

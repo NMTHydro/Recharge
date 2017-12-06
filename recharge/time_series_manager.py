@@ -97,8 +97,8 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     # RGL  = incoming longwave
     # RGLout = outgoing longwave
     """
-    path = paths.amf_sites
-    print path
+    path = paths.amf_sites # this doesn't work
+
 
     def day_fraction_to_hr_min(fractional_day, year):
         """
@@ -142,7 +142,8 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     columns = ['H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
     for key, val in dict_.iteritems():  # Changes here
         amf_name = val['Name']
-        print 'name: {}'.format(amf_name)
+        path = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel/',
+                            'ETRM_inputs_Ameriflux','ameriflux_sites')
         folder = os.path.join(path,'AMF_Data',amf_name)
 
         folder_contents = os.listdir(folder)
@@ -218,7 +219,7 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
                                                                                     amf_name)
 
         if save_cleaned_data_path:
-            p = os.path.join(save_cleaned_data_path, '{}_cleaned_all.csv'.format(amf_name))
+            p = os.path.join(save_cleaned_data_path, 'ameriflux_sites', 'AMF_ETRM_output', '{}_cleaned_all.csv'.format(amf_name))
             df.to_csv(p)
 
             p = os.path.join(save_cleaned_data_path, '{}_cleaned_lowErr.csv'.format(amf_name))

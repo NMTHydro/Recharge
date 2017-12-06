@@ -64,7 +64,8 @@ class Processes(object):
 
         # set global mask and polygons paths
         paths.set_polygons_path(cfg.polygons)
-        paths.set_mask_path(cfg.mask)
+        if cfg.mask:
+            paths.set_mask_path(cfg.mask)
 
         if cfg.use_verify_paths:
             paths.verify()
@@ -184,7 +185,7 @@ class Processes(object):
             #             print 'item in array', item
 
             # print "array counter {}".format(array_counter)
-            print m['tot_etrs'], nonzero(m['tot_etrs'])
+            # print 'master tot_etrs', m['tot_etrs'], nonzero(m['tot_etrs'])
 
             time_it(rm.update_raster_obj, m, day)
             # after here
@@ -290,12 +291,13 @@ class Processes(object):
         self._initial_depletions = m['dr'] + m['de'] + m['drew']
 
     def save_mask(self):
-        self._info('saving mask to results')
-
-        # copy the mask path file into results
         path = paths.mask
-        name = os.path.basename(path)
-        shutil.copyfile(path, os.path.join(paths.results_root, name))
+        if path is not None:
+            self._info('saving mask to results')
+
+            # copy the mask path file into results
+            name = os.path.basename(path)
+            shutil.copyfile(path, os.path.join(paths.results_root, name))
 
     def save_tracker(self, path=None):
         """
