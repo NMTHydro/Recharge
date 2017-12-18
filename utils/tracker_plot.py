@@ -93,7 +93,7 @@ def grapher(col_dict, x, y, plot_output, function_count, together=False):
                 plt.savefig('{}/{}_separate{}{}.png'.format(plot_output, y_item, count, function_count))
                 count += 1
     if together == True:
-        # We plot everything together.
+        # We plot everything together. # yes
         for x_item in x:
             count = 0
             fig = plt.figure()
