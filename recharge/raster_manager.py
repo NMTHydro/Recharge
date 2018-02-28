@@ -102,6 +102,9 @@ class RasterManager(object):
                 print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
+                    print "output was set..."
+                else:
+                    print "date_object NOT in self._save_dates"
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
         #print 'outputs rm {}'.format(outputs)

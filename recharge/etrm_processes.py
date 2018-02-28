@@ -101,7 +101,7 @@ class Processes(object):
         self.yplot = self._cfg.yplot
         self.plot_output = self._cfg.plot_output
 
-        shape = self._static['taw'].shape
+        shape = self._static['taw'].shape # Here's where the shape of the grid is determined GELP
         self._master = initialize_master_dict(shape)
 
         self._raster_manager = RasterManager(cfg)
@@ -207,9 +207,19 @@ class Processes(object):
             if self.point_tracker is None:
                 self.point_tracker = initialize_point_tracker(m, point_arr)
 
-            time_it(rm.update_raster_obj, m, day)
+            time_it(rm.update_raster_obj, m, day) # TODO - Prob starts after here...
+            print "Does it get to here?"
             time_it(self._update_master_tracker, m, day)
+            print "Does it get to here (update master tracker)"
             self._update_point_tracker(m, day)
+
+            # for index, dataframe in self.point_tracker:
+            #
+            #     print "index"
+            #
+            #     print "dataframe"
+
+            print "Does it update point tracker?"
 
             #print 'heres point tracker', self.point_tracker
         print "Here's your guy {}".format(self.point_tracker)
@@ -931,7 +941,21 @@ class Processes(object):
     def _update_point_tracker(self, m, date):
 
         #print self.point_tracker
+        total_mem = 0
         for index, dataframe in self.point_tracker:
+
+            mem = dataframe.memory_usage(index=False)
+
+            # print "mem {}".format(mem)
+
+            total_mem += mem
+
+        print "Total memory used by {} is {}".format(date, total_mem)
+
+
+        for index, dataframe in self.point_tracker:
+
+            # print "memory usage of the dataframe", dataframe.memory_usage(index=False)
 
             #print 'item in point tracker', item
 
@@ -965,6 +989,7 @@ class Processes(object):
             #=========
             else:
                 v = self._output_function(v)
+            print "V taken care of..."
             return v
 
         tracker_from_master = [factory(key) for key in sorted(m)]

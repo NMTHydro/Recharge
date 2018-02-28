@@ -61,6 +61,7 @@ def run_model(cfg_path=None):
     print 'Running Model'
     print 'this is the cfg_path {}'.format(cfg_path)
     cfg = Config(cfg_path)
+    print cfg
     for i, runspec in enumerate(cfg.runspecs):
         runspec.output_root = '{}{:03n}'.format(runspec.output_root, i)
         # TODO - make a modified make_results_dir to only create of the 'outer' folder.
@@ -131,9 +132,11 @@ def run(cfg_path=None):
 
 
 if __name__ == '__main__':
+    # # print sys.argv[1]
     if len(sys.argv) == 1:
         run()
     else:
         run(cfg_path=sys.argv[1])
+    # run(cfg_path=None)
 
 # ============= EOF =============================================

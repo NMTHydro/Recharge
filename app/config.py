@@ -172,7 +172,16 @@ class Config:
             rfile = open(path, 'r')
         else:
             rfile = path
+        # print paths.config
+        # print rfile
+        #rfile = path
 
+        # for doc in yaml.load_all(rfile):
+        #     if doc != None:
+        #         print doc
+        #     else:
+        #         print "here's the bad one"
+        #         print doc
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
         rfile.close()
 

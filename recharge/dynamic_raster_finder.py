@@ -224,10 +224,10 @@ def get_penman(date_object, variable='etrs'):
     tail = '{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
 
     if variable == 'etrs':
-        name = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail))
+        name = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail)) # default is this one
 
     elif variable == 'rlin':
-        name = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail))
+        name = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail)) # Makes no sense. Not in directory.
 
     elif variable == 'rg':
         name = os.path.join('rad{}'.format(year), 'RTOT_{}'.format(tail))
