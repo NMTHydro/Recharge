@@ -204,6 +204,15 @@ class Processes(object):
         self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
         # big_counter = 0
         st = time.time()
+
+        # JIR pympler memory profiling
+        # see https://pythonhosted.org/Pympler/classtracker.html#classtracker
+        from pympler.classtracker import ClassTracker
+        tracker = ClassTracker()
+        from recharge.raster import Raster
+        tracker.track_class(Raster)
+
+
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
             self._info('DAY:     {}({})'.format(day, tm_yday))
@@ -211,7 +220,12 @@ class Processes(object):
             # JIR
             # print the memory usage before and after this method. This is probably the source of the leak
             # mem_available()
+            tracker.create_snapshot()
             time_it(self._do_daily_raster_load, day)
+            tracker.create_snapshot()
+            # is the number of Rasters growing each iteration?
+            # that could be a problem
+            tracker.stats.print_summary()
             # mem_available()
 
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
