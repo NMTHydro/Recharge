@@ -90,6 +90,17 @@ class Paths:
         self.amf_ex_sac_output_root = ex_sac_out = os.path.join(ex_sac, 'AMF_ETRM_output')
         self.amf_ex_sac_extract = os.path.join(ex_sac, 'AMF_extracts')
 
+        mem = os.path.join(output_root, "mem000.txt")
+
+        cnt = 1
+        while os.path.isfile(mem):
+            mem = os.path.join(output_root, "mem{:03n}.txt".format(cnt))
+            cnt += 1
+
+        self.mem_file = mem
+
+        # use me
+
     def set_mask_path(self, path):
         self.mask = self.input_path(path)
         print 'here is the mask path {}'.format(self.mask)

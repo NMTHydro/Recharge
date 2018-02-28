@@ -144,7 +144,7 @@ class Raster(object):
         :return:
         """
         idxs = self._get_masked_indices()
-        print self._arr
+        # print self._arr
         return self._arr[idxs].flatten()
 
     def open(self, path, band=1):

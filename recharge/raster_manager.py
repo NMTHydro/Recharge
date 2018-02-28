@@ -101,6 +101,7 @@ class RasterManager(object):
             if self._save_dates:
                 print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
                 if date_object in self._save_dates:
+                    print " We got past the if... "
                     self._set_outputs(dailys, date_object, 'daily')
                     print "output was set..."
                 else:
@@ -120,7 +121,9 @@ class RasterManager(object):
             self._set_outputs(outputs, date_object, 'annual')
 
     def _set_outputs(self, outputs, date_object, period):
+        print "We got to set outputs"
         for element, arr in outputs:
+
             print 'period -> {}'.format(period)
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)

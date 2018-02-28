@@ -121,19 +121,19 @@ def initialize_static_dict(pairs=None):
     for k, p in pairs:
         print 'static {:<20s} {}'.format(k, p)
         raster = Raster(p, root=paths.static_inputs)
-        print 'raster jjj', raster
+        # print 'raster jjj', raster
         arr = raster.masked()
 
         if k == 'plant_height':
             arr = initial_plant_height(arr)
-            print arr
+            # print arr
         elif k == 'rew':
             arr = initial_rew(arr)
         elif k == 'root_z':
             arr = initial_root_z(arr)
         elif k == 'soil_ksat':
             arr = initial_soil_ksat(arr)
-            print arr
+            # print arr
         elif k == 'tew':
             arr = initial_tew(arr)
 
@@ -237,7 +237,7 @@ def initialize_raster_tracker(shape):
     """
 
     d = {k: {tk: zeros(shape) for tk in OUTPUTS} for k in TRACKER_KEYS}
-    print 'd itself', d
+    # print 'd itself', d
     return d
 
 

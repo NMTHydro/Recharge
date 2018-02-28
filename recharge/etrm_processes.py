@@ -18,6 +18,7 @@ import os
 import shutil
 import time
 import numpy
+import psutil
 import gdal
 import ogr
 import osgeo
@@ -42,7 +43,35 @@ class NotConfiguredError(BaseException):
     def __str__(self):
         return 'The model has not been configured. Processes.configure_run must be called before Processes.run'
 
+START_TIME = None
 
+def mem_available(tag=""):
+    values = psutil.virtual_memory()
+    # print "*********{} - mem 1: {}**********".format(tag, values.free*1024**-2)
+
+    # print "$$$$$$$$$ {} - mem 2: {} $$$$$$".format(tag, values.free >> 20)
+
+    print "======== {} - mem 1: {} =========".format(tag, values.available >> 20)
+    print "GIGGGSSSS {} - mem 2: {} =========".format(tag, values.available >> 30)
+
+    # todo write to file
+
+    used_memory = values.available >> 20 # megabytes
+
+    global START_TIME
+    if START_TIME is None:
+        START_TIME = time.time()
+    with open(paths.mem_file, 'a') as wfile:
+        wfile.write("{},{}\n".format(time.time()-START_TIME, used_memory))
+        print "wrote the line"
+
+
+    # if psutil:
+    #     mem = psutil.virtual_memory().free
+    #     mem *= 1024. ** -2
+    # else:
+    #     mem = 16
+    #     return mem
 class Processes(object):
     """
     The purpose of this class is update the etrm master dict daily.
@@ -215,12 +244,17 @@ class Processes(object):
 
             if self.point_tracker is None:
                 self.point_tracker = initialize_point_tracker(m, point_arr)
+            mem_available(01)
+            time_it(rm.update_raster_obj, m, day) # TODO - Prob starts after here...
 
             time_it(rm.update_raster_obj, m, day)  # TODO - Prob starts after here...
             print "Does it get to here?"
+            mem_available(02)
+            # todo output plot of time vs memory consumtion
             time_it(self._update_master_tracker, m, day)
+            mem_available(03)
             print "Does it get to here (update master tracker)"
-            self._update_point_tracker(m, day)
+            #self._update_point_tracker(m, day)
 
             # for index, dataframe in self.point_tracker:
             #
@@ -982,6 +1016,7 @@ class Processes(object):
             total_mem += mem
 
         print "Total memory used by {} is {}".format(date, total_mem)
+        # Todo - write memory values and date to text file
 
         for index, dataframe in self.point_tracker:
             # print "memory usage of the dataframe", dataframe.memory_usage(index=False)
@@ -1010,6 +1045,9 @@ class Processes(object):
                 v = median(v)
             # ========= July 4, 2017 testing
             elif k == 'de':
+                # print 'de in tracker', v
+                pass
+            #=========
                 print 'de in tracker', v
             # =========
             else:
