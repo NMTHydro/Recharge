@@ -117,9 +117,9 @@ def tracker_iterator(main_path, list_of_dates):
 
     print "full outfiles", out_files
 
-    for i in range(0, 16):
+    for i in range(0, 13): # 0, 16
         pix = pd.DataFrame([])
-        for j in range(i, i + (len(out_files)-15), 16):
+        for j in range(i, i + (len(out_files)-12), 13): # len(out_files)-15), 16
 
             # print "j", j
 
@@ -131,7 +131,9 @@ def tracker_iterator(main_path, list_of_dates):
 
             pix = pix.append(y)
         dict["Pixel_{}".format(i + 1)] = pix
-        pix.to_csv("/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data/p %d.csv" % i, index=False)
+        pix.to_csv("/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data_March_8_2018/p %d.csv" % i,
+                   index=False)
+
     #print "the pixels", dict['Pixel_15']
 
     return dict
@@ -146,7 +148,7 @@ def run():
                      '07/15/2007', '09/15/2007', '07/15/2008', '09/15/2008', '07/15/2009', '09/15/2009', '07/15/2010',
                      '09/15/2010']
 
-    main_path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data"
+    main_path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data_March_8_2018"
 
     # should evenutally yield a dict of dataframes
     relevant_trackers = tracker_iterator(main_path, list_of_dates)

@@ -19,6 +19,7 @@ import shutil
 import time
 import numpy
 import psutil
+import pandas
 import gdal
 import ogr
 import osgeo
@@ -205,12 +206,24 @@ class Processes(object):
         # big_counter = 0
         st = time.time()
 
-        # JIR pympler memory profiling
-        # see https://pythonhosted.org/Pympler/classtracker.html#classtracker
-        from pympler.classtracker import ClassTracker
-        tracker = ClassTracker()
-        from recharge.raster import Raster
-        tracker.track_class(Raster)
+        # # JIR pympler memory profiling
+        # # see https://pythonhosted.org/Pympler/classtracker.html#classtracker
+        #
+        # from pympler.classtracker import ClassTracker
+        # tracker = ClassTracker()
+        # from recharge.raster import Raster
+        # tracker.track_class(Raster)
+        # tracker.track_class(pandas.DataFrame)
+
+        # # GELP pympler memory profiling of Pandas Dataframe Class
+        # from pympler.classtracker import ClassTracker
+        # tracker = ClassTracker()
+        # tracker.track_class(pandas.DataFrame)
+
+        # # GELP pympler memory profiling of numpy.ndarray
+        # from pympler.classtracker import ClassTracker
+        # tracker = ClassTracker()
+        # tracker.track_class(numpy.ndarray)
 
 
         for day in day_generator(*self._date_range):
@@ -220,12 +233,16 @@ class Processes(object):
             # JIR
             # print the memory usage before and after this method. This is probably the source of the leak
             # mem_available()
-            tracker.create_snapshot()
+
+            # tracker.create_snapshot()
+
             time_it(self._do_daily_raster_load, day)
-            tracker.create_snapshot()
+
+            # tracker.create_snapshot()
             # is the number of Rasters growing each iteration?
             # that could be a problem
-            tracker.stats.print_summary()
+
+            # tracker.stats.print_summary()
             # mem_available()
 
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
@@ -258,6 +275,7 @@ class Processes(object):
 
             if self.point_tracker is None:
                 self.point_tracker = initialize_point_tracker(m, point_arr)
+
             mem_available(01)
             time_it(rm.update_raster_obj, m, day) # TODO - Prob starts after here...
 
@@ -266,9 +284,17 @@ class Processes(object):
             mem_available(02)
             # todo output plot of time vs memory consumtion
             time_it(self._update_master_tracker, m, day)
+
+            # tracker.create_snapshot()
+
             mem_available(03)
             print "Does it get to here (update master tracker)"
-            #self._update_point_tracker(m, day)
+
+            self._update_point_tracker(m, day)
+
+            # tracker.create_snapshot()
+            #
+            # tracker.stats.print_summary()
 
             # for index, dataframe in self.point_tracker:
             #

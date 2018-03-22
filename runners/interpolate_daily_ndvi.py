@@ -24,11 +24,21 @@ from recharge import NUMS, NUMSIZE
 from recharge.tools import write_map, read_map
 from app.paths import paths
 
-C = 2272
-R = 2525
+C = 5200 # 2272
+R = 4000 # 2525
 
 
 def time_interpolation(base_dir, day, finalyear):
+    """
+    What I think is going on in this function is as follows: Peter iterates through the NDVI values, finding the
+     original NDVI dates from each year using the list from NUMS in __init__.py. Then he uses those in the spline
+     interpolation.
+
+    :param base_dir:
+    :param day:
+    :param finalyear:
+    :return:
+    """
 
     year = day.year
 
@@ -43,15 +53,18 @@ def time_interpolation(base_dir, day, finalyear):
         if cnt == NUMS[i]:
             first_date = NUMS[i]
             next_date = NUMS[i + 1]
+            print "first date {}, next date {}".format(first_date, next_date)
         elif (cnt < NUMS[i]) and (cnt > NUMS[i - 1]):
             # print('two')
             first_date = NUMS[i - 1]
             next_date = NUMS[i]
+            print "first date {}, next date {}".format(first_date, next_date)
         elif (cnt > NUMS[i]) and (cnt < NUMS[i + 1]):
             # print('three')
             # print(NUMS[i + 1])
             first_date = NUMS[i]
             next_date = NUMS[i + 1]
+            print "first date {}, next date {}".format(first_date, next_date)
         elif (cnt >= 353) and (year == finalyear):
             first_date = NUMS[NUMSIZE - 1]
             # print('first_date: ', first_date)
@@ -63,6 +76,7 @@ def time_interpolation(base_dir, day, finalyear):
             i = 0
             next_date = NUMS[i]
             # print('next_date: ', next_date)
+            print "first date {}, next date {}".format(first_date, next_date)
 
         i += 1
 
@@ -129,6 +143,7 @@ def time_interpolation(base_dir, day, finalyear):
     print('days difference from next ndvi raster', days_dif)
     print('out of max days difference', max_days_diff)
 
+    # Start of the interpolation part....
     if (cnt >= 353) and (year == finalyear):
         interp = 0.0  # Set to 0 otherwise will divide by zero and give error
     else:

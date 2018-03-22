@@ -73,20 +73,44 @@ def add_noise(df):
     :return:
     """
 
+
+    # # Adding flat noise______________________________
     # noise = np.random.normal(0, 0.05, len(df['rzsm']))
+    # df['rzsm'] = df['rzsm'] + noise
+    #
+    #
+    # # # Adding proportional noise____________________
+    # arr = np.random.normal(0, 0.1, len(df['rzsm']))
+    # print "arr", arr
+    # noise = df['rzsm'] * arr
+    # std_def = np.std(noise)
+    # print "std_def", std_def
+    # df['rzsm'] = df['rzsm'] + noise
 
-    # another way to do it.
-    arr = np.random.normal(0, 0.05, len(df['rzsm']))
 
-    print "arr", arr
+    # # Adding Progressive Noise_________________________
+    arr1 = np.random.normal(0, 0.005, len(df['rzsm']))
+    print "arr1", arr1
 
-    noise = df['rzsm'] * arr
+    arr2 = np.random.normal(0, 0.05, len(df['rzsm']))
+    print "arr2", arr2
 
-    std_def = np.std(noise)
+    noise1 = df['rzsm'] * arr2
+    noise2 = df['rzsm'] * arr2
 
-    print "std_def", std_def
+    progressive_noise_list = []
+    for i, j, k in zip(df['rzsm'], noise1, noise2):
+        if i < 0.1:
+            i = i + j
+            progressive_noise_list.append(i)
+        else:
+            i = i + k
+            progressive_noise_list.append(i)
+    print "the progressive noise list", progressive_noise_list
+    noisy_arr = np.array(progressive_noise_list)
 
-    df['rzsm'] = df['rzsm'] + noise
+    # add the noise added array back into the dataframe.
+    df['rzsm'] = noisy_arr
 
     return df
 
@@ -161,7 +185,7 @@ def run():
     """Calls all the functions in the script. Reads in a bunch of ETRM outputs organized by date and filters them by
     TAW and then deletes the TAW and adds noise to the RZSM column."""
 
-    path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data/pixels_processing"
+    path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data_March_8_2018/straight_error_005"
 
     path_dict = {}
     for directory_path, subdir, file in os.walk(path, topdown=False):
