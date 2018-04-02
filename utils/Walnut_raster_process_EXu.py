@@ -343,6 +343,9 @@ rows = 74
 resample_method = 'near'
 x_min_n = 576863+250
 y_min_n = 3501109+500
+#x_min_n = 577113
+#y_min_n = 3501609
+
 cols_n = 243-1
 rows_n = 74-2
 def find_format(path, filter_):
@@ -652,3 +655,9 @@ warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} 
            ' -r {h}  -multi {j} {k}'.format(a=projection, b=x_min_n, c=y_min_n, d=x_max, e=y_max, f=cols_n, g=rows_n,
                                             h="average", j=in_t, k=out_t)
 call(warp)
+gdalwarp -overwrite -s_srs EPSG:26912 -t_srs EPSG:26912 -te 577113 3501609 637613 3519609
+-te 577113 3501609 637613 3519609 -tr 250 250
+gdalwarp -overwrite -s_srs EPSG:26912 -te 577113 3501609 637613 3519609 -tr 250 250 -r max -of GTiff
+#rasterize example to make mask
+#first step
+gdal_rasterize -a id -te 577113 3501609 637613 3519609 -tr 1.0 1.0 -l r81 "G:/Observations/Precipitation/PRISM gauge/r81.shp" G:/Observations/Precipitation/81.tif
