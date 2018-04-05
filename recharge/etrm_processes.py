@@ -562,8 +562,11 @@ class Processes(object):
 
         """
 
+        # basal crop coefficient - GELP
         kcb = m['kcb']
+        # Ref ET -GELP
         etrs = m['etrs']
+        # Root zone depletion -GELP
         pdr = m['dr']
 
         ####
@@ -635,7 +638,7 @@ class Processes(object):
         kcb = m['kcb']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
         ks = m['ks']
-        etrs = m['etrs']
+        etrs = m['etrs'] # comes from get_penman function
 
         # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1

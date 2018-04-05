@@ -91,26 +91,35 @@ def add_noise(df):
     # # Adding Progressive Noise_________________________
     arr1 = np.random.normal(0, 0.005, len(df['rzsm']))
     print "arr1", arr1
+    sigma1 = 0.005
 
     arr2 = np.random.normal(0, 0.05, len(df['rzsm']))
     print "arr2", arr2
+    sigma2 = 0.05
 
-    noise1 = df['rzsm'] * arr2
+    noise1 = df['rzsm'] * arr1
     noise2 = df['rzsm'] * arr2
 
+    sigma_list = []
     progressive_noise_list = []
     for i, j, k in zip(df['rzsm'], noise1, noise2):
         if i < 0.1:
             i = i + j
             progressive_noise_list.append(i)
+            sigma_list.append(sigma1)
         else:
             i = i + k
             progressive_noise_list.append(i)
+            sigma_list.append(sigma2)
     print "the progressive noise list", progressive_noise_list
+    print "the sigma list", sigma_list
     noisy_arr = np.array(progressive_noise_list)
+    sigma_arr = np.array(sigma_list)
 
     # add the noise added array back into the dataframe.
     df['rzsm'] = noisy_arr
+    # add this to the array so Juliet can tell the chi_square
+    df['noise_error'] = sigma_arr
 
     return df
 
@@ -185,7 +194,7 @@ def run():
     """Calls all the functions in the script. Reads in a bunch of ETRM outputs organized by date and filters them by
     TAW and then deletes the TAW and adds noise to the RZSM column."""
 
-    path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data_March_8_2018/straight_error_005"
+    path = "/Volumes/SeagateExpansionDrive/juliet_inverse_problem/gabe_original_data_March_8_2018/progressive_error"
 
     path_dict = {}
     for directory_path, subdir, file in os.walk(path, topdown=False):
