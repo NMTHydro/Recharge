@@ -396,8 +396,23 @@ def parse_data():
         # add the date to the dictionary?
 
     # # as a reminder this is the dictionary that has been normalized
-    # print "avg normal dictionary", avg_normal_dictionary
+    print "avg normal dictionary", avg_normal_dictionary
 
+    # the dictionary relating pixels to locations:
+    relate_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
+                   "002": ["C10", "C11"],
+                   "003": ["C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21"],
+                   "004": ["C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29"],
+                   "005": ["C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39"],
+                   "006": ["C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48"],
+                   "007": ["C51", "C52", "C53", "C54", "C55", "C56", "C57"],
+                   "008": ["C58", "C59", "C60", "C61", "C62", "C63", "C64", "C65", "C66"],
+                   "009": ["C67", "C68", "C69", "C70"], "010": ["C71", "C72", "C73", "C74", "C75"],
+                   "011": ["C76", "C77", "C78", "C79", "C80", "C81", "C82", "C83", "C84"],
+                   "012": ["C85", "C86", "C87", "C88", "C89"]}
+
+
+    # === KEEP ====
     # make a list of dataframes
     df_list = []
     for key, value in avg_normal_dictionary.iteritems():
@@ -406,34 +421,90 @@ def parse_data():
 
         df_list.append(_df)
 
-    # print "DF list {}".format(df_list)
+    print "DF list {}".format(df_list)
+    # === KEEP ====
 
-    # join the dataframes by the 'date' column. only matching rows will be kept
 
-    df_merge_list = []
-    df_merge = None
-    for i in range(len(df_list)):
-        print "i", i
+    # # === KEEP ====
+    # # make a dict of dataframes
+    # df_dict = {}
+    # for k, v in relate_dict.iteritems():
+    #
+    #     for i in v:
+    #         df_list = []
+    #         for key, value in avg_normal_dictionary.iteritems():
+    #             if i == key:
+    #                 _df = pd.DataFrame(data={key: value[0], 'date': value[1]}, columns=[key, 'date'])
+    #                 df_list.append(_df)
+    #
+    #     df_dict[k] = df_list
+    # print "real and true df dict", df_dict
+    # # === KEEP ====
 
-        if i == 0:
-            print "first merge"
-            _df_interim = pd.merge(df_list[i], df_list[i + 1], on='date')
-            # df_merge_list.append(_df_interim)
-            df_merge = _df_interim
-            del _df_interim
-        elif i > 0 : # and i < (len(df_list) -1)
-            print 'do the second merge'
-            # _df_interim = pd.merge(df_merge_list[i-1], df_list[i], on='date')
-            _df_interim = pd.merge(df_merge, df_list[i], on='date')
-            # df_merge_list.append(_df_interim)
-            df_merge = _df_interim
-            del _df_interim
-        # else:
-        #     print 'merge backwards'
-        #     _df_interim = pd.merge(df_merge_list[i - 1], df_list[i], on='date')
-        #     df_merge_list.append(_df_interim)
 
-    print "This is the final merged dataframe {}".format(df_merge_list[-1])
+    related_dfs = {}
+    for key, value in relate_dict.iteritems():
+
+        # join the dataframes by the 'date' column. only matching rows will be kept
+        df_merge_list = []
+        # df_merge = None
+        for i in range(len(df_list)):
+            print "i", i
+            if i == 0:
+                print "first merge"
+                _df_interim = pd.merge(df_list[i], df_list[i + 1], on='date')
+                df_merge_list.append(_df_interim)
+                # df_merge = _df_interim
+                del _df_interim
+            elif i > 0 : # and i < (len(df_list) -1)
+                print 'do the second merge'
+                _df_interim = pd.merge(df_merge_list[i-1], df_list[i], on='date')
+                # _df_interim = pd.merge(df_merge, df_list[i], on='date')
+                df_merge_list.append(_df_interim)
+                # df_merge = _df_interim
+                del _df_interim
+            # else:
+            #     print 'merge backwards'
+            #     _df_interim = pd.merge(df_merge_list[i - 1], df_list[i], on='date')
+            #     df_merge_list.append(_df_interim)
+
+        print "This is the final merged dataframe {}".format(df_merge_list[-1])
+        related_dfs[key] = df_merge_list[-1]
+        del df_merge_list
+
+
+
+
+    # # todo - do for just the relate_dict
+    #
+    # dates_C09 = df['location']['C09']
+    #
+    # good_dates = []
+    # lseries= [a, b, c, d] # for ex. a = (dates_a, sm_a)
+    #
+    # for di in dates:
+    #
+    #     for series in lseries:
+    #
+    #         # if bit in series is "." dont add it to good_dates
+    #
+    #         v = "."
+    #         if v == '.':
+    #             break
+    #     # so if we never break, the else will execute.
+    #     else:
+    #         good_dates.append()
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":

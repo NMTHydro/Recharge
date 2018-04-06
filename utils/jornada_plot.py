@@ -338,74 +338,74 @@ def run():
 
         # todo - make a script that does all the TAWs plotted cummulatively...
 
-# =================================== find_error() exclusive functions =============================================
+=================================== find_error() exclusive functions =============================================
 
-# def nrml_rzsm_for_error(data):
-#     """
-#      Normalize the volumetric soil water content into a RZSM by taking the Min - Max and normalizing on a scale of zero
-#     to one.
-#
-#     :return: normalized dataset
-#     """
-#
-#     print 'length of data', len(data)
-#
-#     print "DATA", data
-#
-#     # Get min and max from a long dataset
-#     ma = max(data)
-#     print "ma", ma
-#     mi = min(data)
-#     print "mi", mi
-#
-#     # normalized scale
-#     n0 = 0
-#     n1 = 1
-#
-#     # create a new normalized dataset
-#     nrml_data = [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) for value in data]
-#     print "lenght of normalized data", len(nrml_data)
-#     print "actual normal data array", nrml_data
-#
-#     return nrml_data
-#
-# def float_data(data):
-#     data = [float(i) for i in data]
-#     return data
-#
-# def depth_average(j_30, j_60, j_90, j_110, j_130):
-#     """
-#
-#     :param j_30: time series of 30m vol soil moisture data
-#     :param j_60: time series of 60m vol soil moisture data
-#     :param j_90: time series of 90m vol soil moisture data
-#     :param j_110: time series of 110m vol soil moisture data
-#     :param j_130: time series of 130m vol soil moisture data
-#     :return: depth averaged vol soil moisture to be normalized.
-#     """
-#     javg_lst = []
-#     for j3, j6, j9, j11, j13 in zip(j_30, j_60, j_90, j_110, j_130):
-#         # multiply each probe measurement by a depth weighting term and get the average of all depth weighted values
-#         # 30cm(0-45), 60cm(45-75), 90cm(75-100), 110cm(100-120), 130cm(120-150) <- Depth weighting of the probes
-#
-#         print "values {} {} {} {} {}".format(j3, j6, j9, j11, j13)
-#
-#         # print "numerator", ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) + (j13 * float(30/150)))
-#         #
-#         # print "numerator mod", ((j3) + (j6 ) + (j9) + (j11) + ( j13))
-#         # print "numerator mod 2", (
-#         # (j3 * (45)) + (j6 * (30 )) + (j9 * (25)) + (j11 * (20)) + (
-#         # j13 * float(30)))
-#         # TODO - Clean this up and make sure d_avg is correct.
-#         d_avg = ((j3 * (45)) + (j6 * (30)) + (j9 * (25)) + (j11 * (20)) + (j13 * (30))) / 150.0
-#
-#         # j_avg = ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) +
-#         #          (j13 * float(30/150))) / 5.0
-#         javg_lst.append(d_avg)
-#
-#     print "j avg list", javg_lst
-#
-#     return javg_lst
+def nrml_rzsm_for_error(data):
+    """
+     Normalize the volumetric soil water content into a RZSM by taking the Min - Max and normalizing on a scale of zero
+    to one.
+
+    :return: normalized dataset
+    """
+
+    print 'length of data', len(data)
+
+    print "DATA", data
+
+    # Get min and max from a long dataset
+    ma = max(data)
+    print "ma", ma
+    mi = min(data)
+    print "mi", mi
+
+    # normalized scale
+    n0 = 0
+    n1 = 1
+
+    # create a new normalized dataset
+    nrml_data = [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) for value in data]
+    print "lenght of normalized data", len(nrml_data)
+    print "actual normal data array", nrml_data
+
+    return nrml_data
+
+def float_data(data):
+    data = [float(i) for i in data]
+    return data
+
+def depth_average(j_30, j_60, j_90, j_110, j_130):
+    """
+
+    :param j_30: time series of 30m vol soil moisture data
+    :param j_60: time series of 60m vol soil moisture data
+    :param j_90: time series of 90m vol soil moisture data
+    :param j_110: time series of 110m vol soil moisture data
+    :param j_130: time series of 130m vol soil moisture data
+    :return: depth averaged vol soil moisture to be normalized.
+    """
+    javg_lst = []
+    for j3, j6, j9, j11, j13 in zip(j_30, j_60, j_90, j_110, j_130):
+        # multiply each probe measurement by a depth weighting term and get the average of all depth weighted values
+        # 30cm(0-45), 60cm(45-75), 90cm(75-100), 110cm(100-120), 130cm(120-150) <- Depth weighting of the probes
+
+        print "values {} {} {} {} {}".format(j3, j6, j9, j11, j13)
+
+        # print "numerator", ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) + (j13 * float(30/150)))
+        #
+        # print "numerator mod", ((j3) + (j6 ) + (j9) + (j11) + ( j13))
+        # print "numerator mod 2", (
+        # (j3 * (45)) + (j6 * (30 )) + (j9 * (25)) + (j11 * (20)) + (
+        # j13 * float(30)))
+        # TODO - Clean this up and make sure d_avg is correct.
+        d_avg = ((j3 * (45)) + (j6 * (30)) + (j9 * (25)) + (j11 * (20)) + (j13 * (30))) / 150.0
+
+        # j_avg = ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) +
+        #          (j13 * float(30/150))) / 5.0
+        javg_lst.append(d_avg)
+
+    print "j avg list", javg_lst
+
+    return javg_lst
 
 
 def find_error():
