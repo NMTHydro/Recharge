@@ -659,5 +659,6 @@ gdalwarp -overwrite -s_srs EPSG:26912 -t_srs EPSG:26912 -te 577113 3501609 63761
 -te 577113 3501609 637613 3519609 -tr 250 250
 gdalwarp -overwrite -s_srs EPSG:26912 -te 577113 3501609 637613 3519609 -tr 250 250 -r max -of GTiff
 #rasterize example to make mask
+-te 114757 3471163 682757 4102413 -tr 250 250
 #first step
 gdal_rasterize -a id -te 577113 3501609 637613 3519609 -tr 1.0 1.0 -l r81 "G:/Observations/Precipitation/PRISM gauge/r81.shp" G:/Observations/Precipitation/81.tif

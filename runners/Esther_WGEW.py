@@ -129,21 +129,9 @@ plt.legend()
 plt.show()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #=====================================================================
 #New separate files
+"""Comparison between prism and their cloest gauges"""
 import csv
 
 obs_years = []
@@ -151,7 +139,7 @@ obs_months = []
 obs_days = []
 obs_depth = []
 
-with open('G:\\Observations\\Precip_Anal\\o81.csv') as csvDataFile:
+with open('G:\\Observations\\Precip_Anal\\o24.csv') as csvDataFile:
 # with open('G:\\Observations\\Precip_Anal\\81.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
@@ -171,7 +159,7 @@ months = []
 days = []
 depth = []
 
-with open('G:\\Observations\\Precip_Anal\\81.csv') as csvDataFile:
+with open('G:\\Observations\\Precip_Anal\\24.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         years.append(int(row[2]))
@@ -190,14 +178,18 @@ for i in range(len(years)):
     y.append(b)
 
 import matplotlib.pyplot as plt
-# plt.plot(x,obs_cum_depth,label = "observation")
-# plt.plot(y,depth,label ="PRISM")
-# # plt.plot(x,obs_depth,label = "at the exact pixel")
-# # plt.plot(y,depth,label ="offset by 1")
-# plt.title('Near Rain Gauge 81')
-# plt.ylabel('Cumulative Depth in mm')
-# plt.xlabel('Julian Day from 2/20/2000 to 12/31/2015')
-# plt.legend()
+plt.plot(x,obs_cum_depth,label = "observation")
+plt.plot(y,depth,label ="PRISM")
+# plt.plot(x,obs_depth,label = "at the exact pixel")
+# plt.plot(y,depth,label ="offset by 1")
+plt.title('Near Rain Gauge 24')
+plt.ylabel('Cumulative Depth in mm')
+plt.xlabel('Julian Day from 2/20/2000 to 12/31/2015')
+plt.rc('font', size=12)  # controls default text sizes
+plt.rc('axes', titlesize=12, labelsize=12)  # fontsize of the axes title
+plt.rc('xtick', labelsize=10)  # fontsize of the tick labels
+plt.rc('ytick', labelsize=10)  # fontsize of the tick labels
+plt.legend()
 
 #calculate annual difference
 obs = []
@@ -311,7 +303,7 @@ months = []
 days = []
 depth = []
 
-with open('G:\\Observations\\Precip_Anal_2\\Data\\67mm.csv') as csvDataFile:
+with open('G:\\Observations\\Precip_Anal_2\\Data\\70mm.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         years.append(int(row[2]))
@@ -329,11 +321,16 @@ plt.ylabel('Precipitation duration in minutes')
 plt.xlabel('Julian Day from 2/20/2000 to 12/31/2015')
 plt.legend()
 
-plt.plot(y,depth,label = "PRISM")
+
 plt.plot(x,cd,label = "Observation")
+plt.plot(y,depth,label = "PRISM")
 plt.title('Precipitation Depth at Gauge 70')
 plt.ylabel('Cumulative Depth in mm')
 plt.xlabel('Julian Day from 2/20/2000 to 12/31/2015')
+plt.rc('font', size=12)  # controls default text sizes
+plt.rc('axes', titlesize=12, labelsize=12)  # fontsize of the axes title
+plt.rc('xtick', labelsize=10)  # fontsize of the tick labels
+plt.rc('ytick', labelsize=10)  # fontsize of the tick labels
 plt.legend()
 #cd - cum depth for obs
 #newList - cum depth for PRISM
@@ -478,7 +475,7 @@ def sep_time_depth(gauge_number,obs_id,obs_years,obs_months,obs_days,cum_depth,c
     return dep,dur,x,cd,ind
 
 #for the gauge of
-gauge_number = 69
+gauge_number = 70
 #monsoon
 m_dep,m_dur,m_time,m_cum_dep,m_ind = sep_time_depth(gauge_number =gauge_number,obs_id = monsoon_id,obs_years = monsoon_years,obs_months=monsoon_months,obs_days=monsoon_days,cum_depth=monsoon_depth,cum_duration=monsoon_duration)
 #other time
@@ -490,7 +487,8 @@ months = []
 days = []
 depth = []
 
-with open('G:\\Observations\\Precip_Anal_2\\Data\\70mm.csv') as csvDataFile:
+with open('C:\\Users\\Esther\\Desktop\\NMTer-Spring2018\\HYD 592\\90.csv') as csvDataFile:
+# with open('G:\\Observations\\Precip_Anal_2\\Data\\70mm.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         years.append(int(row[2]))
@@ -555,15 +553,15 @@ p_o_cum_dep = np.cumsum(p_o_dep)
 
 #---------------------------------------------------------------------------
 #comparison for cum
-plt.plot(m_time,p_m_cum_dep,label = "PRISM")
 plt.plot(m_time,m_cum_dep,label = "Gauge")
+plt.plot(m_time,p_m_cum_dep,label = "PRISM")
 plt.ylabel("PRISM")
 plt.xlabel("Gauge")
 plt.title("Cumulative Depth Comparison for monsoon season")
 plt.legend()
 #------------------------------------------------------------
-plt.plot(o_time,p_o_cum_dep,label = "PRISM")
 plt.plot(o_time,o_cum_dep,label = "Gauge")
+plt.plot(o_time,p_o_cum_dep,label = "PRISM")
 plt.ylabel("PRISM")
 plt.xlabel("Gauge")
 plt.title("Cumulative Depth Comparison for usual time")
