@@ -41,7 +41,7 @@ class Paths:
     static_inputs = None
     initial_inputs = None
     polygons = None
-    mask = '/Volumes/Seagate Expansion Drive/ETRM_inputs/new_inputs/Mask/test_2_final_rast.tif' #'/Volumes/Seagate Expansion Drive/ETRM_inputs/Mask/unioned_raster_output.tif' # TODO temporary
+    mask = None #'/Volumes/Seagate Expansion Drive/ETRM_inputs/new_inputs/Mask/test_2_final_rast.tif' #'/Volumes/Seagate Expansion Drive/ETRM_inputs/Mask/unioned_raster_output.tif' # TODO temporary
     amf_sites = None
     amf_extract = None
     amf_output_root = None
@@ -68,7 +68,7 @@ class Paths:
         now = datetime.now()
         tag = now.strftime('%y%m%d_%H_%M')
 
-        self.results_root = os.path.join(self.etrm_output_root, tag)
+        self.results_root = results_rt = os.path.join(self.etrm_output_root, tag)
 
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
@@ -98,6 +98,10 @@ class Paths:
             cnt += 1
 
         self.mem_file = mem
+
+        self.tracker_csv_path = os.path.join(output_root, 'point_trackers')
+
+        # self.pixel_tracker_output = os.path.join(results_rt)
 
         # use me
 

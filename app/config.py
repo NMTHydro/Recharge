@@ -31,31 +31,55 @@ DEFAULT_CFG = '''
 input_root: Please Set Me      ## /Volumes/Seagate Expansion Drive/ETRM_input
 output_root: Please Set Me     ## /Users/ross/Desktop
 
-start_date: Please Set Me      ## 12/1/2013
-end_date: Please Set Me        ## 12/31/2013
+# === START (No earlier than year 2000) ===
 
-mask: Please Set Me            ## masks/my_mask.tif
-polygons: Blank_Geo
+start_day: SET ME # dd
+start_month: SET ME # mm
+start_year: SET ME # YYYY
 
-save_dates: []                  ## formatted -> 'MM/DD/YYY'
+# === Finish (No later than year 2013) ===
 
-daily_outputs:
- - tot_infil
- - tot_etrs
- - tot_eta
- - tot_precip
- - tot_kcb
+end_day: SET ME #dd
+end_month: SET ME # mm
+end_year: SET ME # YYYY
 
-ro_reinf_frac: 0.0
-swb_mode: fao
-rew_ceff: 1.0
-evap_ceff: 1.0
-winter_evap_limiter: 0.3
-output_units: acre-ft
-is_reduced: False
-winter_end_day: 92
-winter_start_day: 306
+# === MASKS ===
+mask: SET ME # mask of study area (e.g. Mask/my_mask.tif)
+binary_shapefile: SET ME # Set path to raster for individual tracker output (e.g binary_shapefile/my_b_shp.tif)
+polygons: Blank_Geo # (default)
+
+#  === Saving specific dates as rasters ===
+save_dates: [] # list in format -> 'mm/dd/YYY' such as ['mm/dd/YYY', 'mm/dd/YYY', 'mm/dd/YYY']
+write_freq: SET ME # modify to output monthly or yearly rasters. OPTIONS -> daily|monthly|yearly
+daily_outputs:[dr, de, drew] # OPTIONS -> anything that appears in the tracker
+
+# === Misc settings ===
+is_reduced: False # (default)
+winter_evap_limiter: 0.3  # (default)
+polygons: Blank_Geo # (default)
+evap_ceff: 1.0 # (default)
+ro_reinf_frac: 0.0 # (default) Runoff Reinfiltration Fraction. To increase runoff into soil.
+rew_ceff: 1.0 # (default)
+output_units: mm # (default) OPTIONS -> mm|acre-ft|?
+winter_end_day: 92 # (default)
+winter_start_day: 306 # (default)
+use_individual_kcb: True # (default)
+new_mexico_extent: True
+
+# === Don't Change ===
+swb_mode: fao # FAO 56 Water Balance Method
 use_verify_paths: True
+
+# === individual pixel tracker related ===
+plot_output: SET ME # (for plots of the binary shapefile pixel tracker time series)
+xplot: ['Date'] # (default)
+yplot: ['rain', 'eta', 'rzsm'] # (default) OPTIONS -> anything in master dict.
+
+# # === TAW parametrization (default is commented out) ====
+# taw_modification: 1.0 # (default) Will increase TAW by a specified factor.
+# uniform_taw: 25 # changes entire raster to a given TAW value
+
+---
 
 '''
 

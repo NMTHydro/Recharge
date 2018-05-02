@@ -19,6 +19,7 @@ import shutil
 import time
 import numpy
 import psutil
+import csv
 import pandas
 import gdal
 import ogr
@@ -192,7 +193,7 @@ class Processes(object):
         # self._shapefile_to_array(paths.point_shape) # TODO point_tracker - should be made to work directly from shapefile
 
         point_arr = self._pixels_of_interest_to_array(
-            paths.point_shape)  # TODO - this will be obsolete soon. (NOW WHAT?!?!)
+            paths.point_shape)
         print 'point array', point_arr
 
         c = self._constants
@@ -225,6 +226,13 @@ class Processes(object):
         # tracker = ClassTracker()
         # tracker.track_class(numpy.ndarray)
 
+        if self.point_tracker is None:
+            # to avoid a memory leak, at this stage we write to a file.
+            # initialize_point_tracker(m, point_arr)
+            # self.point_tracker = True
+            self.point_tracker = initialize_point_tracker(m, point_arr)
+
+        print "This is point tracker now -> {}".format(self.point_tracker)
 
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
@@ -273,8 +281,7 @@ class Processes(object):
             # if self.tracker is None:
             #     self.tracker = initialize_master_tracker(m)
 
-            if self.point_tracker is None:
-                self.point_tracker = initialize_point_tracker(m, point_arr)
+
 
             mem_available(01)
             time_it(rm.update_raster_obj, m, day) # TODO - Prob starts after here...
@@ -290,6 +297,7 @@ class Processes(object):
             mem_available(03)
             print "Does it get to here (update master tracker)"
 
+            # TODO - Fixing memory leak April 27, 2018
             self._update_point_tracker(m, day)
 
             # tracker.create_snapshot()
@@ -314,19 +322,19 @@ class Processes(object):
 
         self.save_mask()
 
-        # JIR
-        csv_list = self.save_point_tracker()
+        # GELP - > Don't need anymore 5/2/2018
+        # csv_list = self.save_point_tracker()
         # self.csv_list = self.save_point_tracker()
         # self.save_tracker()
 
         count = 0
         # JIR
         # for csv in self.csv_list:
-        for csv in csv_list:
-            print 'heres the csv', csv
-            run_tracker_plot(csv, self.xplot, self.yplot, self.plot_output, count, multi=True)  # multi=True is default
-            count += 1
-        self._info('Execution time: {}'.format(time.time() - st))
+        # for csv in csv_list:
+        #     print 'heres the csv', csv
+        #     run_tracker_plot(csv, self.xplot, self.yplot, self.plot_output, count, multi=True)  # multi=True is default
+        #     count += 1
+        # self._info('Execution time: {}'.format(time.time() - st))
 
     def set_save_dates(self, dates):
         """
@@ -1048,30 +1056,76 @@ class Processes(object):
         # ============
 
     def _update_point_tracker(self, m, date):
+        """
 
-        # print self.point_tracker
-        total_mem = 0
-        for index, dataframe in self.point_tracker:
-            mem = dataframe.memory_usage(index=False)
+        :param m: Master dict of the processes class.
+        :param date: The date of the current timestep to be recorded
+        :return: Writes to a csv file the important things to track for a given pixel. Each pixel has its own csv.
+        """
 
-            # print "mem {}".format(mem)
+        # print "UPDATING POINT TRACKER"
+        # print "==\nTHIS is the POINT TRACKER\n=={}".format(self.point_tracker)
+        # # print self.point_tracker
+        # total_mem = 0
+        # for index, dataframe in self.point_tracker:
+        #     mem = dataframe.memory_usage(index=False)
+        #     # print "mem {}".format(mem)
+        #     total_mem += mem
+        #
+        # print "Total memory used by {} is {}".format(date, total_mem)
+        # # Todo - write memory values and date to text file
+        # the item tracker has been initialized and written to csv in _initialize_point_tracker
+        # Here we just append the "item_tracker" to the correct csv...
+        # get the file directory and loop through
+        tracker_files_path = paths.tracker_csv_path
 
-            total_mem += mem
+        for path, dirs, files in os.walk(tracker_files_path, topdown=False):
+            print "paaaath", path
+            print "dirs", dirs
+            print "files leeeest", files
+            for f in files:
+                print "FFFF", f
+                file_indx = f.split("_")[-1]
+                print "AAA", file_indx
+                file_indx = file_indx.split('.')[0]
+                print "BBB", file_indx
 
-        print "Total memory used by {} is {}".format(date, total_mem)
-        # Todo - write memory values and date to text file
+                print "FILE index ", file_indx
+                for index, cols in self.point_tracker:
+                    print "this is the index", index
+                    if "{}".format(index[0]) == file_indx:
+                        print "MAAATCH"
+                        # TODO - Now we are going to append this to the correct .csv from initialize.
+                        # append this to a file.
+                        item_tracker = [m[key][index[1]] for key in sorted(m) if key not in ('transp_adj',)]
 
-        for index, dataframe in self.point_tracker:
-            # print "memory usage of the dataframe", dataframe.memory_usage(index=False)
+                        for key in sorted(m):
+                            if key not in ('transp_adj',):
+                                print "update Keys!!!", key
+                        item_tracker = [date] + item_tracker
+                        print "about to write"
+                        with open(os.path.join(path, f), 'a') as append_file:
+                            writer = csv.writer(append_file)
+                            writer.writerow(item_tracker)
 
-            # print 'item in point tracker', item
+                print "wrote for {}".format(f)
 
-            # print 'list thing', [m[key] for key in sorted(m)]
-            # for key in m:
-            #     print key, m[key]
-
-            item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj',)]
-            dataframe.loc[date] = item_tracker
+        #
+        #     # print "PT index, {} \n PT dataframe \n ======{}======".format(index, dataframe)
+        #     #
+        #     # # print "memory usage of the dataframe", dataframe.memory_usage(index=False)
+        #     #
+        #     # # print 'item in point tracker', item
+        #     #
+        #     # # print 'list thing', [m[key] for key in sorted(m)]
+        #     # # for key in m:
+        #     # #     print key, m[key]
+        #     #
+        #     # item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj',)]
+        #     #
+        #     # print "Here's the item tracker \n {}".format(item_tracker)
+        #     #
+        #     # dataframe.loc[date] = item_tracker
 
     def _update_master_tracker(self, m, date):
         def factory(k):

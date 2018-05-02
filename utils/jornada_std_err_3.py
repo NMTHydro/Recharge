@@ -24,140 +24,136 @@ from matplotlib import pyplot as plt
 
 # ============= local library imports ===========================
 def intersect(l1, l2):
-    intersection = l1 & l2
+    intersection = set(l1) & set(l2)
     return intersection
 
 def formatter(df_dict):
-    """
 
-    :param df_dict: a dict of data frames with the keys from '000' to '012', 13 keys total
-    :return:
-    """
+    # get each date out as a list and put in the dictionary
 
+    df_dates = {}
     for key, value in df_dict.iteritems():
+        # print "value", value
+        list_o_rings = []
+        # list_o_swc_30 = []
+        # list_o_swc_90 = []
+        # list_o_swc_110 = []
+        # list_o_swc_130 = []
+        for i in value:
+            date_lst = list(i['date'])
+            jsm_30 = list(i['swc_30cm'])
+            jsm_60 = list(i['swc_60cm'])
+            jsm_90 = list(i['swc_90cm'])
+            jsm_110 = list(i['swc_110cm'])
+            jsm_130 = list(i['swc_130cm'])
+            ring = (date_lst, jsm_30, jsm_60, jsm_90, jsm_110, jsm_130)
+            list_o_rings.append(ring)
+        # print "key -> {}, len(list_o_rings) -> {}".format(key, len(list_o_rings))
+        df_dates[key] = list_o_rings
 
-        print "key \n {}".format(key)
+    # print "df dates", df_dates
 
-        good_dates = []
-        values = []
-        good_dfs = []
-        good_vals = []
-        for df in value:
-            date = df['date'] #pd.to_datetime(df['date'])
-            j_30 = df['swc_30cm']
-            j_60 = df['swc_60cm']
-            j_90 = df['swc_90cm']
-            j_110 = df['swc_110cm']
-            j_130 = df['swc_130cm']
+    # we now have a dictionary of series of dates sorted by which pixel they came from.
 
-            vals = (date, j_30, j_60, j_90, j_110, j_130)
-            values.append(vals)
+    # next we need to do a couple of things in order to get the list of "good dates" we need
+    # 1.) We need to check each groupings "." points together and pile that on into a list which we turn into a set.
 
-        for i in values:
-            for date, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
+    # put the dates sans '.' in here
+    huge_list = []
+    for key, value in df_dates.iteritems():
+        for i in value:
+            for da, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
+                # print 'test abcde {}{}{}{}{}'.format(a, b, c, d, e)
                 if "." not in [a, b, c, d, e]:
-                    good_dates.append(date)
-                # good_dates.append(date)
+                    huge_list.append(da)
 
-        print "good dates {} pixel {}, length {}".format(good_dates, key, len(good_dates))
+    # 2.) once we get that initial set (huge list) we try and get the intersection of the huge list with
+                    #  unmodified lists
 
-        # turn good dates into a series to delete the repetitions
-        good_dates = set(good_dates)
+    intersection_dates = {}
+    for key, value in df_dates.iteritems():
+        # this can be a list that stores the intersected lists, the final one being the final intersection.
+        intersection_storage = []
+        for num in range(len(value)):
 
-        # need to test the intersection of all dates with the dates in values
-        # for i in values:
-        good_dates = intersect(good_dates, set(values[0][0]))
+            if num == 0:
+                print "A"
+                unmod_list = value[num][0]
+                # compare this one to the huge list
+                int = intersect(unmod_list, huge_list)
+                intersection_storage.append(int)
 
-        # gooder_dates = []
-        # for i, j in zip(values[0], good_dates):
-        #     for day, gday in i, j:
-        #         if day not in j:
+            elif num > 0:
+                print "B, C ..."
+                unmod_list = value[num][0]
+                # compare these ones to the previous intersection storage
+                int = intersect(unmod_list, intersection_storage[num-1])
+                intersection_storage.append(int)
 
+            elif num == len(value):
+                print "END"
+                unmod_list = value[num+1][0] # todo figure out what the hell I'm doing wrong here.
+                # compare to the last intersection storage
+                int = intersect(unmod_list, intersection_storage[-1])
+                intersection_storage.append(int)
 
+        intersection_dates[key] = intersection_storage[-1]
+        print "how long is the first intersection storage ? {}".format(len(intersection_storage[0]))
+        print "how long is the last intersection storage ? {}".format(len(intersection_storage[-1]))
+    # print "intersection dates dictionary", intersection_dates
 
-        print "good dates as a set", good_dates
-        print "length of set", len(good_dates)
+    # the intersection dictionary contains the most 'parsimonious' selection of dates for a given pixel
 
-        print "length of values", len(values)
-        for i in values:
-            g_dates = []
-            g_a = []
-            g_b = []
-            g_c = []
-            g_d = []
-            g_e = []
-            for date, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
-                if date in good_dates:
-                    g_dates.append(date)
-                    g_a.append(a)
-                    g_b.append(b)
-                    g_c.append(c)
-                    g_d.append(d)
-                    g_e.append(e)
+    # 3.) now we will use this parsimonious list of dates to filter out our original data from the top
 
-            good_vals.append((g_dates, g_a, g_b, g_c, g_d, g_e))
-
-            print "==="
-            print len(g_dates)
-            print len(g_a)
-            print len(g_b)
-            print len(g_c)
-            print len(g_d)
-            print len(g_e)
-            print "===="
-
-        print "good values", len(good_vals)
-
-        for i in good_vals:
-            print "****"
-            print len(i[0])
-            print len(i[1])
-            print len(i[2])
-            print len(i[3])
-            print len(i[3])
-            print len(i[3])
-            print "***"
-
-
-            # data = {'date': good_vals[0], 'j_30': i[1], 'j_60': i[2], 'j_90': i[3], 'j_110': i[4], 'j_130': i[5]}
-            # #     # good_df = pd.DataFrame(data=data, columns=['date', 'j_30', 'j_60', 'j_90', 'j_110', 'j_130'])
-            # #     # good_dfs.append(good_df)
-
-
-
-
-
-            # else:
-            #     #for date, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
-            #     # data = {'date': i[0], 'j_30': i[1], 'j_60': i[2], 'j_90': i[3], 'j_110': i[4], 'j_130': i[5]}
-            #     # good_df = pd.DataFrame(data=data, columns=['date', 'j_30', 'j_60', 'j_90', 'j_110', 'j_130'])
-            #     # good_dfs.append(good_df)
-            #     for dt, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
-            #         g_dates.append(dt)
-            #         g_a.append(a)
-            #         g_b.append(b)
-            #         g_c.append(c)
-            #         g_d.append(d)
-            #         g_e.append(e)
-            # good_vals.append((g_dates, g_a, g_b, g_c, g_d, g_e))
-
-
-        # print "the good vals", good_vals
-        # count = 0
-        # for gtuple in good_vals:
-        #     print "\n {} \n".format(count)
-        #     for dates, a, b, c, d, e in zip(gtuple[0], gtuple[1], gtuple[2], gtuple[3], gtuple[4], gtuple[5]):
-        #         print "lendates", len(dates)
-        #         print "len a", len(a)
-        #     count += 1
-
-
-        # print "The good DFs ", good_dfs
+    # grab the df dict
+    date_formated_dict = []
+    for key, value in df_dates.iteritems():
+        print "==========="
+        print "KEY ", key
+        tim = intersection_dates[key]
+        list_o_rings = []
+        for i in value:
+            # set up empty lists to be filled with good values.
+            date_lst = []
+            jsm_30 = []
+            jsm_60 = []
+            jsm_90 = []
+            jsm_110 = []
+            jsm_130 = []
+            for da, a, b, c, d, e in zip(i[0], i[1], i[2], i[3], i[4], i[5]):
+                # print 'da xxxx', da
+                # print 'a', a
+                if da in tim:
+                    date_lst.append(da)
+                    jsm_30.append(a)
+                    jsm_60.append(b)
+                    jsm_90.append(c)
+                    jsm_110.append(d)
+                    jsm_130.append(e)
+            print len(date_lst)
+            print len(jsm_30)
+            print len(jsm_60)
+            print len(jsm_90)
+            print len(jsm_110)
+            print len(jsm_130)
+            ring = (date_lst, jsm_30, jsm_60, jsm_90, jsm_110, jsm_130)
+            # print "ring {}".format(ring)
+            list_o_rings.append(ring)
+        #     print key
+        # print "listo", type(list_o_rings)
+        # print "listo [0]", list_o_rings[0]
+        # print "key", key
+        print "==========="
+        # # todo - fix problem here
+        # todo also key 11, 12, 3, 4 ... What the ever loving fuck?
+        # date_formated_dict[key] = list_o_rings
         #
-        # for i in good_dfs:
-        #     print "length of good df is {}".format(len(i))
-
-
+        # print "show the date formatted dict", date_formated_dict
+        #
+        # # todo - pull each pixels data together into a dataframe.
+        #
+        # # pop the dataframes out to disk or keep working with em to get std error of the mean.
 
 
 
@@ -199,7 +195,7 @@ def parse_data():
 
         df_dict[key] = loc_list
 
-    print "another look", df_dict['000']
+    # print "another look", df_dict['000']
 
     pix_dictionary = formatter(df_dict)
 
@@ -211,5 +207,10 @@ def parse_data():
 
 if __name__ == "__main__":
 
+    # Before we find the standard error, we need to parse through the original file and remove any missing entries such
+    #  that if data are missing for one location in the Jornada we throw out the missing data and all corresponding data
+    #  in the time series.
+
     parse_data()
+
 

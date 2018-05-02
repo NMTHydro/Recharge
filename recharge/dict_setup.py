@@ -26,6 +26,7 @@ from pandas import DataFrame, date_range, MultiIndex
 from app.paths import paths
 from recharge import STATIC_KEYS, OUTPUTS, INITIAL_KEYS, TRACKER_KEYS
 from recharge.raster import Raster
+import csv
 from recharge.raster_tools import apply_mask, convert_raster_to_array
 
 """
@@ -295,35 +296,88 @@ def initialize_point_tracker(master, point_arr):
     :return:
     """
     # TODO iterate through array and get array address out.
+
+    # print point_arr
     #stuff = where(nonzero(point_arr))
 
     print "shape of array -> {}".format(point_arr.shape)
     # I'm nor sure that argwhere will get the pixels in the order that I want them in.
-    # arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
-    arr_elements = nonzero(point_arr)[0]
+    arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
+    print "nonzero(point_arr", nonzero(point_arr)
+    # arr_elements = nonzero(point_arr)[0]
     print 'stuff', arr_elements
+
+    # TODO - Figure out why the arr_elements isn't working like it's supposed to. GELP 4/27/2018
+
+    # keys = master.keys()
+    # # print 'masterkeyshape', master[keys[0].shape()]# Here's a problem. master key shape is different \
+    # # from the array shape.
+    #
+    #
+    # #  _update_point_tracker so cols are the same
+    #
+    # # add columns for TAW and RZSM - July 9 2017
+    # # columns.append('TAW')
+    # # columns.append('RZSM')
+    # #
+    # # item_tracker = [master[key][index] for key in sorted(master) if key not in ('transp_adj', )]
+    #
+    # item_tracker = []
+    # for key in sorted(master.keys()):
+    #     if key not in ('transp_adj', ):
+    #         print "MASTER KEY" , key
+    # #
+    # # # columns = sorted(columns)
+    # # columns = sorted(master.keys())
+    # # print "COLUMNS", columns
+    #
+    #
+    #
+    # #=======
+    #
+    # # columns = [master[key] for key in sorted(master) if key not in ('transp_adj',)]
+    #
+    # # print "columns master", columns
+    #
+    # # print "MASTA", master
+    #
+    #
+    # columns = sorted(master.keys())
+
+    # The master dictionary doesnt get populated with some of these headers until the daily timestep thing kicks in so
+    #  we manually add them here.
+    columns = ['Date', 'albedo', 'de', 'dr', 'drew', 'dry_days', 'eta', 'etrs', 'evap', 'evap_1', 'evap_2',
+               'fcov', 'few', 'infil', 'kcb', 'ke', 'ke_init', 'kr', 'ks', 'mass', 'max_temp', 'melt',
+               'min_temp', 'pde', 'pdr', 'pdrew', 'pkcb', 'precip', 'rain', 'rg', 'ro', 'rzsm', 'snow_fall',
+               'soil_ksat', 'soil_storage', 'soil_storage_all', 'st_1_dur', 'st_2_dur', 'swe', 'taw', 'temp',
+               'tot_dry_days', 'tot_eta', 'tot_etrs', 'tot_infil', 'tot_kcb', 'tot_mass', 'tot_melt',
+               'tot_precip', 'tot_rain', 'tot_ro', 'tot_snow', 'tot_swe', 'transp']
+
     tracker_list = []
+    for i, item in enumerate(arr_elements):
 
-    keys = master.keys()
-    print 'masterkeyshape' , master[keys[0]].shape # Here's a problem. master key shape is different \
-    # from the array shape.
+        # store the location in the array where you need to get the value from...
+        item = item.tolist()[0]
+        tracker_list.append(([i, item], columns))
 
-    columns = [key for key in keys if key not in ('transp_adj', )] # Just like you do in \
-    #  _update_point_tracker so cols are the same
 
-    # add columns for TAW and RZSM - July 9 2017
-    # columns.append('TAW')
-    # columns.append('RZSM')
+    # avoid a memory leak and write to a csv...
 
-    #item_tracker = [m[key][index] for key in sorted(m) if key not in ('transp_adj', )]
+    # path for all the csvs to go to
+    csv_path = paths.tracker_csv_path
 
-    columns = sorted(columns)
 
-    for item in arr_elements:
-        print 'item in arr elements lllslsls', item
-        tracker_list.append((item, DataFrame(columns=columns)))
+    # make the csvs...
+    for index, dataframe in tracker_list:
+        print "COLS", columns
+        # dataframe.to_csv(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index)))
+        print "writing cols headers"
+        print "where the trackers go", os.path.join(csv_path, "tracker_pixel_{}.csv".format(index))
+        with open(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index[0])), 'w') as wfile:
+            writer = csv.writer(wfile)
+            writer.writerow(columns)
 
-    #print 'tracker list', tracker_list
+    # Still send out the list of pixels and columns
     return tracker_list
 
 def initialize_master_tracker(master):

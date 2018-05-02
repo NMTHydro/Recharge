@@ -20,6 +20,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from matplotlib import pyplot as plt
+from datetime import datetime
 
 # ============= local library imports ===========================
 
@@ -338,7 +339,7 @@ def run():
 
         # todo - make a script that does all the TAWs plotted cummulatively...
 
-=================================== find_error() exclusive functions =============================================
+# =================================== find_error() exclusive functions =============================================
 
 def nrml_rzsm_for_error(data):
     """
@@ -644,36 +645,43 @@ def find_error():
             append_file.write("\n \n ****** \n AVG of AVGs for PIXEL {} is -> {} \n ******  \n \n ".format(key, value))
 
 # =================================== storage_plot() exclusive functions =============================================
-def plot_storage(total_storage, taw, dates, j_name, mi, ma):
+def plot_storage(total_storage, taw, dates, j_name, mi, ma, tdate, rzsm, pixel, etrm_taw):
     """"""
-
+    # fig, ax = plt.subplots(figsize=(6,6))
+    #
+    # print "fig {}".format(fig)
+    # print "ax {}".format(ax)
     rel_storage = [(storage-mi)/taw for storage in total_storage]
     # for storage in total_storage:
     #     storage/taw
 
-    figure_title = "Relative Storage: location-{}, taw-{}".format(j_name, taw)
+    figure_title = "Relative Storage_location-{}_taw-{}_pixel-{}".format(j_name, etrm_taw, pixel)
 
     fig = plt.figure()
     # fig.suptitle("Soil moisture at different depths for {} at TAW = {} corr to pixel {}".format(name, taw, pixel), fontsize=12, fontweight='bold')
     plt.rcParams['axes.grid'] = True
 
     aa = fig.add_subplot(111)
-    aa.set_title("Relative Storage for a total 150 cm depth", fontsize=10, fontweight='bold')
-    aa.set_xlabel('date', fontsize=8)
-    aa.set_ylabel('storage/taw')
-    aa.plot(dates, rel_storage, linewidth=1)
-    aa.plot_date(dates, rel_storage, marker='o', markersize=2)
+    aa.set_title("Root Zone Water Fraction for a total 150 cm depth: location-{}, "
+                 "taw-{}, pixel- {}".format(j_name, etrm_taw, pixel), fontsize=10, fontweight='bold')
+    aa.set_xlabel('date', fontsize=12)
+    aa.set_ylabel('RZWF', fontsize = 12) #= (storage - minimum storage)/(max storage - min storage)
+    aa.plot(dates, rel_storage, linewidth=2)
+    aa.plot(tdate, rzsm, linewidth=2)
+    aa.plot_date(dates, rel_storage, marker='o', markersize=4)
 
-    # plt.tight_layout()
-    # plt.subplots_adjust(top=0.89)
-    plt.subplots_adjust(hspace=.5)
+    # change the axes
+    plt.xlim(datetime.strptime("01/01/2000", "%m/%d/%Y"), datetime.strptime("01/01/2012", "%m/%d/%Y"))
 
+    plt.tight_layout()
+    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=.7, wspace=0.2, hspace=0.2)
+    # plt.subplots_adjust(top=.85)
 
-    plt.show()
+    # plt.show()
 
-    # plt.savefig("/Users/Gabe/Desktop/juliet_stuff/jornada_plot_output/{}.pdf".format(figure_title))
+    plt.savefig("/Users/Gabe/Desktop/juliet_stuff/jornada_plot_output/{}.pdf".format(figure_title))
 
-    # plt.close(fig)
+    plt.close(fig)
 
 def calc_storage(j_30, j_60, j_90, j_110, j_130):
     """
@@ -729,6 +737,28 @@ def storage_plot():
     df_long = df[df.index > 15000]  # 32000 <- use for plotting
     df = df[df.index > 32000]
 
+    # +=+=+=+=+=+= Automatic Plotter mode +=+=+=+=+=+=
+
+    # set TAW
+    etrm_taw = 70
+
+    # set tracker path
+    tracker_path = "/Users/Gabe/Desktop/juliet_stuff/March_2018_model_runs/taw_{}".format(etrm_taw)
+
+    # print tracker_path
+    tracker_path_dict = {}
+    for path, directories, files in os.walk(tracker_path):
+        for i in files:
+            # print "file -> ", i
+            if len(i) == 20:
+                name = i[13:-4]
+            else:
+                name = i[13:-9]
+            # print "name", name
+
+            csv_path = os.path.join(path, i)
+            tracker_path_dict[name] = csv_path
+
     # dictionary that relates each jornada station to the correct pixel.
     jornada_etrm = build_jornada_etrm()
 
@@ -748,6 +778,17 @@ def storage_plot():
 
         # you only want to use the long jornada var...
         # print "Jornada VAR", jornada_var_long
+
+        # ===== TRACKER ======
+        df_tracker = pd.read_csv(tracker_path_dict[value])
+
+        # we need to get rzsm and dates
+        tdate = pd.to_datetime(df_tracker['Date'])
+        # print 'tdate\n', tdate
+        rzsm = df_tracker['rzsm']
+        # print 'rzsm\n', rzsm
+
+        pixel = value
 
         # ===== Depths (plot storage) ========
 
@@ -783,93 +824,85 @@ def storage_plot():
 
         # storage_taw_dict[key] = (total_storage, taw)
 
-        plot_storage(total_storage, taw, j_date, j_name, mi, ma)
+        plot_storage(total_storage, taw, j_date, j_name, mi, ma, tdate, rzsm, pixel, etrm_taw)
 
 
     # print "total storage and taw dictionary -> {}".format(storage_taw_dict)
 
+# ========================= storage_plot_mod() exclusive functions =============================
 
-# =================================== find_std_error() exclusive functions =============================================
+def plot_storage_simple(dates, storage, storage_name, loc):
 
-def nrml_rzsm_for_error(data):
-    """
-     Normalize the volumetric soil water content into a RZSM by taking the Min - Max and normalizing on a scale of zero
-    to one.
+    figure_title = "Storage for location - {} for assumed Storage Depth - {}".format(loc, storage_name)
 
-    :return: normalized dataset
-    """
+    fig = plt.figure()
+    # fig.suptitle("Soil moisture at different depths for {} at TAW = {} corr to pixel {}".format(name, taw, pixel), fontsize=12, fontweight='bold')
+    plt.rcParams['axes.grid'] = True
 
-    # print 'length of data', len(data)
-    #
-    # print "DATA", data
+    aa = fig.add_subplot(111)
+    aa.set_title(figure_title, fontsize=10, fontweight='bold')
+    aa.set_xlabel('date', fontsize=12)
+    aa.set_ylabel('Storage cm', fontsize=12)  # = (storage - minimum storage)/(max storage - min storage)
+    aa.plot(dates, storage, linewidth=2)
+    aa.plot_date(dates, storage, marker='o', markersize=4)
 
-    # Get min and max from a long dataset
-    ma = max(data)
-    # print "ma", ma
-    mi = min(data)
-    # print "mi", mi
+    # # change the axes
+    # plt.xlim(datetime.strptime("01/01/2000", "%m/%d/%Y"), datetime.strptime("01/01/2012", "%m/%d/%Y"))
 
-    # normalized scale
-    n0 = 0
-    n1 = 1
+    plt.tight_layout()
+    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=.7, wspace=0.2, hspace=0.2)
+    # plt.subplots_adjust(top=.85)
+    plt.show()
 
-    # create a new normalized dataset
-    nrml_data = [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) for value in data]
-    # print "lenght of normalized data", len(nrml_data)
-    # print "actual normal data array", nrml_data
-
-    return nrml_data
-
-def float_data(data):
-    data = [float(i) for i in data]
-    return data
-
-def depth_average(j_30, j_60, j_90, j_110, j_130):
+def calc_storage_mod(swc):
     """
 
-    :param j_30: time series of 30m vol soil moisture data
-    :param j_60: time series of 60m vol soil moisture data
-    :param j_90: time series of 90m vol soil moisture data
-    :param j_110: time series of 110m vol soil moisture data
-    :param j_130: time series of 130m vol soil moisture data
-    :return: depth averaged vol soil moisture to be normalized.
-    """
-    javg_lst = []
-    for j3, j6, j9, j11, j13 in zip(j_30, j_60, j_90, j_110, j_130):
-        # multiply each probe measurement by a depth weighting term and get the average of all depth weighted values
-        # 30cm(0-45), 60cm(45-75), 90cm(75-100), 110cm(100-120), 130cm(120-150) <- Depth weighting of the probes
-
-        # print "values {} {} {} {} {}".format(j3, j6, j9, j11, j13)
-
-        # print "numerator", ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) + (j13 * float(30/150)))
-        #
-        # print "numerator mod", ((j3) + (j6 ) + (j9) + (j11) + ( j13))
-        # print "numerator mod 2", (
-        # (j3 * (45)) + (j6 * (30 )) + (j9 * (25)) + (j11 * (20)) + (
-        # j13 * float(30)))
-        # TODO - Clean this up and make sure d_avg is correct.
-        d_avg = ((j3 * (45)) + (j6 * (30)) + (j9 * (25)) + (j11 * (20)) + (j13 * (30))) / 150.0
-
-        # j_avg = ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) +
-        #          (j13 * float(30/150))) / 5.0
-        javg_lst.append(d_avg)
-
-    # print "j avg list", javg_lst
-
-    return javg_lst
-
-
-def find_std_error():
-    """
-    1.) depth average all the jornada data
-    2.) Convert the soil moisture values into a relative soil moisture condition
-    3.) On a per_pixel basis: Get the average, and std deviation and variability
-    4.) print that to a csv
+    :param swc:
     :return:
     """
 
-    # TODO - Write a routine to format the dataframe into
+    depths = ('30', '60', '90', '110', '130')
 
+    depth_vals = {}
+    for d in depths:
+        moisture_depth = swc['swc_{}cm'.format(d)]
+        depth_vals[d] = moisture_depth
+
+    # print "Depth vals dict \n {}".format(depth_vals)
+
+    lifts = (45.0, 30.0, 25.0, 20.0, 25.0)
+
+    # get 30 cm storage
+    stor_30 = np.array(float_data(depth_vals['30'])) * lifts[0]
+
+    # get 60cm storage
+    stor_60 = 0
+    for i in range(0, 2):
+        stor_60 += np.array(float_data(depth_vals[depths[i]])) * lifts[i]
+
+    # get 90 cm storage
+    stor_90 = 0
+    for i in range(0, 3):
+        stor_90 += np.array(float_data(depth_vals[depths[i]])) * lifts[i]
+
+    # get 110 cm storage
+    stor_110 = 0
+    for i in range(0, 4):
+        stor_110 += np.array(float_data(depth_vals[depths[i]])) * lifts[i]
+
+    # get 130 cm storage
+    stor_130 = 0
+    for i in range(0, 5):
+        stor_130 += np.array(float_data(depth_vals[depths[i]])) * lifts[i]
+
+    return [stor_30, stor_60, stor_90, stor_110, stor_130]
+
+
+def storage_plot_mod():
+    """
+
+    :return:
+    """
     # ====== Jornada =======
     # path to the jornada data
     path = "/Users/Gabe/Desktop/33_37_ETRM_aoi_project/Jornada_012002_transect_soil_water_content_data/" \
@@ -881,167 +914,295 @@ def find_std_error():
     # print "df['Date'] \n", df['date']
 
     # filter out missing data "."
-    df = df[df.swc_30cm != "."]  # , 'swc_60cm', 'swc_110cm', 'swc_130cm' | df.swc_60cm | df.swc_90cm | df.swc_110cm | df.swc_130cm
-    df = df[df.swc_60cm != "."]
-    df = df[df.swc_90cm != "."]
-    df = df[df.swc_110cm != "."]
-    df = df[df.swc_130cm != "."]
+    df = df[df['swc_30cm'] != "."]  # , 'swc_60cm', 'swc_110cm', 'swc_130cm'
+    df = df[df['swc_60cm'] != "."]
+    df = df[df['swc_90cm'] != "."]
+    df = df[df['swc_110cm'] != "."]
+    df = df[df['swc_130cm'] != "."]
 
     # # Cut off extraneous dates we don't need...
     df_long = df[df.index > 15000]  # 32000 <- use for plotting
-    # df = df[df.index > 32000]
-    # df_long = df_long[df_long.index < 15250]
+    df = df[df.index > 32000]
 
-    # testing to see why the datasets at each location are different lengths...
+    for i in range(1, 90):
+        key = "C{:02d}".format(i)
+        # print "Key {}".format(key)
 
-    testpath = "/Users/Gabe/Desktop/test_water_content_data.csv"
+        swc = df_long[df_long['location'] == key]
+        print "SWC \n", swc
 
-    df_long.to_csv(testpath)
+        # get five sets of storages from the swc measurements for each tube...
+        storages = calc_storage_mod(swc)
+        storage_names = ['stor_30', 'stor_60', 'stor_90', 'stor_110', 'stor_130']
 
-    # dictionary that relates each pixel to the correct jornada stations.
-    relate_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
-                   "002": ["C10", "C11"], "003": ["C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21"],
-                   "004": ["C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29"],
-                   "005": ["C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39"],
-                   "006": ["C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48"],
-                   "007": ["C51", "C52", "C53", "C54", "C55", "C56", "C57"],
-                   "008": ["C58", "C59", "C60", "C61", "C62", "C63", "C64", "C65", "C66"],
-                   "009": ["C67", "C68", "C69", "C70"], "010": ["C71", "C72", "C73", "C74", "C75"],
-                   "011": ["C76", "C77", "C78", "C79", "C80", "C81", "C82", "C83", "C84"],
-                   "012": ["C85", "C86", "C87", "C88", "C89"]}
+        # to plot, link up the storages with the dates...
+        dates = pd.to_datetime(swc['date'])
 
-    # dictionary that relates each jornada station to the correct pixel.
-    jornada_etrm = build_jornada_etrm()
+        for storage, name in zip(storages, storage_names):
 
-    # loop through the jornada_etrm dictionary to get the proper Jornada data locations while tracking the ETRM pixel.
-    avg_normal_dictionary = {}
-    for key, value in jornada_etrm.iteritems():
-        # print "key -> ", key
-        # print "value -> ", value
+            plot_storage_simple(dates, storage, name, key)
 
-        # ===== Jornada ========
+        # TODO 1) Set up to plot all three storages on the same plot
 
-        jornada_var = df[df['location'] == key]
-
-        # a long version of the jornada dataset to get a more accurate min and max from the whole dataset to perform
-        # the normalization with
-        jornada_var_long = df_long[df_long['location'] == key]
-
-        print "length jornada var long {}, key {}".format(len(jornada_var_long), key)
-
-        # you only want to use the long jornada var...
-        # print "Jornada VAR", jornada_var_long
-
-        # ===== Depths (FIND ERROR) <- Don't normalize the data yet ========
-
-        # 30 cm depth
-        j_30 = float_data(jornada_var_long['swc_30cm'])
-        print "len j_30", len(j_30)
-        # convert to a float
-        # j_30 = j_30.astype(np.float)
-
-        # 60cm
-        j_60 = float_data(jornada_var_long['swc_60cm'])
-        print "len j_60", len(j_60)
-        # j_60 = j_60.astype(np.float)
-
-        # 90cm
-        j_90 = float_data(jornada_var_long['swc_90cm'])
-        print "len j_90", len(j_90)
-        # print "here is j_90 -> {}".format(j_90)
-        # j_90 = j_90.astype(np.float)
-
-        # 110cm
-        j_110 = float_data(jornada_var_long['swc_110cm'])
-        print "len j_110", len(j_110)
-        # j_110 = j_110.astype(np.float)
-
-        # 130cm
-        j_130 = float_data(jornada_var_long['swc_130cm'])
-        print "len j_130", len(j_130)
-        # j_130 = j_130.astype(np.float)
-
-        # get the date...
-        j_date = pd.to_datetime(jornada_var['date'])
-
-        # print "THE DATE \n {}".format(j_date)
-
-        # depth average
-        j_avg = depth_average(j_30, j_60, j_90, j_110, j_130)
-
-        # normalize
-        jornada_avg_nrml = nrml_rzsm_for_error(j_avg)
-
-        # print "length of the depth avg {}".format(len(jornada_avg_nrml))
-
-        # add the normalized depth averaged value for each location into a new dictionary:
-        avg_normal_dictionary[key] = jornada_avg_nrml
-
-        avg_normal_dictionary['date'] = j_date
-
-    # now we need to go through the relate dict to get the sigma, variability and average for each ETRM pixel
-    # print "relate dict \n {}".format(relate_dict)
-    # print "average_normal_dict \n {}".format(avg_normal_dictionary)
-
-
-
-    depth_avg_time_series = {}
-    for key, value in relate_dict.iteritems():
-        if len(value) > 0:
-            _loc_dict = {}
-            for loc in value:
-                # the depth averaged, normalized, time series for a given location
-                avg_nrml = np.array(avg_normal_dictionary[loc])
-
-                # add the time series to a dictionary
-                _loc_dict[loc] = avg_nrml
-
-            depth_avg_time_series[key] = _loc_dict
-
-    # print "updated related statistics dictionary \n {}".format(depth_avg_time_series)
-    #
-    #
-    # ### find the Standard error of the mean for each pixel
-
-    std_error_d = {}
-    # key_lst = []
-    sum_lst = []
-    for key, value in depth_avg_time_series.iteritems():
-
-        # print "key", key
-        #
-        # print "value", value
-
-        arr_lst = []
-
-        for k, v in value.iteritems():
-            if len(arr_lst) == 0:
-                print "k first", k
-                print 'v first', v
-                print "first time!"
-                arr_lst = v
-                print "length first time {}".format(len(arr_lst))
-            else:
-                print "k", k
-                print "v", v
-                print "len v", len(v)
-                prev_list = arr_lst
-                arr_lst = v + prev_list
-
-        print "summed list for key {} and list is \n {}".format(key, arr_lst)
-        std_error_d[key] = arr_lst
-
-    print "final sum dictionary {}".format(std_error_d)
+        # TODO 2) Set up to plot ETrF alongside the storages...(seems like it could be involved).
 
 
 
 
-    #
-    # ### find the average of averages for each pixel
 
-
-
-    # +=+=+=+=+=+=+=+=+=+=+=+= AGGREGATE and OUTPUT +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
+# # =================================== find_std_error() exclusive functions =============================================
+#
+# def nrml_rzsm_for_error(data):
+#     """
+#      Normalize the volumetric soil water content into a RZSM by taking the Min - Max and normalizing on a scale of zero
+#     to one.
+#
+#     :return: normalized dataset
+#     """
+#
+#     # print 'length of data', len(data)
+#     #
+#     # print "DATA", data
+#
+#     # Get min and max from a long dataset
+#     ma = max(data)
+#     # print "ma", ma
+#     mi = min(data)
+#     # print "mi", mi
+#
+#     # normalized scale
+#     n0 = 0
+#     n1 = 1
+#
+#     # create a new normalized dataset
+#     nrml_data = [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) for value in data]
+#     # print "lenght of normalized data", len(nrml_data)
+#     # print "actual normal data array", nrml_data
+#
+#     return nrml_data
+#
+# def float_data(data):
+#     data = [float(i) for i in data]
+#     return data
+#
+# def depth_average(j_30, j_60, j_90, j_110, j_130):
+#     """
+#
+#     :param j_30: time series of 30m vol soil moisture data
+#     :param j_60: time series of 60m vol soil moisture data
+#     :param j_90: time series of 90m vol soil moisture data
+#     :param j_110: time series of 110m vol soil moisture data
+#     :param j_130: time series of 130m vol soil moisture data
+#     :return: depth averaged vol soil moisture to be normalized.
+#     """
+#     javg_lst = []
+#     for j3, j6, j9, j11, j13 in zip(j_30, j_60, j_90, j_110, j_130):
+#         # multiply each probe measurement by a depth weighting term and get the average of all depth weighted values
+#         # 30cm(0-45), 60cm(45-75), 90cm(75-100), 110cm(100-120), 130cm(120-150) <- Depth weighting of the probes
+#
+#         # print "values {} {} {} {} {}".format(j3, j6, j9, j11, j13)
+#
+#         # print "numerator", ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) + (j13 * float(30/150)))
+#         #
+#         # print "numerator mod", ((j3) + (j6 ) + (j9) + (j11) + ( j13))
+#         # print "numerator mod 2", (
+#         # (j3 * (45)) + (j6 * (30 )) + (j9 * (25)) + (j11 * (20)) + (
+#         # j13 * float(30)))
+#         # TODO - Clean this up and make sure d_avg is correct.
+#         d_avg = ((j3 * (45)) + (j6 * (30)) + (j9 * (25)) + (j11 * (20)) + (j13 * (30))) / 150.0
+#
+#         # j_avg = ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) +
+#         #          (j13 * float(30/150))) / 5.0
+#         javg_lst.append(d_avg)
+#
+#     # print "j avg list", javg_lst
+#
+#     return javg_lst
+#
+#
+# def find_std_error():
+#     """
+#     1.) depth average all the jornada data
+#     2.) Convert the soil moisture values into a relative soil moisture condition
+#     3.) On a per_pixel basis: Get the average, and std deviation and variability
+#     4.) print that to a csv
+#     :return:
+#     """
+#
+#     # TODO - Write a routine to format the dataframe into
+#
+#     # ====== Jornada =======
+#     # path to the jornada data
+#     path = "/Users/Gabe/Desktop/33_37_ETRM_aoi_project/Jornada_012002_transect_soil_water_content_data/" \
+#            "Jornada_012002_transect_soil_water_content_data.csv"  # This version has data that goes up through 2015
+#
+#     df = pd.read_csv(path, header=72)  # I have no idea why it works on 72 but whatever.
+#
+#     # print "the df \n", df
+#     # print "df['Date'] \n", df['date']
+#
+#     # filter out missing data "."
+#     df = df[df.swc_30cm != "."]  # , 'swc_60cm', 'swc_110cm', 'swc_130cm' | df.swc_60cm | df.swc_90cm | df.swc_110cm | df.swc_130cm
+#     df = df[df.swc_60cm != "."]
+#     df = df[df.swc_90cm != "."]
+#     df = df[df.swc_110cm != "."]
+#     df = df[df.swc_130cm != "."]
+#
+#     # # Cut off extraneous dates we don't need...
+#     df_long = df[df.index > 15000]  # 32000 <- use for plotting
+#     # df = df[df.index > 32000]
+#     # df_long = df_long[df_long.index < 15250]
+#
+#     # testing to see why the datasets at each location are different lengths...
+#
+#     testpath = "/Users/Gabe/Desktop/test_water_content_data.csv"
+#
+#     df_long.to_csv(testpath)
+#
+#     # dictionary that relates each pixel to the correct jornada stations.
+#     relate_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
+#                    "002": ["C10", "C11"], "003": ["C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21"],
+#                    "004": ["C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29"],
+#                    "005": ["C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39"],
+#                    "006": ["C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48"],
+#                    "007": ["C51", "C52", "C53", "C54", "C55", "C56", "C57"],
+#                    "008": ["C58", "C59", "C60", "C61", "C62", "C63", "C64", "C65", "C66"],
+#                    "009": ["C67", "C68", "C69", "C70"], "010": ["C71", "C72", "C73", "C74", "C75"],
+#                    "011": ["C76", "C77", "C78", "C79", "C80", "C81", "C82", "C83", "C84"],
+#                    "012": ["C85", "C86", "C87", "C88", "C89"]}
+#
+#     # dictionary that relates each jornada station to the correct pixel.
+#     jornada_etrm = build_jornada_etrm()
+#
+#     # loop through the jornada_etrm dictionary to get the proper Jornada data locations while tracking the ETRM pixel.
+#     avg_normal_dictionary = {}
+#     for key, value in jornada_etrm.iteritems():
+#         # print "key -> ", key
+#         # print "value -> ", value
+#
+#         # ===== Jornada ========
+#
+#         jornada_var = df[df['location'] == key]
+#
+#         # a long version of the jornada dataset to get a more accurate min and max from the whole dataset to perform
+#         # the normalization with
+#         jornada_var_long = df_long[df_long['location'] == key]
+#
+#         print "length jornada var long {}, key {}".format(len(jornada_var_long), key)
+#
+#         # you only want to use the long jornada var...
+#         # print "Jornada VAR", jornada_var_long
+#
+#         # ===== Depths (FIND ERROR) <- Don't normalize the data yet ========
+#
+#         # 30 cm depth
+#         j_30 = float_data(jornada_var_long['swc_30cm'])
+#         print "len j_30", len(j_30)
+#         # convert to a float
+#         # j_30 = j_30.astype(np.float)
+#
+#         # 60cm
+#         j_60 = float_data(jornada_var_long['swc_60cm'])
+#         print "len j_60", len(j_60)
+#         # j_60 = j_60.astype(np.float)
+#
+#         # 90cm
+#         j_90 = float_data(jornada_var_long['swc_90cm'])
+#         print "len j_90", len(j_90)
+#         # print "here is j_90 -> {}".format(j_90)
+#         # j_90 = j_90.astype(np.float)
+#
+#         # 110cm
+#         j_110 = float_data(jornada_var_long['swc_110cm'])
+#         print "len j_110", len(j_110)
+#         # j_110 = j_110.astype(np.float)
+#
+#         # 130cm
+#         j_130 = float_data(jornada_var_long['swc_130cm'])
+#         print "len j_130", len(j_130)
+#         # j_130 = j_130.astype(np.float)
+#
+#         # get the date...
+#         j_date = pd.to_datetime(jornada_var['date'])
+#
+#         # print "THE DATE \n {}".format(j_date)
+#
+#         # depth average
+#         j_avg = depth_average(j_30, j_60, j_90, j_110, j_130)
+#
+#         # normalize
+#         jornada_avg_nrml = nrml_rzsm_for_error(j_avg)
+#
+#         # print "length of the depth avg {}".format(len(jornada_avg_nrml))
+#
+#         # add the normalized depth averaged value for each location into a new dictionary:
+#         avg_normal_dictionary[key] = jornada_avg_nrml
+#
+#         avg_normal_dictionary['date'] = j_date
+#
+#     # now we need to go through the relate dict to get the sigma, variability and average for each ETRM pixel
+#     # print "relate dict \n {}".format(relate_dict)
+#     # print "average_normal_dict \n {}".format(avg_normal_dictionary)
+#
+#
+#
+#     depth_avg_time_series = {}
+#     for key, value in relate_dict.iteritems():
+#         if len(value) > 0:
+#             _loc_dict = {}
+#             for loc in value:
+#                 # the depth averaged, normalized, time series for a given location
+#                 avg_nrml = np.array(avg_normal_dictionary[loc])
+#
+#                 # add the time series to a dictionary
+#                 _loc_dict[loc] = avg_nrml
+#
+#             depth_avg_time_series[key] = _loc_dict
+#
+#     # print "updated related statistics dictionary \n {}".format(depth_avg_time_series)
+#     #
+#     #
+#     # ### find the Standard error of the mean for each pixel
+#
+#     std_error_d = {}
+#     # key_lst = []
+#     sum_lst = []
+#     for key, value in depth_avg_time_series.iteritems():
+#
+#         # print "key", key
+#         #
+#         # print "value", value
+#
+#         arr_lst = []
+#
+#         for k, v in value.iteritems():
+#             if len(arr_lst) == 0:
+#                 print "k first", k
+#                 print 'v first', v
+#                 print "first time!"
+#                 arr_lst = v
+#                 print "length first time {}".format(len(arr_lst))
+#             else:
+#                 print "k", k
+#                 print "v", v
+#                 print "len v", len(v)
+#                 prev_list = arr_lst
+#                 arr_lst = v + prev_list
+#
+#         print "summed list for key {} and list is \n {}".format(key, arr_lst)
+#         std_error_d[key] = arr_lst
+#
+#     print "final sum dictionary {}".format(std_error_d)
+#
+#
+#
+#
+#     #
+#     # ### find the average of averages for each pixel
+#
+#
+#
+#     # +=+=+=+=+=+=+=+=+=+=+=+= AGGREGATE and OUTPUT +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 
 
 
@@ -1050,11 +1211,14 @@ if __name__ == "__main__":
     # # this will generate depth plots of ETRM and Jornada data and rzsm theta estimates
     # run()
 
-    # this outputs a text_file indicating the uncertainty of the RZSM for each pixel.
-    find_error()
+    # # this outputs a text_file indicating the uncertainty of the RZSM for each pixel.
+    # find_error()
 
     # # this will output plots of the relative storage for the Jornada tubes.
     # storage_plot()
+
+    # this will output plots of the storage for the Jornada tubes at different storage levels
+    storage_plot_mod()
 
     # # this outputs a csv of the running avg(depth_average) and standard error of the mean for each pixel.
     # find_std_error()
