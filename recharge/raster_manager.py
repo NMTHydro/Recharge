@@ -80,27 +80,27 @@ class RasterManager(object):
         # don't use 'tot_parameter' or you will sum totals
         # just use the normal daily fluxes from master, aka _daily_outputs
 
-
         if self._write_freq == 'daily':
             print master.keys()
-            #print 'what are daily outputs {}'.format(self._cfg.daily_outputs)
+            # print 'what are daily outputs {}'.format(self._cfg.daily_outputs)
             # for element in self._cfg.daily_outputs:
             #     print 'raster tuple', (element, Raster.fromarray(master[element]).unmasked())
 
             # something like this to diff dailys
 
-            #dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
+            # dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
 
             # TODO - The arrays are getting messed up here (OR NOT?!?!?!)
             if paths.mask != None:
-                dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in
+                dailys = [(element, Raster.fromarray(master[element]).unmasked(shape=self._cfg.tiff_shape)) for element in
                           self._cfg.daily_outputs]
 
             else:
-                dailys = [(element, Raster.fromarray(master[element]).unmasked_no_mask()) for element in self._cfg.daily_outputs]
+                dailys = [(element, Raster.fromarray(master[element]).unmasked_no_mask()) for element in
+                          self._cfg.daily_outputs]
                 # print "shape of dailys", dailys.shape() # old verion
 
-            #print 'new dailys -> {}'.format(dailys)
+            # print 'new dailys -> {}'.format(dailys)
 
             for element, arr in dailys:
                 print 'arr shape', arr.shape
@@ -116,7 +116,7 @@ class RasterManager(object):
                     print "date_object NOT in self._save_dates"
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
-        #print 'outputs rm {}'.format(outputs)
+        # print 'outputs rm {}'.format(outputs)
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
@@ -145,7 +145,7 @@ class RasterManager(object):
         print 'saving the simulation master tracker'
         self._save_tabulated_results_to_csv(self._results_dir, paths.polygons)
 
-    def _update_raster_tracker(self, vv, var, period): # TODO - ones
+    def _update_raster_tracker(self, vv, var, period):  # TODO - ones
         """ Updates the cumulative rasters each period as indicated.
 
         This function is to prepare a dict of rasters showing the flux over the past time period (month, year).
@@ -164,9 +164,7 @@ class RasterManager(object):
         #             counter += 1
         # print 'vv counter {}'.format(counter)
 
-        #print 'var -> {}'.format(var)
-
-
+        # print 'var -> {}'.format(var)
 
         periods = ('annual', 'daily', 'monthly')
 
@@ -191,10 +189,9 @@ class RasterManager(object):
         # print "tracker[ckey] -> {}".format(tracker[ckey])
         # print "tracker[ckey][var] {}".format(tracker[ckey][var])
 
-
         # print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
         # TODO fix monthly
-        tracker[ckey][var] = vv # - tracker[lkey][var]
+        tracker[ckey][var] = vv  # - tracker[lkey][var]
         # tracker[lkey][var] =  vv
         print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
         print 'mean value master {} today: {}'.format(var, vv.mean())
@@ -212,7 +209,7 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year) # TODO - date.day missing!
+        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)  # TODO - date.day missing!
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
 

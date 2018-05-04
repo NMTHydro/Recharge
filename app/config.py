@@ -47,6 +47,7 @@ end_year: SET ME # YYYY
 mask: SET ME # mask of study area (e.g. Mask/my_mask.tif)
 binary_shapefile: SET ME # Set path to raster for individual tracker output (e.g binary_shapefile/my_b_shp.tif)
 polygons: Blank_Geo # (default)
+tiff_shape: None
 
 #  === Saving specific dates as rasters ===
 save_dates: [] # list in format -> 'mm/dd/YYY' such as ['mm/dd/YYY', 'mm/dd/YYY', 'mm/dd/YYY']
@@ -117,6 +118,7 @@ class RunSpec:
     xplot = None
     yplot = None
     plot_output = None
+    tiff_shape = None
 
     def __init__(self, obj):
         self._obj = obj
@@ -127,6 +129,7 @@ class RunSpec:
                  'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                  'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent',
+                 'tiff_shape',
                  'xplot', 'yplot','plot_output') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
 
         for attr in attrs:
