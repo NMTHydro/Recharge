@@ -120,6 +120,10 @@ class Raster(object):
 
         return narr
 
+    def unmasked_no_mask(self):
+        narr = self._arr.ravel()
+        return narr
+
     def masked(self):
         """
         returns valid points as 1-d array

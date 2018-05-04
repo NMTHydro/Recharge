@@ -88,9 +88,17 @@ class RasterManager(object):
             #     print 'raster tuple', (element, Raster.fromarray(master[element]).unmasked())
 
             # something like this to diff dailys
-            #TODO - we need to treat the tot_ values differently from de dr drew wrt how the dalys are output.
+
             #dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
-            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs] # old verion
+
+            # TODO - The arrays are getting messed up here (OR NOT?!?!?!)
+            if paths.mask != None:
+                dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in
+                          self._cfg.daily_outputs]
+
+            else:
+                dailys = [(element, Raster.fromarray(master[element]).unmasked_no_mask()) for element in self._cfg.daily_outputs]
+                # print "shape of dailys", dailys.shape() # old verion
 
             #print 'new dailys -> {}'.format(dailys)
 
@@ -126,6 +134,7 @@ class RasterManager(object):
 
             print 'period -> {}'.format(period)
             self._update_raster_tracker(arr, element, period=period)
+            print "arr {}, element {}, period{}".format(arr, element, period)
             self._write_raster(element, date_object, period=period)
 
             if not self._write_freq and period == 'monthly':
