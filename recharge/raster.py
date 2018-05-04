@@ -107,7 +107,7 @@ class Raster(object):
     def remove_negatives(self):
         self.filter_less(0, 0)
 
-    def unmasked(self, tiff_shape=None):
+    def unmasked(self, tiff_shape):
         narr = self._arr
         if paths.mask and os.path.isfile(paths.mask):
             idxs = self._get_masked_indices()
@@ -118,12 +118,17 @@ class Raster(object):
             z[~masked_arr.mask] = narr.ravel()
             narr = z
         else:
+            print 'tiff shape', tiff_shape
             if tiff_shape is None:
                 print 'You need to define tiff shape (cols,rows) if not using a mask'
                 import sys
                 sys.exit()
-
-            narr = narr.reshape(*tiff_shape)
+            print "tiff shape", tiff_shape
+            tiff = tiff_shape.split(',')
+            # narr = narr.reshape(int(tiff_shape[0]), int(tiff_shape[1]))
+            rows = int(tiff[0])
+            cols = int(tiff[1])
+            narr = narr.reshape(rows, cols)
 
         return narr
 

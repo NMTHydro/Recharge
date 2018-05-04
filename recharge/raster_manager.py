@@ -91,14 +91,10 @@ class RasterManager(object):
             # dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
 
             # TODO - The arrays are getting messed up here (OR NOT?!?!?!)
-            if paths.mask != None:
-                dailys = [(element, Raster.fromarray(master[element]).unmasked(shape=self._cfg.tiff_shape)) for element in
-                          self._cfg.daily_outputs]
-
-            else:
-                dailys = [(element, Raster.fromarray(master[element]).unmasked_no_mask()) for element in
-                          self._cfg.daily_outputs]
-                # print "shape of dailys", dailys.shape() # old verion
+            print "self tiff ", self._cfg.tiff_shape
+            tiff_shp = self._cfg.tiff_shape
+            dailys = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=tiff_shp)) for element in
+                      self._cfg.daily_outputs]
 
             # print 'new dailys -> {}'.format(dailys)
 
@@ -115,7 +111,7 @@ class RasterManager(object):
                 else:
                     print "date_object NOT in self._save_dates"
 
-        outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
+        outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in OUTPUTS]
         # print 'outputs rm {}'.format(outputs)
 
         # save monthly data
