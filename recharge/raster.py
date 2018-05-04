@@ -109,7 +109,7 @@ class Raster(object):
 
     def unmasked(self):
         narr = self._arr.ravel()
-        if os.path.isfile(paths.mask):
+        if paths.mask and os.path.isfile(paths.mask):
             idxs = self._get_masked_indices()
             idxs = asarray(idxs, int)
 
@@ -127,7 +127,7 @@ class Raster(object):
         :return:
         """
         a = self._arr
-        if os.path.isfile(paths.mask):
+        if paths.mask and os.path.isfile(paths.mask):
             idxs = self._get_masked_indices()
             a = a[idxs]
             # print self._arr
