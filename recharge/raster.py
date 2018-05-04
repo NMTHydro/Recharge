@@ -108,34 +108,17 @@ class Raster(object):
         self.filter_less(0, 0)
 
     def unmasked(self):
-        idxs = self._get_masked_indices()
-        idxs = asarray(idxs, int)
+        narr = self._arr.ravel()
+        if os.path.isfile(paths.mask):
+            idxs = self._get_masked_indices()
+            idxs = asarray(idxs, int)
 
+            masked_arr = masked_where(idxs == 0, idxs)
+            z = zeros_like(idxs, dtype=float)
+            z[~masked_arr.mask] = narr
+            narr = z
 
-        # return where(idxs==0, self._arr.ravel(), 0)
-
-        masked_arr = masked_where(idxs == 0, idxs)
-        narr = zeros_like(idxs, dtype=float)
-        narr[~masked_arr.mask] = self._arr.ravel()
-        #print 'narr', narr
-        # print 'nonzero narr', narr[nonzero(narr)]
         return narr
-
-        # masked_arr = asarray(masked_where(idxs == 0, idxs)[0], float)
-        # print 'arr ravel', self._arr.ravel()
-        # masked_arr[~masked_arr.mask] = self._arr.ravel()
-        # # TODO - problem right here?
-        # # print 'len mask array ', len(masked_arr)
-        # # print 'masked array mask', masked_arr.mask
-        # masked_arr.mask = nomask
-        # print 'masked array mask post nomask', masked_arr.mask
-        # print 'array returned', masked_arr.filled(0.0)
-        # for item in masked_arr:
-        #     #print 'item in filled array', item
-        #     for value in item:
-        #         if value > 0:
-        #             print 'value in each array', value
-        # return masked_arr.filled(0.0) # 0
 
     def masked(self):
         """
@@ -143,9 +126,12 @@ class Raster(object):
 
         :return:
         """
-        idxs = self._get_masked_indices()
-        # print self._arr
-        return self._arr[idxs].flatten()
+        a = self._arr
+        if os.path.isfile(paths.mask):
+            idxs = self._get_masked_indices()
+            a = a[idxs]
+            # print self._arr
+        return a.flatten()
 
     def open(self, path, band=1):
         """
