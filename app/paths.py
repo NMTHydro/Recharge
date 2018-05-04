@@ -106,8 +106,9 @@ class Paths:
         # use me
 
     def set_mask_path(self, path):
-        self.mask = self.input_path(path)
-        print 'here is the mask path {}'.format(self.mask)
+        if path and os.path.isfile(path):
+            self.mask = self.input_path(path)
+            print 'here is the mask path {}'.format(self.mask)
 
     def set_point_shape_path(self, path):
         self.point_shape = self.input_path(path)

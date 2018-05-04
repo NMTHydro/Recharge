@@ -295,17 +295,20 @@ def initialize_point_tracker(master, point_arr):
     :param point_arr:
     :return:
     """
+
+
+
     # TODO iterate through array and get array address out.
 
     # print point_arr
     #stuff = where(nonzero(point_arr))
 
-    print "shape of array -> {}".format(point_arr.shape)
+    # print "shape of array -> {}".format(point_arr.shape)
     # I'm nor sure that argwhere will get the pixels in the order that I want them in.
     arr_elements = argwhere(a=point_arr) # finds the indices of array elements that are non-zero, grouped by element
-    print "nonzero(point_arr", nonzero(point_arr)
+    # print "nonzero(point_arr", nonzero(point_arr)
     # arr_elements = nonzero(point_arr)[0]
-    print 'stuff', arr_elements
+    # print 'stuff', arr_elements
 
     # TODO - Figure out why the arr_elements isn't working like it's supposed to. GELP 4/27/2018
 
@@ -362,20 +365,23 @@ def initialize_point_tracker(master, point_arr):
 
 
     # avoid a memory leak and write to a csv...
-
+    # make the directory first
+    try:
+        if not os.path.isfile(paths.tracker_csv_path):
+            os.mkdir(paths.tracker_csv_path)
+    except WindowsError:
+        pass
     # path for all the csvs to go to
     csv_path = paths.tracker_csv_path
-
-
     # make the csvs...
     for index, dataframe in tracker_list:
         print "COLS", columns
         # dataframe.to_csv(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index)))
-        print "writing cols headers"
+        # print "writing cols headers"
         print "where the trackers go", os.path.join(csv_path, "tracker_pixel_{}.csv".format(index))
         with open(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index[0])), 'w') as wfile:
             writer = csv.writer(wfile)
-            writer.writerow(columns)
+            writer.writerow(columns) #TODO - in windows writes double spaced.
 
     # Still send out the list of pixels and columns
     return tracker_list

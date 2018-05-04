@@ -121,16 +121,16 @@ class RunSpec:
     def __init__(self, obj):
         self._obj = obj
         attrs = ('mask', 'polygons', 'use_individual_kcb',
-                 'input_root', 'output_root', 'output_path', 'write_freq', 'use_verify_paths',
-                 'nlcd_name', 'dem_name', 'aspect_name', 'slope_name', 'x_cord_name',
-                 'y_cord_name',
+                 'input_root', 'output_root', 'write_freq', 'use_verify_paths',
+                 'nlcd_name', 'dem_name', 'aspect_name', 'slope_name',
                  'taw_modification',
                  'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff',
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                  'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent',
-                 'xplot', 'yplot','plot_output')
+                 'xplot', 'yplot','plot_output') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
 
         for attr in attrs:
+            # print "last attr out", attr
             setattr(self, attr, self._obj.get(attr))
 
         initial = self._obj.get('initial')
@@ -207,6 +207,7 @@ class Config:
         #         print "here's the bad one"
         #         print doc
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
+        print "runspecs", self.runspecs
         rfile.close()
 
 

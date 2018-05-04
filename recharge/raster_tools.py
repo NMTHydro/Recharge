@@ -128,7 +128,9 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     out_data_set.SetProjection(geo['projection'])
 
     output_band = out_data_set.GetRasterBand(output_band)
-    print 'heres the array to save convere_array_to_raster ', arr
+    print 'heres the shape of the array to save convere_array_to_raster ', arr
+    print len(arr)
+    print type(arr)
     output_band.WriteArray(arr, 0, 0)
     del out_data_set, output_band
 
@@ -184,6 +186,13 @@ def get_raster_geo_attributes(root):
 def apply_mask(mask_path, arr):
     out = None
     idxs = get_mask(mask_path)
+    if idxs is not None:
+        out = arr[idxs].flatten()
+    return out
+
+def apply_mask_pixel_tracker(pix_mask, arr):
+    out = None
+    idxs = get_mask(pix_mask)
     if idxs is not None:
         out = arr[idxs].flatten()
     return out

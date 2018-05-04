@@ -23,8 +23,8 @@ dgketchum 24 JUL 2016
 """
 
 import os
-
-from numpy import where, isnan
+import numpy as np
+# from numpy import where, isnan
 
 from app.paths import paths
 from recharge import NUMS, PRISM_YEARS
@@ -44,8 +44,8 @@ def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
     kcb = ndvi * scalar
 
     if previous_kcb is not None:
-        kcb = where(isnan(kcb) is True, previous_kcb, kcb)
-        kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
+        kcb = np.where(np.isnan(kcb) is True, previous_kcb, kcb)
+        kcb = np.where(abs(kcb) > 100.0, previous_kcb, kcb)
 
     return kcb
 
@@ -148,7 +148,7 @@ def get_prisms(date, is_reduced = False):
     temp = (min_temp + max_temp) / 2
 
     precip = get_prism(date, variable='precip', is_reduced=is_reduced)
-    precip = where(precip < 0, 0, precip)
+    precip = np.where(precip < 0, 0, precip)
     return min_temp, max_temp, temp, precip
 
 
