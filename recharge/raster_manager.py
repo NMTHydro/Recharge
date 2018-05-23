@@ -30,7 +30,7 @@ from calendar import monthrange
 
 import gdal
 import ogr
-from numpy import array, where, zeros, nonzero
+from numpy import array, where, zeros, nonzero, mean
 
 from app.paths import paths
 from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
@@ -128,7 +128,8 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
-
+        print "vv"
+        print mean(vv)
         periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
@@ -178,6 +179,8 @@ class RasterManager(object):
             name = '{}_{}_{}.tif'.format(key, date.month, date.year)
             filename = os.path.join(rd['monthly_rasters'], name)
             array_to_save = tracker[CURRENT_MONTH][key]
+            print "array to save"
+            print mean(array_to_save)
 
         elif period == 'daily':
             name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
