@@ -150,9 +150,6 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        print 'len vv: {}'.format(len(vv))
-        print 'tracker[l][var] vv: {}'.format(len(tracker[lkey][var]))
-
         tracker[ckey][var] = vv - tracker[lkey][var]
         tracker[lkey][var] = vv
 
