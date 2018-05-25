@@ -19,7 +19,7 @@
 # ============= local library imports  ==========================
 import os
 
-from numpy import array, asarray
+from numpy import array, asarray, zeros_like
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 
@@ -114,9 +114,12 @@ class Raster(object):
             idxs = asarray(idxs, int)
             masked_arr = masked_where(idxs == 0, idxs)
 
+            z_float = zeros_like(idxs, dtype=float)
+
             # masked_arr = self._arr.reshape(len(masked_arr), len(masked_arr[0]))
-            masked_arr[~masked_arr.mask] = self._arr.ravel()
-            masked_arr.mask = nomask
+            z_float[~masked_arr.mask] = self._arr.ravel()
+            masked_arr = z_float
+            # masked_arr.mask = nomask
         else:
             masked_arr = self._arr#.ravel()
 

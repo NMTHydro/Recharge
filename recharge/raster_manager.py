@@ -30,7 +30,7 @@ from calendar import monthrange
 
 import gdal
 import ogr
-from numpy import array, where, zeros, nonzero, mean
+from numpy import array, where, zeros, nonzero, mean, amax
 
 from app.paths import paths
 from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
@@ -74,6 +74,7 @@ class RasterManager(object):
         :param date_object: datetime date object
         :return: None
         """
+        # print 'master tot_etrs', master['tot_etrs'] # it is decimal here
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save daily data (this will take a long time)
@@ -128,8 +129,6 @@ class RasterManager(object):
         :param var: vars are all accumulation terms from master
         :return: None
         """
-        print "vv"
-        print mean(vv)
         periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
@@ -197,6 +196,8 @@ class RasterManager(object):
 
         print 'saving {} raster to {}'.format(key, filename)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
+        # print 'array_to_save', array_to_save
+        # print 'self._geo', self._geo
         convert_array_to_raster(filename, array_to_save, self._geo)
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
