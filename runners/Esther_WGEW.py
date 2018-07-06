@@ -139,7 +139,7 @@ obs_months = []
 obs_days = []
 obs_depth = []
 
-with open('G:\\Observations\\Precip_Anal\\o24.csv') as csvDataFile:
+with open('H:\\Observations\\Precip_Anal\\o24.csv') as csvDataFile:
 # with open('G:\\Observations\\Precip_Anal\\81.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
@@ -159,7 +159,7 @@ months = []
 days = []
 depth = []
 
-with open('G:\\Observations\\Precip_Anal\\24.csv') as csvDataFile:
+with open('H:\\Observations\\Precip_Anal\\24.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         years.append(int(row[2]))
@@ -178,7 +178,7 @@ for i in range(len(years)):
     y.append(b)
 
 import matplotlib.pyplot as plt
-plt.plot(x,obs_cum_depth,label = "observation")
+plt.plot(x,obs_cum_depth,label = "Observation")
 plt.plot(y,depth,label ="PRISM")
 # plt.plot(x,obs_depth,label = "at the exact pixel")
 # plt.plot(y,depth,label ="offset by 1")
@@ -187,6 +187,7 @@ plt.ylabel('Cumulative Depth in mm')
 plt.xlabel('Julian Day from 2/20/2000 to 12/31/2015')
 plt.rc('font', size=12)  # controls default text sizes
 plt.rc('axes', titlesize=12, labelsize=12)  # fontsize of the axes title
+plt.xticks( arange(5), ('Tom', 'Dick', 'Harry', 'Sally', 'Sue'))
 plt.rc('xtick', labelsize=10)  # fontsize of the tick labels
 plt.rc('ytick', labelsize=10)  # fontsize of the tick labels
 plt.legend()
@@ -250,7 +251,7 @@ days = []
 duration=[]
 depth = []
 
-with open('G:\\Observations\\Precip_Anal_2\\East_Corner_4.csv') as csvDataFile:
+with open('H:\\Observations\\Precip_Anal_2\\East_Corner_4.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         ID.append(int(row[0]))
@@ -396,7 +397,7 @@ days = []
 duration=[]
 depth = []
 #read observational files
-with open('G:\\Observations\\Precip_Anal_2\\East_Corner_4.csv') as csvDataFile:
+with open('H:\\Observations\\Precip_Anal_2\\East_Corner_4.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         ID.append(int(row[0]))
@@ -487,8 +488,8 @@ months = []
 days = []
 depth = []
 
-with open('C:\\Users\\Esther\\Desktop\\NMTer-Spring2018\\HYD 592\\90.csv') as csvDataFile:
-# with open('G:\\Observations\\Precip_Anal_2\\Data\\70mm.csv') as csvDataFile:
+# with open('C:\\Users\\Esther\\Desktop\\NMTer-Spring2018\\HYD 592\\90.csv') as csvDataFile:
+with open('H:\\Observations\\Precip_Anal_2\\Data\\70mm.csv') as csvDataFile:
     csvReader = csv.reader(csvDataFile)
     for row in csvReader:
         years.append(int(row[2]))

@@ -18,7 +18,7 @@ import os
 import shutil
 import time
 
-from numpy import maximum, minimum, where, isnan, exp, median, nonzero
+from numpy import maximum, minimum, where, isnan, exp, median, nonzero,random, log
 
 from app.paths import paths, PathsNotSetExecption
 from recharge import MM
@@ -27,6 +27,7 @@ from recharge.dict_setup import initialize_master_dict, initialize_static_dict, 
 from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb, get_prisms
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
+from scipy.stats import norm
 
 class NotConfiguredError(BaseException):
     def __str__(self):
@@ -147,14 +148,50 @@ class Processes(object):
             self._info('DAY:     {}({})'.format(day, tm_yday))
 
             time_it(self._do_daily_raster_load, day)
+            # modify the PRISM precipitation
+            if start_monsoon <= tm_yday <= end_monsoon:
+                m['precip'] = maximum((m['precip'] - 1.612722) / 0.676904, 0)
+            else:
+                m['precip'] = maximum((m['precip'] - 0.488870) / 0.993831, 0)
+
+            m['inten'] = m['precip'] * 0
+
+            # generate random number
+            random_number = random.randn()
+            percentile = norm.cdf(random_number)
+
+            log_precip = log(m['precip'][m['precip'] > 0])
+            log_inten = log_precip * 0
+            if start_monsoon <= tm_yday <= end_monsoon:
+                log_inten[log_precip < 0] = norm.ppf(percentile, -2.43, 1.21)
+                log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -2.89, 1.06)
+                log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -2.83, 0.96)
+                log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -2.57, 0.95)
+                log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -2.44, 0.90)
+                log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -2.31, 0.89)
+                log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -2.18, 0.84)
+                log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -1.85, 0.77)
+                log_inten[log_precip >= 3.5] = norm.ppf(percentile, -1.86, 0.73)
+            else:
+                log_inten[log_precip < 0] = norm.ppf(percentile, -2.77, 1.33)
+                log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -3.48, 0.91)
+                log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -3.47, 0.77)
+                log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -3.37, 0.70)
+                log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -3.38, 0.61)
+                log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -3.28, 0.65)
+                log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -3.08, 0.56)
+                log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -3.12, 0.45)
+                log_inten[log_precip >= 3.5] = norm.ppf(percentile, -3.13, 0.66)
+
+            m['inten'][m['precip'] > 0] = exp(log_inten) # mm/min
 
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
             # If melt is occurring (calculated in _do_snow), infiltration will be set to 24 hours
             # [mm/day] #
             if start_monsoon <= tm_yday <= end_monsoon:
-                m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
+                m['soil_ksat'] = s['soil_ksat']# * 2 / 24.
             else:
-                m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
+                m['soil_ksat'] = s['soil_ksat']# * 6 / 24.
 
             time_it(self._do_snow, m, c)
             # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
@@ -167,7 +204,7 @@ class Processes(object):
             #     time_it(self._do_vert_soil_water_balance, m, s, c)
             
             func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
-            time_it(func, m, s, c)
+            time_it(func, m, s, c, tm_yday)
             
             time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
@@ -239,6 +276,7 @@ class Processes(object):
         m['etrs'] *= gamma
         m['kcb'] *= zeta
         m['soil_ksat'] *= theta
+
 
     def modify_taw(self, taw_modification):
         """
@@ -431,7 +469,7 @@ class Processes(object):
         m['fcov'] = fcov = maximum(minimum(cover_fraction_unbound, 1), 0.001)  # covered fraction of ground
         m['few'] = maximum(1 - fcov, 0.001)  # uncovered fraction of ground
 
-    def _do_fao_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None, evap_ceff=None):
+    def _do_fao_soil_water_balance(self, m, s, c, tm_yday, ro_local_reinfilt_frac=None, rew_ceff=None, evap_ceff=None):
         """ Calculate evap and all soil water balance at each time step.
 
         """
@@ -512,8 +550,37 @@ class Processes(object):
         m['dry_days'] = dd
 
         # Surface runoff (Hortonian- using storm duration modified ksat values)
-        ro = where(water > soil_ksat, water - soil_ksat, 0)
-        ro *= (1 - ro_local_reinfilt_frac)
+        # ro = where(water > soil_ksat, water - soil_ksat, 0)
+        # ro *= (1 - ro_local_reinfilt_frac)
+        '''Esther's Stats'''
+        num = random.uniform(0, 1)
+        start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
+        if start_monsoon <= tm_yday <= end_monsoon:
+            ro =  0.001160957 * (m['precip']**2) + 0.199019984 * m['precip'] * m['inten']
+            if num > 0.01392405:
+                ro = where(m['precip'] <= 2,0,ro)
+            if num > 0.05977011:
+                ro = where((m['precip'] <= 5) & (m['precip'] > 2), 0, ro)
+            if num > 0.06521739:
+                ro = where((m['precip'] <= 8) & (m['precip'] > 5), 0, ro)
+            if num > 0.2393617:
+                ro = where((m['precip'] <= 12) & (m['precip'] > 5), 0, ro)
+            if num > 0.4554455:
+                ro = where((m['precip'] <= 22) & (m['precip'] > 12), 0, ro)
+            if num > 0.8:
+                ro = where((m['precip'] <= 40) & (m['precip'] > 22), 0, ro)
+            if num > 0.9:
+                ro = where(m['precip'] > 40, 0, ro)
+        else:
+            ro = 0.0003765849 * (m['precip']**2) + 0.0964337598 * m['precip']*m['inten']
+            if num > 0.001658375:
+                ro = where(m['precip'] <= 10,0,ro)
+            if num > 0.05504587:
+                ro = where((m['precip'] <= 20) & (m['precip'] > 10), 0, ro)
+            if num > 0.1111111:
+                ro = where((m['precip'] <= 30) & (m['precip'] > 20), 0, ro)
+            if num > 0.5454545:
+                ro = where(m['precip'] > 30, 0, ro)
         m['ro'] = ro
 
         # Calculate Deep Percolation (recharge or infiltration)
@@ -531,7 +598,7 @@ class Processes(object):
 
         m['soil_storage'] = (pdr - dr)
 
-    def _do_vert_soil_water_balance(self, m, s, c, ro_local_reinfilt_frac=None, rew_ceff=None):
+    def _do_vert_soil_water_balance(self, m, s, c, tm_yday,ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
 
         :return: None

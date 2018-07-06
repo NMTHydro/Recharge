@@ -662,3 +662,107 @@ gdalwarp -overwrite -s_srs EPSG:26912 -te 577113 3501609 637613 3519609 -tr 250 
 -te 114757 3471163 682757 4102413 -tr 250 250
 #first step
 gdal_rasterize -a id -te 577113 3501609 637613 3519609 -tr 1.0 1.0 -l r81 "G:/Observations/Precipitation/PRISM gauge/r81.shp" G:/Observations/Precipitation/81.tif
+
+
+#-------------------------------------------------------------------
+#-------------------------------------------------------------------
+#-------------------------------------------------------------------
+#New Mexico Initialize de dr drew
+
+import os
+from subprocess import call
+from recharge.raster_tools import convert_raster_to_array
+from recharge.raster_tools import convert_array_to_raster
+from recharge.raster_tools import get_raster_geo_attributes
+
+#dr
+taw= convert_raster_to_array("H:\\ETRM_inputs\\statics\\", "taw_mod_4_21_10_0.tif")
+dr = taw/2
+geo = get_raster_geo_attributes("H:\\ETRM_inputs\\Blank_Geo")
+output_path = "G:\\NewMexico\\dr_half_taw_mm.tif"
+arr = dr
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+#de===================
+tew = convert_raster_to_array("H:\\ETRM_inputs\\statics\\", "tew_250_15apr.tif")
+de = tew/2
+geo = get_raster_geo_attributes("H:\\ETRM_inputs\\Blank_Geo")
+output_path = "G:\\NewMexico\\de_half_tew_mm.tif"
+arr = de
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+#drew===================
+rew = convert_raster_to_array("H:\\ETRM_inputs\\statics\\", "rew_22SEPT16.tif")
+drew = rew/2
+geo = get_raster_geo_attributes("H:\\ETRM_inputs\\Blank_Geo")
+output_path = "G:\\NewMexico\\drew_half_rew_mm.tif"
+arr = drew
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+#===============================================================================
+# process New Mexico rasters for thesis Chapter 2
+root = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\NM rasters\\"
+type = "eta"
+#others like etrs,eta, infil, precip, ro
+name0 = root + "tot_" + type + "_2000.tif"
+name1 = root + "tot_" + type + "_2001.tif"
+name2 = root + "tot_" + type + "_2002.tif"
+name3 = root + "tot_" + type + "_2003.tif"
+name4 = root + "tot_" + type + "_2004.tif"
+name5 = root + "tot_" + type + "_2005.tif"
+name6 = root + "tot_" + type + "_2006.tif"
+name7 = root + "tot_" + type + "_2007.tif"
+name8 = root + "tot_" + type + "_2008.tif"
+name9 = root + "tot_" + type + "_2009.tif"
+name10 = root + "tot_" + type + "_2010.tif"
+name11 = root + "tot_" + type + "_2011.tif"
+name12 = root + "tot_" + type + "_2012.tif"
+name13 = root + "tot_" + type + "_2013.tif"
+#------------------------------------------
+yr0 = convert_raster_to_array(name0)
+yr1 = convert_raster_to_array(name1)
+yr2 = convert_raster_to_array(name2)
+yr3 = convert_raster_to_array(name3)
+yr4 = convert_raster_to_array(name4)
+yr5 = convert_raster_to_array(name5)
+yr6 = convert_raster_to_array(name6)
+yr7 = convert_raster_to_array(name7)
+yr8 = convert_raster_to_array(name8)
+yr9 = convert_raster_to_array(name9)
+yr10 = convert_raster_to_array(name10)
+yr11 = convert_raster_to_array(name11)
+yr12 = convert_raster_to_array(name12)
+yr13 = convert_raster_to_array(name13)
+
+total = (yr0+yr1+yr2+yr3+yr4+yr5+yr6+yr7+yr8+yr9+yr10+yr11+yr12+yr13)/14
+geo = get_raster_geo_attributes("H:\\ETRM_inputs\\Blank_Geo")
+output_path = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\"+type+".tif"
+arr = total
+convert_array_to_raster(output_path, arr, geo, output_band=1)
+
+precip = convert_raster_to_array("C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\precip.tif")
+ro = convert_raster_to_array("C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\ro.tif")
+etrs = convert_raster_to_array("C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\etrs.tif")
+infil = convert_raster_to_array("C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\infil.tif")
+eta = convert_raster_to_array("C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\eta.tif")
+
+geo = get_raster_geo_attributes("H:\\ETRM_inputs\\Blank_Geo")
+
+output_path1 = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\ro_precent.tif"
+output_path2 = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\etrs_precent.tif"
+output_path3 = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\infil_precent.tif"
+output_path4 = "C:\\Users\\Esther\\Desktop\\NMTer-Summer2018\\Chapter 2\\eta_precent.tif"
+
+arr1 =  precip * 0
+arr1[precip > 0] = 100 * ro[precip > 0]/precip[precip > 0]
+arr2 =  precip * 0
+arr2[precip > 0] = 100 * etrs[precip > 0]/precip[precip > 0]
+arr3 =  precip * 0
+arr3[precip > 0] = 100 * infil[precip > 0]/precip[precip > 0]
+arr4 =  precip * 0
+arr4[precip > 0] = 100 * eta[precip > 0]/precip[precip > 0]
+
+convert_array_to_raster(output_path1, arr1, geo, output_band=1)
+convert_array_to_raster(output_path2, arr2, geo, output_band=1)
+convert_array_to_raster(output_path3, arr3, geo, output_band=1)
+convert_array_to_raster(output_path4, arr4, geo, output_band=1)
