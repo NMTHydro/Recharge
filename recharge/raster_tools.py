@@ -173,7 +173,7 @@ def get_raster_geo_attributes(root):
     """
     # statics = [filename for filename in os.listdir(statics_path) if filename.endswith('.tif')]
     # file_name = statics[0]
-    file_name = next((fn for fn in os.listdir(root) if fn.endswith('.tif')), None)
+    file_name = next((fn for fn in sorted(os.listdir(root)) if fn.endswith('.tif')), None)
     dataset = gdal.Open(os.path.join(root, file_name))
 
     band = dataset.GetRasterBand(1)

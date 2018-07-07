@@ -897,6 +897,7 @@ class Processes(object):
 
 
     def _output_function(self, param):
+        '''determine if units are acre-feet (volume, summed over area of interest) or mm (average depth)'''
         if self._cfg.output_units == MM:
             param = param.mean()
         if not self._cfg.output_units == MM:
