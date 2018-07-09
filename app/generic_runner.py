@@ -121,7 +121,7 @@ def run(cfg_path=None):
 if __name__ == '__main__':
 
 
-    run(cfg_path='/Users/dcadol/ETRM_CONFIG.yml')
+    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
     # if len(sys.argv) == 1:
     #     run()
     # else:

@@ -556,31 +556,31 @@ class Processes(object):
         num = random.uniform(0, 1)
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         if start_monsoon <= tm_yday <= end_monsoon:
-            ro =  0.001160957 * (m['precip']**2) + 0.199019984 * m['precip'] * m['inten']
+            ro =  0.001160957 * (m['rain']**2) + 0.199019984 * m['rain'] * m['inten']
             if num > 0.01392405:
-                ro = where(m['precip'] <= 2,0,ro)
+                ro = where(m['rain'] <= 2,0,ro)
             if num > 0.05977011:
-                ro = where((m['precip'] <= 5) & (m['precip'] > 2), 0, ro)
+                ro = where((m['rain'] <= 5) & (m['rain'] > 2), 0, ro)
             if num > 0.06521739:
-                ro = where((m['precip'] <= 8) & (m['precip'] > 5), 0, ro)
+                ro = where((m['rain'] <= 8) & (m['rain'] > 5), 0, ro)
             if num > 0.2393617:
-                ro = where((m['precip'] <= 12) & (m['precip'] > 5), 0, ro)
+                ro = where((m['rain'] <= 12) & (m['rain'] > 5), 0, ro)
             if num > 0.4554455:
-                ro = where((m['precip'] <= 22) & (m['precip'] > 12), 0, ro)
+                ro = where((m['rain'] <= 22) & (m['rain'] > 12), 0, ro)
             if num > 0.8:
-                ro = where((m['precip'] <= 40) & (m['precip'] > 22), 0, ro)
+                ro = where((m['rain'] <= 40) & (m['rain'] > 22), 0, ro)
             if num > 0.9:
-                ro = where(m['precip'] > 40, 0, ro)
+                ro = where(m['rain'] > 40, 0, ro)
         else:
-            ro = 0.0003765849 * (m['precip']**2) + 0.0964337598 * m['precip']*m['inten']
+            ro = 0.0003765849 * (m['rain']**2) + 0.0964337598 * m['rain']*m['inten']
             if num > 0.001658375:
-                ro = where(m['precip'] <= 10,0,ro)
+                ro = where(m['rain'] <= 10,0,ro)
             if num > 0.05504587:
-                ro = where((m['precip'] <= 20) & (m['precip'] > 10), 0, ro)
+                ro = where((m['rain'] <= 20) & (m['rain'] > 10), 0, ro)
             if num > 0.1111111:
-                ro = where((m['precip'] <= 30) & (m['precip'] > 20), 0, ro)
+                ro = where((m['rain'] <= 30) & (m['rain'] > 20), 0, ro)
             if num > 0.5454545:
-                ro = where(m['precip'] > 30, 0, ro)
+                ro = where(m['rain'] > 30, 0, ro)
         m['ro'] = ro
 
         # Calculate Deep Percolation (recharge or infiltration)
