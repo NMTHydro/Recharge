@@ -22,7 +22,7 @@ import os
 from affine import Affine
 
 from app.paths import paths, PathsNotSetExecption
-from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman, get_prism, get_spline_ndvi
+from recharge.dynamic_raster_finder import get_prisms, get_geo, get_individ_ndvi, get_penman, get_prism
 from recharge.raster import Raster
 from recharge.raster_tools import get_tiff_transform_func, get_tiff_transform
 from recharge.tools import day_generator
@@ -44,7 +44,6 @@ def generate_dataset(daterange, out):
     for day in day_generator(*daterange):
         extract_prism(day, *args)
         extract_ndvi(day, *args)
-        # extract_ndvi_spline(day, *args)
         extract_penman(day, *args)
         print '----------------- day {} -------------------'.format(day.strftime('%m_%d_%Y'))
 
@@ -93,18 +92,6 @@ def extract_ndvi(day, out, geo, bounds):
     timestamp = day.strftime('%Y_%m_%d')
     year = str(day.year)
     p = os.path.join(out, 'NDVI', 'NDVI', year)
-    # if not os.path.isdir(p):
-    #     os.makedirs(p)
-    p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
-    slice_and_save(p, arr, geo, *bounds)
-
-
-def extract_ndvi_spline(day, out, geo, bounds):
-    arr = get_spline_ndvi(day)
-
-    timestamp = day.strftime('%Y_%m_%d')
-    year = str(day.year)
-    p = os.path.join(out, 'NDVI', 'NDVI_spline', year)
     # if not os.path.isdir(p):
     #     os.makedirs(p)
     p = os.path.join(p, '{}{}.tif'.format('NDVI', timestamp))
@@ -210,7 +197,6 @@ def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     raster = Raster.fromarray(arr)
     marr = raster.unmasked()
     marr = marr[slice(startr, endr), slice(startc, endc)]
-    # marr = marr * arr
     # print 'saving {}'.format(p)
     raster.save(p, marr, geo)
 
@@ -231,6 +217,6 @@ def get_transform(startc, startr):
 
 
 if __name__ == '__main__':
-    paths.build('')
-    generate_dataset('12/1/2013', '12/2/2013', '/Users/ross/Sandbox/etrm_dataset')
+    paths.build('/Volumes/Seagate Expansion Drive/ETRM_inputs')
+    generate_dataset(['1/1/2000', '12/31/2013'], '/Volumes/Seagate Expansion Drive/gabe_aoi_inputs')
 # ============= EOF =============================================

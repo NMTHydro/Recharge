@@ -17,6 +17,15 @@
 import os
 import shutil
 import time
+import numpy
+import psutil
+import csv
+import pandas
+import gdal
+import ogr
+import osgeo
+from subprocess import call
+from numpy import maximum, minimum, where, isnan, exp, median, full
 
 from numpy import maximum, minimum, where, isnan, exp, median, nonzero,random, log, zeros_like
 
@@ -28,6 +37,12 @@ from recharge.dynamic_raster_finder import get_penman, get_individ_kcb, get_kcb,
 from recharge.raster_manager import RasterManager
 from recharge.tools import millimeter_to_acreft, unique_path, add_extension, time_it, day_generator
 from scipy.stats import norm
+from recharge.raster_tools import convert_raster_to_array
+
+from recharge.dict_setup import initialize_point_tracker
+from recharge.raster_tools import apply_mask, apply_mask_pixel_tracker
+from utils.tracker_plot import run_tracker_plot
+
 
 class NotConfiguredError(BaseException):
     def __str__(self):
@@ -56,8 +71,11 @@ class Processes(object):
     _is_configured = False
 
     def __init__(self, cfg):
-        self.tracker = None
+        # JIR
+        # self.tracker = None
+        self.point_tracker = None
         self._initial_depletions = None
+
         if not paths.is_set():
             raise PathsNotSetExecption()
 
@@ -67,7 +85,8 @@ class Processes(object):
         paths.set_polygons_path(cfg.polygons)
         if cfg.mask:
             paths.set_mask_path(cfg.mask)
-
+        if cfg.binary_shapefile:
+            paths.set_point_shape_path(cfg.binary_shapefile)
         if cfg.use_verify_paths:
             paths.verify()
 
@@ -80,11 +99,18 @@ class Processes(object):
 
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
-        # as defined in self._outputs. Don't initialize point_tracker until a time step has passed
+        # as defined in self._outputs. Don't initialize point_tracker until a time step has passed #TODO - point_tracker?
         self._static = initialize_static_dict(cfg.static_pairs)
-        self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
 
-        shape = self._static['taw'].shape
+        # JIR
+        # not necessary
+        # self._initial = initialize_initial_conditions_dict(cfg.initial_pairs)
+
+        self.xplot = self._cfg.xplot
+        self.yplot = self._cfg.yplot
+        self.plot_output = self._cfg.plot_output
+
+        shape = self._static['taw'].shape  # Here's where the shape of the grid is determined GELP
         self._master = initialize_master_dict(shape)
 
         self._raster_manager = RasterManager(cfg)
@@ -106,6 +132,9 @@ class Processes(object):
 
         if runspec.taw_modification is not None:
             self.modify_taw(runspec.taw_modification)
+
+        if runspec.uniform_taw is not None:
+            self.uniform_taw(runspec.uniform_taw)
 
         self._date_range = runspec.date_range
         self._use_individual_kcb = runspec.use_individual_kcb
@@ -134,6 +163,8 @@ class Processes(object):
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
+        point_arr = self._pixels_of_interest_to_array(paths.point_shape)
+
         c = self._constants
         m = self._master
         s = self._static
@@ -141,8 +172,15 @@ class Processes(object):
 
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         self._info('Monsoon: {} to {}'.format(start_monsoon, end_monsoon))
-        big_counter = 0
+        # big_counter = 0
         st = time.time()
+
+        if self.point_tracker is None:
+            # to avoid a memory leak, at this stage we write to a file.
+            # initialize_point_tracker(m, point_arr)
+            # self.point_tracker = True
+            self.point_tracker = initialize_point_tracker(m, point_arr)
+
         for day in day_generator(*self._date_range):
             tm_yday = day.timetuple().tm_yday
             self._info('DAY:     {}({})'.format(day, tm_yday))
@@ -188,10 +226,12 @@ class Processes(object):
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
             # If melt is occurring (calculated in _do_snow), infiltration will be set to 24 hours
             # [mm/day] #
-            if start_monsoon <= tm_yday <= end_monsoon:
-                m['soil_ksat'] = s['soil_ksat']# * 2 / 24.
-            else:
-                m['soil_ksat'] = s['soil_ksat']# * 6 / 24.
+            m['soil_ksat'] = s['soil_ksat']
+            # ksat-runoff version
+            # if start_monsoon <= tm_yday <= end_monsoon:
+            #     m['soil_ksat'] = s['soil_ksat'] * 2 / 24.
+            # else:
+            #     m['soil_ksat'] = s['soil_ksat'] * 6 / 24.
 
             time_it(self._do_snow, m, c)
             # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
@@ -202,7 +242,7 @@ class Processes(object):
             #     time_it(self._do_fao_soil_water_balance, m, s, c)
             # elif self._swb_mode == 'vertical':
             #     time_it(self._do_vert_soil_water_balance, m, s, c)
-            
+
             func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
             time_it(func, m, s, c, tm_yday)
             
@@ -210,44 +250,23 @@ class Processes(object):
 
             time_it(self._do_accumulations)
 
-            if self.tracker is None:
-                self.tracker = initialize_master_tracker(m)
+            # if self.tracker is None:
+            #     self.tracker = initialize_master_tracker(m) #TODO check gabe merge
 
-            # array_counter = 0
-            # for value in rm._output_tracker['current_day']['tot_etrs']:
-            #     for item in value:
-            #         if item > 0 and item != 1.0:
-            #             array_counter += 1
-            #             big_counter += 1
-            #             print 'item in array', item
 
-            # print "array counter {}".format(array_counter)
-            # print 'master tot_etrs', m['tot_etrs'], nonzero(m['tot_etrs'])
 
             time_it(rm.update_raster_obj, m, day)
-            # after here
             time_it(self._update_master_tracker, m, day)
-            #print 'heres the rm._output_tracker in the loop after the update {}'.format(rm._output_tracker)
-            #print 'etrs update obj {}'.format(rm._output_tracker['current_day']['tot_etrs'])
-            # array_counter = 0
-            # for value in rm._output_tracker['current_day']['tot_etrs']:
-            #     for item in value:
-            #         if item > 0 and item != 1.0:
-            #             array_counter += 1
-            #             big_counter += 1
-            #             print 'item in array', item
+            self._update_point_tracker(m, day)
 
-            # print "array counter {}".format(array_counter)
-        print ' big counter {}'.format(big_counter)
-        print "Here's the raster manager rm {}".format(rm)
-        print "Here's the master dict for tot_etrs {}".format(m['tot_etrs'])
-        print "master dict daily {}".format(m)
+
         self._info('saving tabulated data')
         time_it(rm.save_csv)
 
-        self.save_mask()
+        if paths.mask != None:
+            self.save_mask()
 
-        self.save_tracker()
+        self.save_tracker() #TODO check gabe merge
         self._info('Execution time: {}'.format(time.time() - st))
 
     def set_save_dates(self, dates):
@@ -277,7 +296,6 @@ class Processes(object):
         m['kcb'] *= zeta
         m['soil_ksat'] *= theta
 
-
     def modify_taw(self, taw_modification):
         """
         Gets the taw array, modifies it by a constant scalar value
@@ -292,6 +310,24 @@ class Processes(object):
         taw = s['taw']
         taw = taw * taw_modification
         s['taw'] = taw
+
+        return taw
+
+    def uniform_taw(self, taw_value):
+        """Replaces the taw array with a single value
+
+        :param taw_value: object
+        :return taw_uniform array
+
+        """
+        print '===========================\nrunning uniform_taw\n==========================='
+        m = self._master  # testing 6/2/17
+        s = self._static
+        taw = s['taw']
+        taw_shape = taw.shape
+        s['taw'] = numpy.full(taw_shape, taw_value)
+        taw = s['taw']
+        m['pdr'] = m['dr'] = taw
 
         return taw
 
@@ -313,12 +349,20 @@ class Processes(object):
 
         :return:
         """
+        # JIR
+        initial = initialize_initial_conditions_dict(self._cfg.initial_pairs)
+
         self._info('Initialize initial model state')
         m = self._master
+        # JIR
+        print 'initial dr {}'.format(initial['dr'])
+        # m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
+        m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
 
-        m['pdr'] = m['dr'] = self._initial['dr']
-        m['pde'] = m['de'] = self._initial['de']
-        m['pdrew'] = m['drew'] = self._initial['drew']
+        # JIR
+        m['pde'] = m['de'] = initial['de']
+        # JIR
+        m['pdrew'] = m['drew'] = initial['drew']
 
         s = self._static
         for key in ('rew', 'tew', 'taw', 'soil_ksat'):
@@ -326,7 +370,7 @@ class Processes(object):
             msg = '{} median: {}, mean: {}, max: {}, min: {}'.format(key, median(v), v.mean(), v.max(), v.min())
             self._debug(msg)
 
-        self._initial_depletions = m['dr'] + m['de'] + m['drew']
+        self._initial_depletions = m['dr']  # + m['de'] + m['drew']
 
     def save_mask(self):
         path = paths.mask
@@ -337,14 +381,54 @@ class Processes(object):
             name = os.path.basename(path)
             shutil.copyfile(path, os.path.join(paths.results_root, name))
 
-    def save_tracker(self, path=None):
-        """
+    def save_point_tracker(self, path=None):
 
-        :param path:
-        :return:
-        """
-        self._info('Saving tracker')
+        output_loc = paths.etrm_output_root
+        count = 0
 
+        csv_pathlist = []
+        for tuple in self.point_tracker:
+
+            base = 'etrm_tracker_{:03n}'.format(count)
+
+            if path is None:
+                path = add_extension(os.path.join(output_loc, base), '.csv')
+
+            if os.path.isfile(path):
+                path = unique_path(output_loc, base, '.csv')
+
+            path = add_extension(path, '.csv')
+            print 'this should be your csv: {}'.format(path)
+            print tuple, 'self. point tracker'
+            tuple[1].to_csv(path, na_rep='nan', index_label='Date')
+            count += 1
+
+            csv_pathlist.append(path)
+        return csv_pathlist
+    # JIR # TODO check gabe merge
+    # def save_tracker(self, path=None):
+    #     """
+    #
+    #     :param path:
+    #     :return:
+    #     """
+    #     self._info('Saving tracker')
+    #
+    #     root = paths.results_root
+    #     base = 'etrm_master_tracker'
+    #     if path is None:
+    #         path = add_extension(os.path.join(root, base), '.csv')
+    #
+    #     if os.path.isfile(path):
+    #         path = unique_path(root, base, '.csv')
+    #
+    #     path = add_extension(path, '.csv')
+    #     print 'this should be your csv: {}'.format(path)
+    #     print self.tracker, 'self. tracker'
+    #     self.tracker.to_csv(path, na_rep='nan', index_label='Date')
+
+    # JIR
+    def _get_tracker_path(self, path=None):
         root = paths.results_root
         base = 'etrm_master_tracker'
         if path is None:
@@ -354,8 +438,7 @@ class Processes(object):
             path = unique_path(root, base, '.csv')
 
         path = add_extension(path, '.csv')
-        print 'this should be your csv: {}'.format(path)
-        self.tracker.to_csv(path, na_rep='nan', index_label='Date')
+        return path
 
     def _do_snow(self, m, c):
         """ Calibrated snow model that runs using PRISM temperature and precipitation.
@@ -421,8 +504,11 @@ class Processes(object):
 
         """
 
+        # basal crop coefficient - GELP
         kcb = m['kcb']
+        # Ref ET -GELP
         etrs = m['etrs']
+        # Root zone depletion -GELP
         pdr = m['dr']
 
         ####
@@ -487,13 +573,14 @@ class Processes(object):
         m['pdrew'] = pdrew = m['drew']
 
         taw = maximum(s['taw'], 0.001)
+        m['taw'] = taw  # add taw to master dict - Jul 9 2017, GELP
         tew = maximum(s['tew'], 0.001)  # TEW is zero at lakes in our data set
         rew = s['rew']
 
         kcb = m['kcb']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
         ks = m['ks']
-        etrs = m['etrs']
+        etrs = m['etrs'] # comes from get_penman function
 
         # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
@@ -597,6 +684,8 @@ class Processes(object):
         m['drew'] = minimum(maximum(pdrew - ((water - ro) * rew_ceff) + evap / few, 0), rew)
 
         m['soil_storage'] = (pdr - dr)
+
+        m['rzsm'] = 1 - (dr / taw)  # add root zone soil moisture (RZSM) to master dict - Jul 9, 2017 GELP
 
     def _do_vert_soil_water_balance(self, m, s, c, tm_yday,ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
@@ -771,7 +860,7 @@ class Processes(object):
             kk = 'tot_{}'.format(k)
             m[kk] = m[k] + m[kk]
 
-        m['soil_storage_all'] = self._initial_depletions - (m['pdr'] + m['pde'] + m['pdrew'])
+        m['soil_storage_all'] = self._initial_depletions - (m['pdr'])  # removed m['pde'] + m['pdrew'] 6/2/17
 
         func = self._output_function
         ms = [func(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
@@ -779,7 +868,6 @@ class Processes(object):
 
         ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
         print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
-
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -877,6 +965,117 @@ class Processes(object):
     #     m['kcb'] *= zeta
     #     m['soil_ksat'] *= theta
 
+    # TODO - eventually make point_tracker work from a shapefile. Code is below -vvv-
+    # def _shapefile_to_array(self, point_shape):
+    #     """
+    #     takes a point shapefile that has any number of points of attribute value 1.
+    #     :param point_shape:
+    #     :return:
+    #     This function converts the shapefile into a .tif of the entire model domain with pixel values of 1
+    #     corresponding to the points in the shapefile and zeros everywhere else.
+    #     Then, the .tif is converted into an array with the convert_raster_to_array function and that output array is
+    #     returned.
+    #     """
+    #     print 'shapefile path', point_shape
+    #     point_data = ogr.Open(point_shape)
+    #
+    #     print 'point_data', point_data
+    #
+    #     print 'cfg.new_mexico_extent', self._cfg.new_mexico_extent
+    #     #convert_raster_to_array()
+    #     if self._cfg.new_mexico_extent == True:
+    #         rasterize = 'gdal_rasterize -a id -ts 2272 2525 -tr 250 250 -te 114757 3471163 682757 4102413 -l pixel_shapefile_for_mask {} /Users/Gabe/Desktop/exp/pixel_mask_for_array.tif'.format(point_shape)
+    #         print rasterize
+    #         call(rasterize)
+    #
+    #     else:
+    #         print '_shapefile_to_array only formatted to work with a new_mexico extent of \n \
+    #               -te 114757 3471163 682757 4102413 -ts 2272 2525 -tr 250 250. If different extent needed,\n \
+    #           edit _shapefile_to_array function '
+    #         pass
+    #
+    #     # rasterize = 'gdal_rasterize -a id -ts 2272 -tr 250 250 -te 114757 3471163 682757 4102413 \
+    #     #              -l pixel_shapefile_for_mask /Users/Gabe/Desktop/RZSM_analysis/pixel_shapefile_for_mask.shp \
+    #     #               /Users/Gabe/Desktop/experimental_rasterize/pixel_mask_for_array.tif'
+    #     # gdal_rasterize - a
+    #     # id - l
+    #     # pixel_shapefile_for_mask / Users / Gabe / Desktop / RZSM_analysis / pixel_shapefile_for_mask.shp
+
+    def _pixels_of_interest_to_array(self, point_tif):
+
+        # =========== Jul 8, 2017
+        # print 'point tif', point_tif
+
+        point_arr = convert_raster_to_array(point_tif)
+
+        try:
+            if os.path.isfile(paths.mask):
+                point_arr = apply_mask(paths.mask, point_arr)
+        except TypeError:
+            pass
+
+        point_arr = apply_mask_pixel_tracker(paths.point_shape, point_arr)
+
+        # print 'new point arr', point_arr
+        # print 'new point arr shape', point_arr.shape
+
+        return point_arr
+        # ============
+
+    def _update_point_tracker(self, m, date):
+        """
+
+        :param m: Master dict of the processes class.
+        :param date: The date of the current timestep to be recorded
+        :return: Writes to a csv file the important things to track for a given pixel. Each pixel has its own csv.
+        """
+
+        # print "UPDATING POINT TRACKER"
+        # print "==\nTHIS is the POINT TRACKER\n=={}".format(self.point_tracker)
+        # # print self.point_tracker
+        # total_mem = 0
+        # for index, dataframe in self.point_tracker:
+        #     mem = dataframe.memory_usage(index=False)
+        #     # print "mem {}".format(mem)
+        #     total_mem += mem
+        #
+        # print "Total memory used by {} is {}".format(date, total_mem)
+        # # Todo - write memory values and date to text file
+        # the item tracker has been initialized and written to csv in _initialize_point_tracker
+        # Here we just append the "item_tracker" to the correct csv...
+        # get the file directory and loop through
+        tracker_files_path = paths.tracker_csv_path
+
+        for path, dirs, files in os.walk(tracker_files_path, topdown=False):
+            # print "paaaath", path
+            # print "dirs", dirs
+            # print "files leeeest", files
+            for f in files:
+                # print "FFFF", f
+                file_indx = f.split("_")[-1]
+                # print "AAA", file_indx
+                file_indx = file_indx.split('.')[0]
+                # print "BBB", file_indx
+
+                # print "FILE index ", file_indx
+                for index, cols in self.point_tracker:
+                    # print "this is the index", index
+                    if "{}".format(index[0]) == file_indx:
+                        # print "MAAATCH"
+                        # TODO - Now we are going to append this to the correct .csv from initialize.
+                        # append this to a file.
+                        item_tracker = [m[key][index[1]] for key in sorted(m) if key not in ('transp_adj',)]
+
+                        # for key in sorted(m):
+                        #     if key not in ('transp_adj',):
+                        #         print "update Keys!!!", key
+                        item_tracker = [date] + item_tracker
+                        # print "about to write"
+                        with open(os.path.join(path, f), 'a') as append_file:
+                            writer = csv.writer(append_file)
+                            writer.writerow(item_tracker)
+
+
     def _update_master_tracker(self, m, date):
         def aggregate_data(key):
             param = m[key]
@@ -895,6 +1094,49 @@ class Processes(object):
         # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
         self.tracker.loc[date] = tracker_from_master
 
+    def _update_master_tracker2(self, m, date): #TODO check gabe merge
+        def factory(k):
+
+            # print 'k', k
+            # print 'm[k]', m[k]
+
+            v = m[k]
+
+            if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
+                     'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
+                v = v.mean()
+            elif k == 'transp_adj':
+                v = median(v)
+            # ========= July 4, 2017 testing
+            elif k == 'de':
+                # print 'de in tracker', v
+                pass
+            #=========
+                # print 'de in tracker', v
+            # =========
+            else:
+                v = self._output_function(v)
+            # print "V taken care of..."
+            return v
+
+        # JIR
+        # tracker_from_master = [factory(key) for key in sorted(m)]
+        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
+        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
+
+        # no reason for self.tracker to accumulate tracker_from_master
+        # just append to the csv output file here
+
+        # this is the original
+        # self.tracker.loc[date] = tracker_from_master
+
+        # do something like this instead
+        values = [str(factory(key)) for key in sorted(m)]
+        # need to implement _get_tracker_path
+        with open(self._get_tracker_path(), 'a') as wfile:
+            line = ','.join(values)
+            wfile.write('{},{}\n'.format(date, line))
+
 
     def _output_function(self, param):
         '''determine if units are acre-feet (volume, summed over area of interest) or mm (average depth)'''
@@ -904,56 +1146,56 @@ class Processes(object):
             param = millimeter_to_acreft(param)
         return param
 
-
-    def _get_tracker_summary(self, tracker, name):
-        s = self._static[name]
-
-        s1 = tracker['evap_1'].sum()
-        s2 = tracker['evap_2'].sum()
-        et = tracker['evap'].sum()
-        ts = tracker['transp'].sum()
-
-        ps = tracker['precip'].sum()
-        rs = tracker['rain'].sum()
-        ms = tracker['melt'].sum()
-        ros = tracker['ro'].sum()
-        infils = tracker['infil'].sum()
-
-        # print 'summary stats for {}:\n{}'.format(name, tracker.describe())
-        print '---------------------------------Tracker Summary--------------------------------'
-        print 'a look at vaporization:'
-        print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(s1, s2, s1 + s2, et)
-        print 'total transpiration = {}'.format(ts)
-
-        depletions = ('drew', 'de', 'dr')
-        capacities = (s['rew'], s['tew'], s['taw'])
-
-        starting_water = sum((x - tracker[y][0] for x, y in zip(capacities, depletions)))
-        ending_water = sum((x - tracker[y][-1] for x, y in zip(capacities, depletions)))
-
-        delta_soil_water = ending_water - starting_water
-        print 'soil water change = {}'.format(delta_soil_water)
-
-        print 'input precip = {}, rain = {}, melt = {}'.format(ps, rs, ms)
-
-        rswe = tracker['swe'][-1]
-        print 'remaining snow on ground (swe) = {}'.format(rswe)
-
-        input_sum = rswe + ms + rs
-
-        print 'total inputs (swe, rain, melt): {}'.format(input_sum)
-        print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, ps)
-        print 'total runoff = {}, total recharge = {}'.format(ros, infils)
-
-        output_sum = ts + et + ros + infils
-
-        output_sum += delta_soil_water + rswe  # added swe to output_sum; Dan, 2/11/17
-
-        print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
-        mass_balance = input_sum - output_sum
-        mass_percent = (mass_balance / input_sum) * 100
-        print 'overall water balance for {}: {} mm, or {} percent'.format(name, mass_balance, mass_percent)
-        print '--------------------------------------------------------------------------------'
+    # JIR
+    # def _get_tracker_summary(self, tracker, name):
+    #     s = self._static[name]
+    #
+    #     s1 = tracker['evap_1'].sum()
+    #     s2 = tracker['evap_2'].sum()
+    #     et = tracker['evap'].sum()
+    #     ts = tracker['transp'].sum()
+    #
+    #     ps = tracker['precip'].sum()
+    #     rs = tracker['rain'].sum()
+    #     ms = tracker['melt'].sum()
+    #     ros = tracker['ro'].sum()
+    #     infils = tracker['infil'].sum()
+    #
+    #     # print 'summary stats for {}:\n{}'.format(name, tracker.describe())
+    #     print '---------------------------------Tracker Summary--------------------------------'
+    #     print 'a look at vaporization:'
+    #     print 'stage one  = {}, stage two  = {}, together = {},  total evap: {}'.format(s1, s2, s1 + s2, et)
+    #     print 'total transpiration = {}'.format(ts)
+    #
+    #     depletions = ('drew', 'de', 'dr')
+    #     capacities = (s['rew'], s['tew'], s['taw'])
+    #
+    #     starting_water = sum((x - tracker[y][0] for x, y in zip(capacities, depletions)))
+    #     ending_water = sum((x - tracker[y][-1] for x, y in zip(capacities, depletions)))
+    #
+    #     delta_soil_water = ending_water - starting_water
+    #     print 'soil water change = {}'.format(delta_soil_water)
+    #
+    #     print 'input precip = {}, rain = {}, melt = {}'.format(ps, rs, ms)
+    #
+    #     rswe = tracker['swe'][-1]
+    #     print 'remaining snow on ground (swe) = {}'.format(rswe)
+    #
+    #     input_sum = rswe + ms + rs
+    #
+    #     print 'total inputs (swe, rain, melt): {}'.format(input_sum)
+    #     print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, ps)
+    #     print 'total runoff = {}, total recharge = {}'.format(ros, infils)
+    #
+    #     output_sum = ts + et + ros + infils
+    #
+    #     output_sum += delta_soil_water + rswe  # added swe to output_sum; Dan, 2/11/17
+    #
+    #     print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
+    #     mass_balance = input_sum - output_sum
+    #     mass_percent = (mass_balance / input_sum) * 100
+    #     print 'overall water balance for {}: {} mm, or {} percent'.format(name, mass_balance, mass_percent)
+    #     print '--------------------------------------------------------------------------------'
 
     def _info(self, msg):
         print '-------------------------------------------------------'

@@ -41,7 +41,7 @@ class Paths:
     static_inputs = None
     initial_inputs = None
     polygons = None
-    mask = None
+    mask = None #'/Volumes/Seagate Expansion Drive/ETRM_inputs/new_inputs/Mask/test_2_final_rast.tif' #'/Volumes/Seagate Expansion Drive/ETRM_inputs/Mask/unioned_raster_output.tif' # TODO temporary
     amf_sites = None
     amf_extract = None
     amf_output_root = None
@@ -51,6 +51,7 @@ class Paths:
     amf_ex_sac_output_root = None
     amf_ex_sac_trackers = None
     results_root = None
+    point_shape = None # TODO point_tracker
 
     def __init__(self):
         self._is_set = False
@@ -67,7 +68,7 @@ class Paths:
         now = datetime.now()
         tag = now.strftime('%y%m%d_%H_%M')
 
-        self.results_root = os.path.join(self.etrm_output_root, tag)
+        self.results_root = results_rt = os.path.join(self.etrm_output_root, tag)
 
         self.prism = os.path.join(etrm_input_root, 'PRISM')
         self.ndvi = os.path.join(etrm_input_root, 'NDVI')
@@ -91,8 +92,29 @@ class Paths:
         self.amf_ex_sac_output_root = ex_sac_out = os.path.join(ex_sac, 'AMF_ETRM_output')
         self.amf_ex_sac_extract = os.path.join(ex_sac, 'AMF_extracts')
 
+        mem = os.path.join(output_root, "mem000.txt")
+
+        cnt = 1
+        while os.path.isfile(mem):
+            mem = os.path.join(output_root, "mem{:03n}.txt".format(cnt))
+            cnt += 1
+
+        self.mem_file = mem
+
+        self.tracker_csv_path = os.path.join(output_root, 'point_trackers')
+
+        # self.pixel_tracker_output = os.path.join(results_rt)
+
+        # use me
+
     def set_mask_path(self, path):
-        self.mask = self.input_path(path)
+        if path and os.path.isfile(path):
+            self.mask = self.input_path(path)
+            print 'here is the mask path {}'.format(self.mask)
+
+    def set_point_shape_path(self, path):
+        self.point_shape = self.input_path(path)
+        print 'here is the shapefile path {}'.format(self.point_shape)
 
     def input_path(self, path):
         return os.path.join(self.etrm_input_root, path)

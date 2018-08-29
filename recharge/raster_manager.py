@@ -74,7 +74,6 @@ class RasterManager(object):
         :param date_object: datetime date object
         :return: None
         """
-        # print 'master tot_etrs', master['tot_etrs'] # it is decimal here
         mo_date = monthrange(date_object.year, date_object.month)
 
         # save daily data (this will take a long time)
@@ -83,10 +82,15 @@ class RasterManager(object):
 
         if self._write_freq == 'daily':
 
-            for element in self._cfg .daily_outputs:
-                print 'asdfas', element, master[element], nonzero(master[element])
+            # dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
 
-            dailys = [(element, Raster.fromarray(master[element]).unmasked()) for element in self._cfg.daily_outputs]
+            print "self tiff ", self._cfg.tiff_shape
+            tiff_shp = self._cfg.tiff_shape
+            dailys = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=tiff_shp)) for element in
+                      self._cfg.daily_outputs]
+
+            # print 'new dailys -> {}'.format(dailys)
+
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
@@ -96,7 +100,9 @@ class RasterManager(object):
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
 
-        outputs = [(element, Raster.fromarray(master[element]).unmasked()) for element in OUTPUTS]
+        outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in self._cfg.daily_outputs]
+        # print 'outputs rm {}'.format(outputs)
+
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
         if date_object.day == mo_date[1]:
@@ -132,7 +138,7 @@ class RasterManager(object):
         periods = ('annual', 'daily', 'monthly')
 
         if period not in periods:
-            msg = 'invalid period "{}" cannot update tracker. period most be one of {}'.format(period, periods)
+            msg = 'invalid period "{}" cannot update tracker. period must be one of {}'.format(period, periods)
 
             print msg
             raise NotImplementedError(msg)
@@ -150,8 +156,7 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        tracker[ckey][var] = vv - tracker[lkey][var]
-        tracker[lkey][var] = vv
+        tracker[ckey][var] = vv
 
     def _write_raster(self, key, date, period=None, master=None):
         """
@@ -164,7 +169,7 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}'.format(key, date.month, date.year)
+        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)  # TODO - date.day missing!
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         # root = rd['root'] # results directory doesn't have a root; all
@@ -178,8 +183,6 @@ class RasterManager(object):
             name = '{}_{}_{}.tif'.format(key, date.month, date.year)
             filename = os.path.join(rd['monthly_rasters'], name)
             array_to_save = tracker[CURRENT_MONTH][key]
-            print "array to save"
-            print mean(array_to_save)
 
         elif period == 'daily':
             name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
@@ -196,8 +199,6 @@ class RasterManager(object):
 
         print 'saving {} raster to {}'.format(key, filename)
         print 'written array {} mean value: {}'.format(key, array_to_save.mean())
-        # print 'array_to_save', array_to_save
-        # print 'self._geo', self._geo
         convert_array_to_raster(filename, array_to_save, self._geo)
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):

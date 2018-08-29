@@ -19,7 +19,6 @@
 # ============= local library imports  ==========================
 import sys
 import os
-
 pp = os.path.realpath(__file__)
 sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
@@ -28,12 +27,9 @@ from config import Config, check_config
 from recharge.dataset import generate_dataset
 from recharge.etrm_processes import Processes
 from recharge.preprocessing import generate_rew_tiff
+from recharge.raster_tools import make_results_dir
 
 CLI_ENABLED = False
-
-
-def run_soil_mapper():
-    print 'Running soil mapper'
 
 
 def run_dataset():
@@ -49,10 +45,14 @@ def run_dataset():
 
 def run_model(cfg_path=None):
     print 'Running Model'
+    print 'this is the cfg_path {}'.format(cfg_path)
     cfg = Config(cfg_path)
-    for runspec in cfg.runspecs:
+    print cfg
+    for i, runspec in enumerate(cfg.runspecs):
+        runspec.output_root = '{}{:03n}'.format(runspec.output_root, i)
+        # TODO - make a modified make_results_dir to only create of the 'outer' folder.
+        make_results_dir(runspec.output_root)
         paths.build(runspec.input_root, runspec.output_root)
-
         etrm = Processes(runspec)
         etrm.configure_run(runspec)
         etrm.run()
@@ -84,7 +84,7 @@ def welcome():
 Developed by David Ketchum, Jake Ross 2016
 New Mexico Tech/New Mexico Bureau of Geology
 
-   
+
 Available commands are enumerated using "commands"
 
 For more information regarding a specific command use "help <command>". Replace <command> with the command of interest
@@ -115,16 +115,13 @@ def run(cfg_path=None):
             func()
     else:
         run_model(cfg_path)
-        #run_soil_mapper()
- 
+
 
 if __name__ == '__main__':
-
-
-    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
-    # if len(sys.argv) == 1:
-    #     run()
-    # else:
-    #     run(cfg_path=sys.argv[1])
+    if len(sys.argv) == 1:
+        run()
+    else:
+        run(cfg_path=sys.argv[1])
+    # run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
 
 # ============= EOF =============================================
