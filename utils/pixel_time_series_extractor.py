@@ -174,9 +174,9 @@ def run_point_extract():
 
     # Begin extraction from the point path.
     feature_dictionary = x_y_extract(point_path)
-    print feature_dictionary
+    print "feature dictionary", feature_dictionary
 
-    # Use the feature dictionary to extract data from the rasters
+    # Use the feature dictionary to extract data from the rasters.
     for feature, tup in feature_dictionary.iteritems():
 
         # Get the X and Y coords from the dictionary and unpack them

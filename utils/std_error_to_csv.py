@@ -55,7 +55,8 @@ def calculate_rzswf(row, loc):
     # 140 cm total depth
     # first number is the depth of instrument, second number is the thickness of representative layer.
     # print "location -> {}".format(loc)
-    for k, wt in ((30, 45), (60, 20), (90, 25), (110, 20), (130, 30)):
+    # for k, wt in ((30, 45), (60, 20), (90, 25), (110, 20), (130, 30)):
+    for k, wt in ((30, 45), (60, 30), (90, 25), (110, 20), (130, 25)):
         # build the paths for each depth.
         k = 'swc_{}cm'.format(k)
         # print "K {}".format(k)
@@ -74,18 +75,22 @@ def calculate_rzswf(row, loc):
 
         # print "little s {}".format(v * wt)
 
-    print "STORAGE - {}".format(s)
+    # print "STORAGE - {}".format(s)
 
     # normalize the storage to get RZSWF (Root Zone Soil Water Fraction)
     if s - min_max_dict[loc][0] < 0:
         # soil water fraction goes to zero if the chosen minimum happens to be larger than the storage value
         # I realize calculating this is redundant but i do so for clarity
         rzswf = (s - s)/(min_max_dict[loc][1] - s)
-        print "should be zero -> {}".format(rzswf)
+        # print "should be zero -> {}".format(rzswf)
     else:
         rzswf = (s - min_max_dict[loc][0])/(min_max_dict[loc][1] - min_max_dict[loc][0])
 
     # return both the date and the root zone soil water fraction
+
+    # print 'row', row
+    # print 'raw rzswf', rzswf
+
     return row['date'], rzswf
 
 
@@ -106,6 +111,7 @@ def calculate_pixel(df, locations):
         :param loc: is a location from the list "locations"
         :return:
         """
+
         print "Doing location {}".format(loc)
         # filter the dictionary for all entries corresponding to the swc probe location
         fdf = df[df['location'] == loc]
@@ -123,6 +129,9 @@ def calculate_pixel(df, locations):
 
     series = [func(location) for location in locations]
     # series is a list of lists of [[(),()], [(),()], ... ] for every swc tube in the pixel
+
+    # print 'series', series
+
     return series
 
 
@@ -161,7 +170,7 @@ def calculate_se(vs):
         i_minus_m.append(j)
 
     # find the mean of the new subtracted list and take the square root
-    std_dev = (sum(i_minus_m)/n) ** 0.5
+    std_dev = (sum(i_minus_m)/(n - 1)) ** 0.5
 
     # standard error is std_dev over square root of n
     std_err = std_dev/(n ** 0.5)
@@ -230,15 +239,26 @@ def main():
     # print df.keys()
 
     # We use this dictionary to keep track of which locations correspond to which pixels.
-    pixel_location_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
-                           "002": ["C10", "C11"],
+    # pixel_location_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
+    #                        "002": ["C10", "C11"],
+    #                        "003": ["C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21"],
+    #                        "004": ["C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29"],
+    #                        "005": ["C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39"],
+    #                        "006": ["C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48"],
+    #                        "007": ["C51", "C52", "C53", "C54", "C55", "C56", "C57"],
+    #                        "008": ["C58", "C59", "C60", "C61", "C62", "C63", "C64", "C65", "C66"],
+    #                        "009": ["C67", "C68", "C69", "C70"], "010": ["C71", "C72", "C73", "C74", "C75"],
+    #                        "011": ["C76", "C77", "C78", "C79", "C80", "C81", "C82", "C83", "C84"],
+    #                        "012": ["C85", "C86", "C87", "C88", "C89"]}
+    pixel_location_dict = {"000": ["C01", "C02"], "002": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
+                           "001": ["C10", "C11"],
                            "003": ["C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21"],
                            "004": ["C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29"],
                            "005": ["C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39"],
                            "006": ["C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48"],
                            "007": ["C51", "C52", "C53", "C54", "C55", "C56", "C57"],
                            "008": ["C58", "C59", "C60", "C61", "C62", "C63", "C64", "C65", "C66"],
-                           "009": ["C67", "C68", "C69", "C70"], "010": ["C71", "C72", "C73", "C74", "C75"],
+                           "010": ["C67", "C68", "C69", "C70"], "009": ["C71", "C72", "C73", "C74", "C75"],
                            "011": ["C76", "C77", "C78", "C79", "C80", "C81", "C82", "C83", "C84"],
                            "012": ["C85", "C86", "C87", "C88", "C89"]}
 
@@ -249,8 +269,22 @@ def main():
     # i is a number. the items (pixel, locations) in the location dict are stored in a tuple
     for i, (pixel, locations) in enumerate(pixel_location_dict.items()):
 
+        print 'pixel number {}'.format(pixel)
+
         #[[(),()], [(),()]] where the tuples are dates and RZSWF for every swc tube in the pixel
         das = calculate_pixel(df, locations) # gets the storage for each tube
+
+        # print 'this is what das looks like', das
+        # GELP June 18
+        # temp_dict = {}
+        # if pixel == '005':
+        #     for i in range(0, (len(locations) + 1), 1):
+        #         print 'location', locations[i]
+        #
+        #         temp_dict[locations[i]] = das[i]
+        #
+        # print 'temp dict for pixel five', temp_dict
+
 
         # timeseries = [(dates), (std_errors)]
         timeseries = calculate(das)

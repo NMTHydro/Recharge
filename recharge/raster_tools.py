@@ -24,6 +24,7 @@ from pprint import pformat
 
 import rasterio
 from affine import Affine
+import numpy as np
 from numpy import array, asarray
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
@@ -375,11 +376,21 @@ def tiff_framer(mask_path, tiff_list):
 
 
 if __name__ == '__main__':
+
     rr = '/Users/ross/Sandbox/ETRM'
     tnames = ['eta_7_2012.tif', 'etrs_7_2012.tif']
     tnames = ['de_30_12_2013.tif', 'dr_30_12_2013.tif']
 
     mp = os.path.join(rr, 'mask', 'zuni_1.tif')
     print tiff_framer(mp, [os.path.join(rr, ti) for ti in tnames])
+    #
+    # arr = np.ones((10, 10))
+    #
+    # geo = {'bands':1, 'rows': 10, 'cols': 10, 'data_type': 6, 'geotransform': , 'projection': }
+    #
+    # p = '/Users/Gabe/Desktop/wrri_stuff/etrm_testing/1985_sc_uniquevals_colors_final_9.tif'
+    #
+    # convert_array_to_raster(p, arr, geo)
+
 
 # =================================== EOF =========================
