@@ -195,7 +195,7 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     if variable == 'precip':
         if is_reduced:
             root = os.path.join('precip', '800m_std_all')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'precip_{}'.format(tail)
         else:
             if is_walnut_gulch:
@@ -210,7 +210,7 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     elif variable == 'min_temp':
         if is_reduced:
             root = os.path.join('Temp', 'Minimum_standard')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'min_temp_{}'.format(tail)
         else:
             if is_walnut_gulch:
@@ -228,7 +228,8 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     elif variable == 'max_temp':
         if is_reduced:
             root = os.path.join('Temp', 'Maximum_standard')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}' \
+                   '  {:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'max_temp_{}'.format(tail)
         else:
             if is_walnut_gulch:

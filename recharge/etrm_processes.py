@@ -18,7 +18,7 @@ import os
 import shutil
 import time
 
-from numpy import maximum, minimum, where, isnan, exp, median, nonzero,random, log
+from numpy import maximum, minimum, where, isnan, exp, median, nonzero,random, log, zeros_like
 
 from app.paths import paths, PathsNotSetExecption
 from recharge import MM
@@ -161,7 +161,7 @@ class Processes(object):
             percentile = norm.cdf(random_number)
 
             log_precip = log(m['precip'][m['precip'] > 0])
-            log_inten = log_precip * 0
+            log_inten = zeros_like(log_precip)
             if start_monsoon <= tm_yday <= end_monsoon:
                 log_inten[log_precip < 0] = norm.ppf(percentile, -2.43, 1.21)
                 log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -2.89, 1.06)
@@ -556,15 +556,15 @@ class Processes(object):
         num = random.uniform(0, 1)
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         if start_monsoon <= tm_yday <= end_monsoon:
-            ro =  0.001160957 * (m['rain']**2) + 0.199019984 * m['rain'] * m['inten']
+            ro = 0.001160957 * (m['rain']**2) + 0.199019984 * m['rain'] * m['inten']
             if num > 0.01392405:
-                ro = where(m['rain'] <= 2,0,ro)
+                ro = where(m['rain'] <= 2, 0, ro)
             if num > 0.05977011:
                 ro = where((m['rain'] <= 5) & (m['rain'] > 2), 0, ro)
             if num > 0.06521739:
                 ro = where((m['rain'] <= 8) & (m['rain'] > 5), 0, ro)
             if num > 0.2393617:
-                ro = where((m['rain'] <= 12) & (m['rain'] > 5), 0, ro)
+                ro = where((m['rain'] <= 12) & (m['rain'] > 8), 0, ro)
             if num > 0.4554455:
                 ro = where((m['rain'] <= 22) & (m['rain'] > 12), 0, ro)
             if num > 0.8:

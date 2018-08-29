@@ -84,7 +84,7 @@ def welcome():
 Developed by David Ketchum, Jake Ross 2016
 New Mexico Tech/New Mexico Bureau of Geology
 
-
+   
 Available commands are enumerated using "commands"
 
 For more information regarding a specific command use "help <command>". Replace <command> with the command of interest
@@ -116,7 +116,7 @@ def run(cfg_path=None):
     else:
         run_model(cfg_path)
         #run_soil_mapper()
-
+ 
 
 if __name__ == '__main__':
 
