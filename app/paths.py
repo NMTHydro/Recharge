@@ -101,14 +101,14 @@ class Paths:
 
         self.mem_file = mem
 
-        self.tracker_csv_path = os.path.join(output_root, 'point_trackers')
+        self.tracker_csv_path = os.path.join(results_rt, 'point_trackers')
 
         # self.pixel_tracker_output = os.path.join(results_rt)
 
         # use me
 
     def set_mask_path(self, path):
-        if path and os.path.isfile(path):
+        if path:
             self.mask = self.input_path(path)
             print 'here is the mask path {}'.format(self.mask)
 

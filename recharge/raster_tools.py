@@ -192,12 +192,15 @@ def apply_mask_pixel_tracker(pix_mask, arr):
     out = None
     idxs = get_mask(pix_mask)
     if idxs is not None:
+        print "array shape", arr.shape
+        print 'indices', idxs.shape
         out = arr[idxs].flatten()
     return out
 
 
 def get_mask(path):
     if os.path.isfile(path):
+        print "here is the mask", path
         path, file_name = os.path.dirname(path), os.path.basename(path)
     else:
 

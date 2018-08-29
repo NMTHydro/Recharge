@@ -27,7 +27,7 @@ import osgeo
 from subprocess import call
 from numpy import maximum, minimum, where, isnan, exp, median, full
 
-from numpy import maximum, minimum, where, isnan, exp, median, nonzero,random, log, zeros_like
+from numpy import maximum, minimum, where, isnan, exp, median, nonzero, random, log, zeros_like
 
 from app.paths import paths, PathsNotSetExecption
 from recharge import MM
@@ -90,6 +90,7 @@ class Processes(object):
         if cfg.use_verify_paths:
             paths.verify()
 
+        print '##############################', paths.mask, cfg.mask
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
 
@@ -163,8 +164,6 @@ class Processes(object):
 
         self._info('Run started. Simulation period: start={}, end={}'.format(*self._date_range))
 
-        point_arr = self._pixels_of_interest_to_array(paths.point_shape)
-
         c = self._constants
         m = self._master
         s = self._static
@@ -179,9 +178,11 @@ class Processes(object):
             # to avoid a memory leak, at this stage we write to a file.
             # initialize_point_tracker(m, point_arr)
             # self.point_tracker = True
-            self.point_tracker = initialize_point_tracker(m, point_arr)
+            if paths.point_shape and os.path.isfile(paths.point_shape):
+                point_arr = self._pixels_of_interest_to_array(paths.point_shape)
+                self.point_tracker = initialize_point_tracker(m, point_arr)
 
-        for day in day_generator(*self._date_range):
+        for counter, day in enumerate(day_generator(*self._date_range)):
             tm_yday = day.timetuple().tm_yday
             self._info('DAY:     {}({})'.format(day, tm_yday))
 
@@ -221,7 +222,7 @@ class Processes(object):
                 log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -3.12, 0.45)
                 log_inten[log_precip >= 3.5] = norm.ppf(percentile, -3.13, 0.66)
 
-            m['inten'][m['precip'] > 0] = exp(log_inten) # mm/min
+            m['inten'][m['precip'] > 0] = exp(log_inten)  # mm/min
 
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
             # If melt is occurring (calculated in _do_snow), infiltration will be set to 24 hours
@@ -245,28 +246,24 @@ class Processes(object):
 
             func = self._do_fao_soil_water_balance if self._swb_mode == 'fao' else self._do_vert_soil_water_balance
             time_it(func, m, s, c, tm_yday)
-            
+
             time_it(self._do_mass_balance, day, swb=self._swb_mode)
 
             time_it(self._do_accumulations)
 
-            # if self.tracker is None:
-            #     self.tracker = initialize_master_tracker(m) #TODO check gabe merge
-
-
-
             time_it(rm.update_raster_obj, m, day)
-            time_it(self._update_master_tracker, m, day)
-            self._update_point_tracker(m, day)
 
+            is_first = counter == 0
+            time_it(self._update_master_tracker, m, day, is_first)
+            self._update_point_tracker(m, day, is_first)
 
         self._info('saving tabulated data')
         time_it(rm.save_csv)
 
-        if paths.mask != None:
+        if paths.mask is not None:
             self.save_mask()
 
-        self.save_tracker() #TODO check gabe merge
+        # self.save_tracker() #TODO check gabe merge
         self._info('Execution time: {}'.format(time.time() - st))
 
     def set_save_dates(self, dates):
@@ -381,30 +378,31 @@ class Processes(object):
             name = os.path.basename(path)
             shutil.copyfile(path, os.path.join(paths.results_root, name))
 
-    def save_point_tracker(self, path=None):
+    # def save_point_tracker(self, path=None):
+    #
+    #     output_loc = paths.etrm_output_root
+    #     count = 0
+    #
+    #     csv_pathlist = []
+    #     for tuple in self.point_tracker:
+    #
+    #         base = 'etrm_tracker_{:03n}'.format(count)
+    #
+    #         if path is None:
+    #             path = add_extension(os.path.join(output_loc, base), '.csv')
+    #
+    #         if os.path.isfile(path):
+    #             path = unique_path(output_loc, base, '.csv')
+    #
+    #         path = add_extension(path, '.csv')
+    #         print 'this should be your csv: {}'.format(path)
+    #         print tuple, 'self. point tracker'
+    #         tuple[1].to_csv(path, na_rep='nan', index_label='Date')
+    #         count += 1
+    #
+    #         csv_pathlist.append(path)
+    #     return csv_pathlist
 
-        output_loc = paths.etrm_output_root
-        count = 0
-
-        csv_pathlist = []
-        for tuple in self.point_tracker:
-
-            base = 'etrm_tracker_{:03n}'.format(count)
-
-            if path is None:
-                path = add_extension(os.path.join(output_loc, base), '.csv')
-
-            if os.path.isfile(path):
-                path = unique_path(output_loc, base, '.csv')
-
-            path = add_extension(path, '.csv')
-            print 'this should be your csv: {}'.format(path)
-            print tuple, 'self. point tracker'
-            tuple[1].to_csv(path, na_rep='nan', index_label='Date')
-            count += 1
-
-            csv_pathlist.append(path)
-        return csv_pathlist
     # JIR # TODO check gabe merge
     # def save_tracker(self, path=None):
     #     """
@@ -434,8 +432,8 @@ class Processes(object):
         if path is None:
             path = add_extension(os.path.join(root, base), '.csv')
 
-        if os.path.isfile(path):
-            path = unique_path(root, base, '.csv')
+        # if os.path.isfile(path):
+        #     path = unique_path(root, base, '.csv')
 
         path = add_extension(path, '.csv')
         return path
@@ -580,7 +578,7 @@ class Processes(object):
         kcb = m['kcb']
         kc_max = maximum(c['kc_max'], kcb + 0.05)
         ks = m['ks']
-        etrs = m['etrs'] # comes from get_penman function
+        etrs = m['etrs']  # comes from get_penman function
 
         # Start Evaporation Energy Balancing
         st_1_dur = (s['rew'] - m['pdrew']) / (c['ke_max'] * etrs)  # ASCE 194 Eq 9.22; called Fstage1
@@ -643,7 +641,7 @@ class Processes(object):
         num = random.uniform(0, 1)
         start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
         if start_monsoon <= tm_yday <= end_monsoon:
-            ro = 0.001160957 * (m['rain']**2) + 0.199019984 * m['rain'] * m['inten']
+            ro = 0.001160957 * (m['rain'] ** 2) + 0.199019984 * m['rain'] * m['inten']
             if num > 0.01392405:
                 ro = where(m['rain'] <= 2, 0, ro)
             if num > 0.05977011:
@@ -659,9 +657,9 @@ class Processes(object):
             if num > 0.9:
                 ro = where(m['rain'] > 40, 0, ro)
         else:
-            ro = 0.0003765849 * (m['rain']**2) + 0.0964337598 * m['rain']*m['inten']
+            ro = 0.0003765849 * (m['rain'] ** 2) + 0.0964337598 * m['rain'] * m['inten']
             if num > 0.001658375:
-                ro = where(m['rain'] <= 10,0,ro)
+                ro = where(m['rain'] <= 10, 0, ro)
             if num > 0.05504587:
                 ro = where((m['rain'] <= 20) & (m['rain'] > 10), 0, ro)
             if num > 0.1111111:
@@ -687,7 +685,7 @@ class Processes(object):
 
         m['rzsm'] = 1 - (dr / taw)  # add root zone soil moisture (RZSM) to master dict - Jul 9, 2017 GELP
 
-    def _do_vert_soil_water_balance(self, m, s, c, tm_yday,ro_local_reinfilt_frac=None, rew_ceff=None):
+    def _do_vert_soil_water_balance(self, m, s, c, tm_yday, ro_local_reinfilt_frac=None, rew_ceff=None):
         """ Calculate all soil water balance at each time step.
 
         :return: None
@@ -1022,7 +1020,7 @@ class Processes(object):
         return point_arr
         # ============
 
-    def _update_point_tracker(self, m, date):
+    def _update_point_tracker(self, m, date, is_first):
         """
 
         :param m: Master dict of the processes class.
@@ -1046,8 +1044,8 @@ class Processes(object):
         # get the file directory and loop through
         tracker_files_path = paths.tracker_csv_path
 
-        for path, dirs, files in os.walk(tracker_files_path, topdown=False):
-            # print "paaaath", path
+        for root, dirs, files in os.walk(tracker_files_path, topdown=False):
+            # print "paaaath", root
             # print "dirs", dirs
             # print "files leeeest", files
             for f in files:
@@ -1064,41 +1062,21 @@ class Processes(object):
                         # print "MAAATCH"
                         # TODO - Now we are going to append this to the correct .csv from initialize.
                         # append this to a file.
-                        item_tracker = [m[key][index[1]] for key in sorted(m) if key not in ('transp_adj',)]
+                        keys = sorted(m.keys())
+                        values = [m[key][index[1]] for key in keys if key not in ('transp_adj',)]
 
+                        self._write_csv('Point Tracker', os.path.join(root, f), date, keys, values, is_first)
                         # for key in sorted(m):
                         #     if key not in ('transp_adj',):
                         #         print "update Keys!!!", key
-                        item_tracker = [date] + item_tracker
-                        # print "about to write"
-                        with open(os.path.join(path, f), 'a') as append_file:
-                            writer = csv.writer(append_file)
-                            writer.writerow(item_tracker)
+                        # item_tracker = [date] + item_tracker
+                        # # print "about to write"
+                        # with open(os.root.join(root, f), 'a') as append_file:
+                        #     writer = csv.writer(append_file)
+                        #     writer.writerow(item_tracker)
 
-
-    def _update_master_tracker(self, m, date):
-        def aggregate_data(key):
-            param = m[key]
-
-            if key in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
-                     'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
-                param = param.mean()
-            elif key == 'transp_adj':
-                param = median(param)
-            else:
-                param = self._output_function(param)
-            return param
-
-        tracker_from_master = [aggregate_data(key) for key in sorted(m)]
-        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
-        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
-        self.tracker.loc[date] = tracker_from_master
-
-    def _update_master_tracker2(self, m, date): #TODO check gabe merge
+    def _update_master_tracker(self, m, date, is_first):  # TODO check gabe merge
         def factory(k):
-
-            # print 'k', k
-            # print 'm[k]', m[k]
 
             v = m[k]
 
@@ -1107,37 +1085,28 @@ class Processes(object):
                 v = v.mean()
             elif k == 'transp_adj':
                 v = median(v)
-            # ========= July 4, 2017 testing
-            elif k == 'de':
-                # print 'de in tracker', v
-                pass
-            #=========
-                # print 'de in tracker', v
-            # =========
             else:
                 v = self._output_function(v)
-            # print "V taken care of..."
             return v
 
-        # JIR
-        # tracker_from_master = [factory(key) for key in sorted(m)]
-        # print 'tracker from master, list : {}, length {}'.format(tracker_from_master, len(tracker_from_master))
-        # remember to use loc. iloc is to index by integer, loc can use a datetime obj.
+        keys = sorted(m.keys())
+        values = [factory(key) for key in keys]
+        path = self._get_tracker_path()
+        self._write_csv('Master tracker', path, date, keys, values, is_first)
+        
+    def _write_csv(self, msg, path, date, keys, values, is_first):
+        values = [str(v) for v in values]
+        lines = ['{},{}'.format(date, ','.join(values))]
+        if is_first:
+            header = 'date,{}'.format(','.join(keys))
+            print 'writinsad heasder', msg, header
+            lines.insert(0, header)
 
-        # no reason for self.tracker to accumulate tracker_from_master
-        # just append to the csv output file here
-
-        # this is the original
-        # self.tracker.loc[date] = tracker_from_master
-
-        # do something like this instead
-        values = [str(factory(key)) for key in sorted(m)]
-        # need to implement _get_tracker_path
-        with open(self._get_tracker_path(), 'a') as wfile:
-            line = ','.join(values)
-            wfile.write('{},{}\n'.format(date, line))
-
-
+        print '{} - path {}'.format(msg, path)
+        with open(path, 'a') as wfile:
+            for line in lines:
+                wfile.write('{}\n'.format(line))
+                
     def _output_function(self, param):
         '''determine if units are acre-feet (volume, summed over area of interest) or mm (average depth)'''
         if self._cfg.output_units == MM:

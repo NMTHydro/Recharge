@@ -186,6 +186,7 @@ class RunSpec:
 
 class Config:
     runspecs = None
+    path = None
 
     def __init__(self, path=None):
         self.load(path=path)
@@ -212,6 +213,7 @@ class Config:
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
         print "runspecs", self.runspecs
         rfile.close()
+        self.path = path
 
 
         # self.runspecs = [RunSpec(i, doc) for i, doc in enumerate(yaml.load_all(rfile))]
