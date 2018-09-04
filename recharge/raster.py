@@ -19,7 +19,7 @@
 # ============= local library imports  ==========================
 import os
 
-from numpy import array, asarray, zeros_like
+from numpy import array, asarray, where, zeros_like, nonzero
 from numpy.ma import masked_where, nomask
 from osgeo import gdal
 
@@ -107,7 +107,32 @@ class Raster(object):
     def remove_negatives(self):
         self.filter_less(0, 0)
 
-    def unmasked(self):
+    def unmasked(self, tiff_shape):
+        narr = self._arr
+        if paths.mask and os.path.isfile(paths.mask):
+            idxs = self._get_masked_indices()
+            idxs = asarray(idxs, int)
+
+            masked_arr = masked_where(idxs == 0, idxs)
+            z = zeros_like(idxs, dtype=float)
+            z[~masked_arr.mask] = narr.ravel()
+            narr = z
+        else:
+            print 'tiff shape', tiff_shape
+            if tiff_shape is None:
+                print 'You need to define tiff shape (cols,rows) if not using a mask'
+                import sys
+                sys.exit()
+            print "tiff shape", tiff_shape
+            tiff = tiff_shape.split(',')
+            # narr = narr.reshape(int(tiff_shape[0]), int(tiff_shape[1]))
+            rows = int(tiff[0])
+            cols = int(tiff[1])
+            narr = narr.reshape(rows, cols)
+
+        return narr
+
+    def unmasked2(self): #TODO check gabe merge
         idxs = self._get_masked_indices()
         # print 'asdfasfdsadf', idxs
         if idxs is not None:
@@ -124,7 +149,6 @@ class Raster(object):
             masked_arr = self._arr#.ravel()
 
         return masked_arr
-        # return masked_arr.filled(0)
 
     def masked(self):
         """
@@ -132,12 +156,12 @@ class Raster(object):
 
         :return:
         """
-        idxs = self._get_masked_indices()
-        arr = self._arr
-        if idxs is not None:
-            arr = arr[idxs]
-            arr = arr.flatten()
-        return arr
+        a = self._arr
+        if paths.mask and os.path.isfile(paths.mask):
+            idxs = self._get_masked_indices()
+            a = a[idxs]
+            # print self._arr
+        return a.flatten()
 
     def open(self, path, band=1):
         """
@@ -182,6 +206,15 @@ class Raster(object):
     # private
     def _get_masked_indices(self):
         global gmask_path, gmask
+        if gmask is None or gmask_path != paths.mask:
+            print 'caching mask: {}'.format(paths.mask)
+            mask = Raster(paths.mask)
+            gmask = mask.as_bool_array
+            gmask_path = paths.mask
+        return gmask
+
+    def _get_masked_indices2(self): #TODO check gabe merge
+        global gmask_path, gmask
         if paths.mask:
             if gmask is None or gmask_path != paths.mask:
                 if os.path.isfile(paths.mask):
@@ -189,7 +222,6 @@ class Raster(object):
                     mask = Raster(paths.mask)
                     gmask = mask.as_bool_array
                     gmask_path = paths.mask
-
         return gmask
 
     def _save(self, path, arr, geo, band):

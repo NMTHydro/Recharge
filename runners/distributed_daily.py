@@ -19,15 +19,21 @@ from recharge.etrm_processes import Processes
 from app.config import Config
 
 
-def run():
+def dist_daily_run():
     cfg = Config()
     etrm = Processes(cfg)
     etrm.set_save_dates(cfg.save_dates)
     etrm.run(ro_reinf_frac=0.0, rew_ceff=1.0, evap_ceff=1.0)
 
+def dist_daily_taw_run():
+    cfg2 = Config()
+    cfg2.load()
+    etrm2 = Processes(cfg2)
+    etrm2.set_save_dates(cfg2.save_dates)
+    etrm2.modify_taw(cfg2.taw_modification)
+    etrm2.run()
 
 if __name__ == '__main__':
-    run()
-
+    dist_daily_taw_run()
 
 # ============= EOF =============================================

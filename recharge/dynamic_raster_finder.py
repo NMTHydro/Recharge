@@ -23,8 +23,8 @@ dgketchum 24 JUL 2016
 """
 
 import os
-
-from numpy import where, isnan
+import numpy as np
+# from numpy import where, isnan
 
 from app.paths import paths
 from recharge import NUMS, PRISM_YEARS
@@ -45,8 +45,8 @@ def post_process_ndvi(name, in_path, previous_kcb, band=1, scalar=1.25):
     kcb = ndvi * scalar
 
     if previous_kcb is not None:
-        kcb = where(isnan(kcb) is True, previous_kcb, kcb)
-        kcb = where(abs(kcb) > 100.0, previous_kcb, kcb)
+        kcb = np.where(np.isnan(kcb) is True, previous_kcb, kcb)
+        kcb = np.where(abs(kcb) > 100.0, previous_kcb, kcb)
 
     return kcb
 
@@ -59,7 +59,13 @@ def get_spline_kcb(date_object, previous_kcb=None):
     :param previous_kcb: Previous day's kcb value.
     :return: numpy array object
     """
-    ndvi = get_spline_ndvi(date_object)
+    year = str(date_object.year)
+
+    tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
+    path = os.path.join(year, tail)
+
+    raster = Raster(path, root=paths.ndvi_spline)
+    ndvi = raster.masked()
     return post_process_ndvi(ndvi, previous_kcb=previous_kcb)
 
 
@@ -83,14 +89,6 @@ def get_individ_kcb(date_object, previous_kcb=None):
 
     name = os.path.join(year, tail)
     return post_process_ndvi(name, paths.ndvi_individ, previous_kcb)
-
-
-def get_spline_ndvi(date_object):
-    year = str(date_object.year)
-    tail = 'ndvi{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
-    path = os.path.join(year, tail)
-    raster = Raster(path, root=paths.ndvi_spline)
-    return raster.masked()
 
 
 def get_individ_ndvi(date_object):
@@ -144,7 +142,7 @@ def get_kcb(date_object, previous_kcb=None):
     return post_process_ndvi(name, paths.ndvi_std_all, previous_kcb, band)
 
 
-def get_prisms(date, is_reduced=False):
+def get_prisms(date, is_reduced = False):
     """
     return all prism variables
 
@@ -156,7 +154,7 @@ def get_prisms(date, is_reduced=False):
     temp = (min_temp + max_temp) / 2
 
     precip = get_prism(date, variable='precip', is_reduced=is_reduced)
-    precip = where(precip < 0, 0, precip)
+    precip = np.where(precip < 0, 0, precip)
     return min_temp, max_temp, temp, precip
 
 
@@ -171,7 +169,7 @@ def get_geo(date_object):
     return raster.geo
 
 
-def get_prism(date_object, variable='precip', is_reduced=False):
+def get_prism(date_object, variable='precip', is_reduced = False):
     """
     Find PRISM image.
 
@@ -195,7 +193,7 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     if variable == 'precip':
         if is_reduced:
             root = os.path.join('precip', '800m_std_all')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'precip_{}'.format(tail)
         else:
             if is_walnut_gulch:
@@ -210,7 +208,7 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     elif variable == 'min_temp':
         if is_reduced:
             root = os.path.join('Temp', 'Minimum_standard')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'min_temp_{}'.format(tail)
         else:
             if is_walnut_gulch:
@@ -228,7 +226,8 @@ def get_prism(date_object, variable='precip', is_reduced=False):
     elif variable == 'max_temp':
         if is_reduced:
             root = os.path.join('Temp', 'Maximum_standard')
-            tail = '{}_{:02n}_{:02n}.tif'.format(year, date_object.month, date_object.day)
+            tail = '{}{:02n}' \
+                   '  {:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'max_temp_{}'.format(tail)
         else:
             if is_walnut_gulch:
@@ -264,10 +263,10 @@ def get_penman(date_object, variable='etrs'):
     tail = '{}_{:03n}.tif'.format(year, date_object.timetuple().tm_yday)
 
     if variable == 'etrs':
-        name = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail))
+        name = os.path.join('PM{}'.format(year), 'PM_NM_{}'.format(tail)) # default is this one
 
     elif variable == 'rlin':
-        name = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail))
+        name = os.path.join('PM{}'.format(year), 'RLIN_NM_{}'.format(tail)) # Makes no sense. Not in directory.
 
     elif variable == 'rg':
         if is_walnut_gulch:

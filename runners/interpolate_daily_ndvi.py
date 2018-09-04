@@ -24,8 +24,8 @@ from recharge import NUMS, NUMSIZE
 from recharge.tools import write_map, read_map
 from app.paths import paths
 # For Walnut Gulch
-C = 243	#2304,NM
-R = 74 #3154,NM
+C = 243	#2304,NM #5200 Landsat
+R = 74 #3154,NM # 4000 Landsat
 
 
 def time_interpolation(base_dir, day, finalyear):
@@ -35,7 +35,7 @@ def time_interpolation(base_dir, day, finalyear):
     #base_dir = 'G:\\Walnut\\Modis\\'
     # output  'F:\\ETRM_Inputs\\NDVI_spline\\'
 
-    cnt = day.timetuple().     tm_yday
+    cnt = day.timetuple().tm_yday
     i = 0
     first_date = 0
     while first_date == 0:
@@ -129,6 +129,7 @@ def time_interpolation(base_dir, day, finalyear):
     print('days difference from next ndvi raster', days_dif)
     print('out of max days difference', max_days_diff)
 
+    # Start of the interpolation part....
     if (cnt >= 353) and (year == finalyear):
         interp = 0.0  # Set to 0 otherwise will divide by zero and give error
     else:
@@ -167,8 +168,8 @@ def main():
     endday = datetime(2013, 12, 31, 0)
     finalyear = 2013
 
-    base_dir = 'G:\\Walnut\\Modis\\'#paths.ndvi_individ
-    output ='G:\\Walnut\\Modis\\Inter'#paths.ndvi_spline
+    base_dir = paths.ndvi_individ
+    output = paths.ndvi_spline
 
     year = '2000'
     ref_map = os.path.join(base_dir, year, 'NDVI2000_01_01.tif')
