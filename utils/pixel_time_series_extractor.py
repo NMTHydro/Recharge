@@ -144,6 +144,8 @@ def raster_extract(raster_path, x, y):
     # ReadAsArray(xoffset, yoffset, xcount, ycount)
     data = band.ReadAsArray(0, 0, cols, rows)
 
+
+
     # get the offsets so you can read the data from the correct position in the array.
     x_offset = int((x - xOrigin) / width_of_pixel)
     y_offset = int((y-yOrigin) / height_of_pixel)
