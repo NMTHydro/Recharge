@@ -19,6 +19,7 @@ import os
 import gdal
 import sys
 import numpy as np
+from gdalconst import *
 from matplotlib import pyplot as plt
 # from matplotlib import image as mpimg
 import pandas as pd
@@ -37,8 +38,8 @@ def raster_extract(raster_path):
     # don't forget to register
     gdal.AllRegister()
 
+    datasource_obj = gdal.Open(raster_path, GA_ReadOnly)
     # open the raster datasource
-    datasource_obj = gdal.Open(raster_path)
     if datasource_obj is None:
         print "Can't open the datasource from {}".format(raster_path)
         sys.exit(1)
@@ -46,46 +47,31 @@ def raster_extract(raster_path):
     # get the size of image (for reading)
     rows = datasource_obj.RasterYSize
     cols = datasource_obj.RasterXSize
+    dimensions = (cols, rows)
+    projection = datasource_obj.GetProjection()
 
-    # get georefference info
+    # # get georefference info
     transform = datasource_obj.GetGeoTransform()
-    xOrigin = transform[0]
-    yOrigin = transform[3]
-    width_of_pixel = transform[1]
-    height_of_pixel = transform[5]
+    # xOrigin = transform[0]
+    # yOrigin = transform[3]
+    # width_of_pixel = transform[1]
+    # height_of_pixel = transform[5]
 
     # read in a band (only one band)
     band = datasource_obj.GetRasterBand(1)
+    # get the datatype
+    dt = band.DataType
+    print 'here is the data type of the original raster -> {}'.format(dt)
     # ReadAsArray(xoffset, yoffset, xcount, ycount)
-    data = band.ReadAsArray(0, 0, cols, rows)
+    data = band.ReadAsArray(0, 0, cols, rows).astype(np.float32)
 
     arr_3d = np.zeros((rows, cols, datasource_obj.RasterCount))
 
     arr_3d[:, :, 0] = data
+    # save memory
+    # datasource_obj = None
 
-    # # xlist = []
-    # distfromorigin = 0
-    # for x in range(rows):
-    #     # xlist.append(xOrigin + distfromorigin)
-    #     arr_3d[x, :, :] = xOrigin + distfromorigin
-    #     distfromorigin += width_of_pixel
-    #
-    # # ylist = []
-    # distfromorigin = 0
-    # for y in range(cols):
-    #     # ylist.append(yOrigin - distfromorigin)
-    #     arr_3d[:, y, :] = yOrigin - distfromorigin
-    #     distfromorigin += height_of_pixel
-
-    # x_arr = np.array(xlist)
-    # y_arr = np.array(ylist)
-    flat_vals = data.ravel
-    # print 'len x_arr', x_arr.shape
-    # print 'len y arr', y_arr.shape
-
-    # plot_data = (xlist, ylist, flat_vals)
-
-    return data, arr_3d #plot_data
+    return data, arr_3d, transform, dimensions, projection, dt
 
 def stress_function(ETrF):
     """
@@ -118,6 +104,34 @@ def stress_function(ETrF):
 
     return RZWF
 
+def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, datatype):
+    """
+
+    :return:
+    """
+    filename = os.path.join(output_path, output_filename)
+
+    driver = gdal.GetDriverByName('GTiff')
+    # path, cols, rows, bandnumber, data type (if not specified, as below, the default is GDT_Byte)
+    output_dataset = driver.Create(filename, dimensions[0], dimensions[1], 1, GDT_Float32)
+
+
+
+    # we write TO the output band
+    output_band = output_dataset.GetRasterBand(1)
+    # we don't need to do an offset
+    output_band.WriteArray(array, 0, 0)
+
+    print 'done writing, Master.'
+
+    # set the geotransform in order to georefference the image
+    output_dataset.SetGeoTransform(geotransform)
+    # set the projection
+    output_dataset.SetProjection(projection)
+
+    #save memory
+    # output_dataset = None
+
 def main():
     """
     The purpose of this script is to take an ETrF/NDVI CORRECTED and PRECIP CHECKED ETrF raster image and convert it into a
@@ -131,20 +145,14 @@ def main():
     path_to_raster = '/Users/Gabe/Desktop/NM_DEM_slope/test_RZSM_processing/original_EEFLUX_images_20090713/' \
                      'LT50330362009194PAC02_ETrF/LT50330362009194PAC02_ETrF.etrf.tif'
 
-    raster_array, arr_3d = raster_extract(path_to_raster)
+    output_filename ='LT50330362009194PAC02_RZWF.tif'
+
+    output_path = '/Users/Gabe/Desktop/NM_DEM_slope/test_RZSM_processing'
+
+    raster_array, arr_3d, transform, dimensions, projection, datatype = raster_extract(path_to_raster)
     # print timeit.timeit('raster_extract()')
 
     print 'this is the array', raster_array
-
-    # def test():
-    #     """Stupid test function"""
-    #     L = []
-    #     for i in range(100):
-    #         L.append(i)
-    #
-    # if __name__ == '__main__':
-    #     import timeit
-    #     print(timeit.timeit("test()", setup="from __main__ import test"))
 
     RZWF_array = stress_function(raster_array)
 
@@ -152,17 +160,14 @@ def main():
 
     arr_3d_RZWF[:, :, 0] = RZWF_array
 
-    # print timeit.timeit('stress_function()')
-
-    # plt.plot(RZWF_array)
+    # map_plot = plt.imshow(arr_3d[:, :, 0])
     # plt.show()
-    # img = mpimg.imread(RZWF_array)
+    #
+    # rzwf_plot = plt.imshow(arr_3d_RZWF[:, :, 0])
+    # plt.show()
 
-    map_plot = plt.imshow(arr_3d[:, :, 0])
-    plt.show()
-
-    rzwf_plot = plt.imshow(arr_3d_RZWF[:, :, 0])
-    plt.show()
+    # now we write the raster to a file.
+    write_raster(RZWF_array, transform, output_path, output_filename, dimensions, projection, datatype)
 
 
 if __name__ == "__main__":
