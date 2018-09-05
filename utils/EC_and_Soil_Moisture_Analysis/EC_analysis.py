@@ -81,37 +81,9 @@ NEE_PI  (umolCO2 m-2 s-1): Net Ecosystem Exchange (as measured/calculated by tow
 RECO_PI (umolCO2 m-2 s-1): Ecosystem Respiration (as measured/calculated by tower teams) [RE]
 GPP_PI  (umolCO2 m-2 s-1): Gross Primary Productivity (as measured/calculated by tower teams) [GPP]"""
 
-def plotter1(x, y):
+def closure_check(ec_dataset, Rn, LE, H, timeseries):
+    """"""
 
-    x = x.values
-    y = y.values
-
-    plt.plot_date(x, y, fillstyle='none')
-    plt.show()
-
-def check_energybal(ec_dataset, timeseries=None):
-    """
-
-    :param ec_dataset: the full dataset from the EC tower
-    :param timeseries: a series of datetimes
-    :return: a plot of the energy balance closure over time for the Eddy Covariance tower.
-    """
-    # normalize all the fluxes to the net radiation
-    Rn = ec_dataset['NETRAD']
-
-    # == other forms of energy ==
-
-    #shorwave radiation
-    sw_in = ec_dataset['SW_IN']
-    sw_out = ec_dataset['SW_OUT']
-
-    #longwave radiation
-    lw_in = ec_dataset['LW_IN']
-    lw_out = ec_dataset['LW_OUT']
-
-    #heat
-    H = ec_dataset['H']
-    LE = ec_dataset['LE']
     try:
         G = ec_dataset['FG']
     # TODO - If there is no ground heat flux, average over 24 hours to negate impact of G. Ask Dan the proper way.
@@ -136,7 +108,64 @@ def check_energybal(ec_dataset, timeseries=None):
 
     plotter1(timeseries, closure_error)
 
+def plotter1(x, y):
 
+    x = x.values
+    y = y.values
+
+    plt.plot_date(x, y, fillstyle='none')
+    plt.show()
+
+def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
+    """
+
+    :param ec_dataset: the full dataset from the EC tower
+    :param timeseries: a series of datetimes
+    :return: a plot of the energy balance closure over time for the Eddy Covariance tower.
+    """
+
+    if not dailyaverage:
+        Rn = ec_dataset['NETRAD']
+        H = ec_dataset['H']
+        LE = ec_dataset['LE']
+        closure_check(ec_dataset, Rn, H, LE, timeseries)
+
+    #===== daily averaging =====
+    else:
+        timeseries = timeseries.values
+        Rn = ec_dataset['NETRAD'].values
+        H = ec_dataset['H'].values
+        LE = ec_dataset['LE'].values
+        # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
+        halfhour_data = pd.DataFrame({'timeseries':timeseries, 'Rn':Rn, 'LE':LE, 'H':H})
+        #([[timeseries, Rn, LE, H]], columns=['timeseries', 'Rn', 'LE', 'H'])
+        print halfhour_data
+        halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
+        daily_time = halfhour_data.resample('d').mean()
+        print 'resampled!', daily_time
+        print 'daily', daily_time[0]
+        # normalize all the fluxes to the net radiation
+        Rn = ec_dataset['NETRAD']
+        Rn_av = daily_time['Rn']
+        # Rn_av = Rn.resample("d", how='mean') deprecado
+
+
+        # == other forms of energy ==
+
+        #shorwave radiation
+        sw_in = ec_dataset['SW_IN']
+        sw_out = ec_dataset['SW_OUT']
+
+        #longwave radiation
+        lw_in = ec_dataset['LW_IN']
+        lw_out = ec_dataset['LW_OUT']
+
+        #heat
+        H = ec_dataset['H']
+        H_av = daily_time['H']
+        LE = ec_dataset['LE']
+        LE_av = daily_time['LE']
+        closure_check(ec_dataset, Rn_av, H_av, LE_av, daily_time['timeseries'])
 
 
 def analyze(path, x, y):
@@ -168,8 +197,10 @@ def analyze(path, x, y):
 
     print mmh20.head()
 
-    # check energy balance closure
-    check_energybal(ec_dataset, timeseries=a)
+    # # check energy balance closure
+    # check_energybal(ec_dataset, timeseries=a)
+
+    check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
 
     # plot the variables
     plotter1(a, mmh20)
