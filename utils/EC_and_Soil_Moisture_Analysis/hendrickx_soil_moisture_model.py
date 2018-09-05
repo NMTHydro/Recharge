@@ -24,7 +24,6 @@ from matplotlib import pyplot as plt
 # from matplotlib import image as mpimg
 import pandas as pd
 import timeit
-import tqdm
 
 # ============= local library imports ===========================
 
@@ -142,8 +141,7 @@ def main():
     """
 
     # testing
-    path_to_raster = '/Users/Gabe/Desktop/NM_DEM_slope/test_RZSM_processing/original_EEFLUX_images_20090713/' \
-                     'LT50330362009194PAC02_ETrF/LT50330362009194PAC02_ETrF.etrf.tif'
+    path_to_raster = 'C:\Users\Mike\Downloads\LT50330362009194PAC02_ETrF.etrf.tif'
 
     output_filename ='LT50330362009194PAC02_RZWF.tif'
 

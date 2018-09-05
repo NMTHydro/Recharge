@@ -137,6 +137,8 @@ def check_energybal(ec_dataset, timeseries=None):
     plotter1(timeseries, closure_error)
 
 
+
+
 def analyze(path, x, y):
     """
 
@@ -159,9 +161,10 @@ def analyze(path, x, y):
 
     b = ec_dataset[y]
 
+    unconverted_LE = ec_dataset[y]
     if y == 'LE':
         # convert latent heat flux into mm h20 by multiplying by the latent heat of vaporization todo - check calc w Dan
-        mmh20 = b * 4.09243e-7
+        mmh20 = b * 7.962e-4 # 4.09243e-7 <- instantaneous (mm/s)/m^2
 
     print mmh20.head()
 
@@ -169,14 +172,20 @@ def analyze(path, x, y):
     check_energybal(ec_dataset, timeseries=a)
 
     # plot the variables
-    plotter1(a, b)
+    plotter1(a, mmh20)
+
+    plotter1(a, unconverted_LE)
+
+
 
 if __name__ == '__main__':
     def main():
         """We are reading in and plotting Eddy Covariance Data from Ameriflux EC towers"""
         # get the location of the file containing the EC dataset
         #Walnut Gulch Kendal Grasslands
-        path = '/Users/Gabe/Desktop/fluxnet_EC/AMF_US-Wkg_BASE-BADM_11-5/AMF_US-Wkg_BASE_HH_11-5.csv'
+        # path = '/Users/Gabe/Desktop/fluxnet_EC/AMF_US-Wkg_BASE-BADM_11-5/AMF_US-Wkg_BASE_HH_11-5.csv'
+        path = 'C:\Users\Mike\Downloads\AMF_US-Wkg_BASE_HH_11-5.csv'
+
         # # Sevilleta Grass
         # path = '/Users/Gabe/Desktop/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
 
