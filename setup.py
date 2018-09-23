@@ -22,15 +22,12 @@ try:
 except ImportError:
       from distutils.core import setup
 
-with open('README.txt') as f:
-      readme = f.read()
-
 tag = '0.0.1'
 
 setup(name='etrm',
       version=tag,
       description='Model evapotranspiraton using soil, remote sensing, and meteorology inputs',
-      long_description=readme,
+      long_description='',
       setup_requires=[],
       py_modules=['app', 'etrm', 'runners'],
       license='Apache',
