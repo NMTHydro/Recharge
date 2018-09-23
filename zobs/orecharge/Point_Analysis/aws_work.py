@@ -34,7 +34,7 @@ now = datetime.datetime.now()
 tag = '{}_{}_{}_{}'.format(now.month, now.day, now.hour, now.minute)
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'C:\\Recharge_GIS\\OSG_Data\\qgis_rasters\\{a}_{b}.tif'.format(a=name, b=tag)
     cols = dataset.RasterXSize

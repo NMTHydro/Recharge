@@ -45,7 +45,7 @@ def millimeter_to_acreft(param):
 
 def save_master_tracker(tracker, raster_out_root):
     csv_path_filename = os.path.join(raster_out_root, 'etrm_master_tracker.csv')
-    print 'this should be your master tracker csv: {}'.format(csv_path_filename)
+    print('this should be your master tracker csv: {}'.format(csv_path_filename))
     tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
 
@@ -69,10 +69,10 @@ def unique_path(root, base, extension):
 
 
 def time_it(func, *args, **kw):
-    print '######### {:<30s} STARTED'.format(func.func_name)
+    print('######### {:<30s} STARTED'.format(func.func_name))
     st = time.time()
     ret = func(*args, **kw)
-    print '######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time() - st)
+    print('######### {:<30s} execution time={:0.3f}'.format(func.func_name, time.time() - st))
     return ret
 
 
@@ -93,7 +93,7 @@ def read_map(filename, fileformat):
     ds = gdal.Open(filename)
     prj = ds.GetProjection()
     if ds is None:
-        print('Could not open {}. Something went wrong!! Shutting down'.format(filename))
+        print(('Could not open {}. Something went wrong!! Shutting down'.format(filename)))
         import sys
         sys.exit(1)
 
@@ -139,8 +139,8 @@ def write_map(fileName, fileFormat, x, y, data, prj, FillVal):
     data[isnan(data)] = FillVal
     # Processing
     if verbose:
-        print 'Writing to temporary file ' + fileName + '.tif'
-        print "Output format: " + fileFormat
+        print('Writing to temporary file ' + fileName + '.tif')
+        print("Output format: " + fileFormat)
     # Create Output filename from (FEWS) product name and date and open for writing
     TempDataset = driver1.Create(fileName + '.tif', data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
     # Give georeferences
@@ -157,15 +157,15 @@ def write_map(fileName, fileFormat, x, y, data, prj, FillVal):
     TempBand.SetNoDataValue(FillVal)
     # Create data to write to correct format (supported by 'CreateCopy')
     if verbose:
-        print 'Writing to ' + fileName
+        print('Writing to ' + fileName)
     outDataset = driver2.CreateCopy(fileName, TempDataset, 0)
     TempDataset = None
     outDataset = None
     if verbose:
-        print 'Removing temporary file ' + fileName + '.tif'
+        print('Removing temporary file ' + fileName + '.tif')
     os.remove(fileName + '.tif');
 
     if verbose:
-        print 'Writing to ' + fileName + ' is done!'
+        print('Writing to ' + fileName + ' is done!')
 
 # =================================== EOF =========================

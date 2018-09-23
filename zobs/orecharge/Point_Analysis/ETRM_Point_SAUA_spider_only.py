@@ -38,7 +38,7 @@ np.set_printoptions(threshold=3000, edgeitems=5000, precision=3)
 pandas.set_option('display.height', 5000)
 pandas.set_option('display.max_rows', 5000)
 startTime = datetime.now()
-print startTime
+print(startTime)
 
 
 def print_full(x):
@@ -123,8 +123,8 @@ df_norm = pandas.DataFrame(columns=factors, index=site_list)
 yy = 0
 for var_arr in var_arrs:
     factor = factors[yy]
-    print factor
-    print ''
+    print(factor)
+    print('')
     shp_filename = 'C:\\Recharge_GIS\\qgis_layers\\sensitivity_points\\SA_pnts29APR16_UTM.shp'
     ds = ogr.Open(shp_filename)
     lyr = ds.GetLayer()
@@ -136,7 +136,7 @@ for var_arr in var_arrs:
         mx, my = geom.GetX(), geom.GetY()
         path = 'C:\Users\David\Documents\Recharge\Sensitivity_analysis\SA_extracts'
         file_name = '{}\\{}_extract.csv'.format(path, name)
-        print file_name
+        print(file_name)
         extract_data = extract_readIn.read_std_extract_csv(file_name)
         rslts = []
         for col in var_arr.T:
@@ -159,7 +159,7 @@ for param in df.iteritems():
     var_arr = var_arrs[xx]
     yy = 0
     for site in data_cube:
-        print site
+        print(site)
         site_name = site_list[yy]
         normal = normalize_list[xx]
         site_obj = [x for x in site]
@@ -179,7 +179,7 @@ for param in df.iteritems():
         sens_list = np.array(sens_list)
         df_norm.iloc[site_list.index(site_name), factors.index(param[0])] = sens_list
         if yy == 20:
-            print 'done'
+            print('done')
             break
         yy += 1
     xx += 1
@@ -200,7 +200,7 @@ ndvi_range = np.array(ndvi_range)
 for index, row in df_norm.iterrows():
 
     if row.name == 'La_Jencia':  # ['South_Baldy', 'Water_Canyon', 'La_Jencia', 'Socorro']:
-        print index, row
+        print(index, row)
         fig = plt.figure(xx, figsize=(20, 10))
         ax1 = fig.add_subplot(111)
         ax2 = ax1.twiny()

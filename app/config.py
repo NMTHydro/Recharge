@@ -211,7 +211,7 @@ class Config:
         #         print "here's the bad one"
         #         print doc
         self.runspecs = [RunSpec(doc) for doc in yaml.load_all(rfile)]
-        print "runspecs", self.runspecs
+        print("runspecs", self.runspecs)
         rfile.close()
         self.path = path
 
@@ -225,15 +225,15 @@ def check_config(path=None):
         path = paths.config
 
     if not os.path.isfile(path):
-        print '***** The config file {} does not exist. A default one will be written'.format(path)
+        print('***** The config file {} does not exist. A default one will be written'.format(path))
 
         with open(path, 'w') as wfile:
-            print '-------------- DEFAULT CONFIG -----------------'
-            print DEFAULT_CFG
-            print '-----------------------------------------------'
+            print('-------------- DEFAULT CONFIG -----------------')
+            print(DEFAULT_CFG)
+            print('-----------------------------------------------')
             wfile.write(DEFAULT_CFG)
 
-        print '***** Please edit the config file at {} and rerun the model'.format(path)
+        print('***** Please edit the config file at {} and rerun the model'.format(path))
         sys.exit()
 
 # ============= EOF =============================================

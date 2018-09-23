@@ -20,7 +20,7 @@ for feat in lyr:
     if name in already_done:
         pass
     else:
-        print name
+        print(name)
         x += 1
         point_id_obj = x
         geom = feat.GetGeometryRef()
@@ -92,10 +92,10 @@ for feat in lyr:
             rb = wp_open.GetRasterBand(1)
             wp_obj = rb.ReadAsArray(px, py, 1, 1)
             wp_open = []
-        print ''
-        print point_id_obj
-        print name
-        print mx, my
+        print('')
+        print(point_id_obj)
+        print(name)
+        print(mx, my)
 
         point_id = []
         date = []
@@ -224,10 +224,10 @@ for feat in lyr:
         for element in kcb:
             if element < 0.001 or element > 1.5:
                 kcb[x] = kcb[x - 1]
-                print 'found bad value'
+                print('found bad value')
             x += 1
 
-        print 'NDVI point extract at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('NDVI point extract at {a} {b} done'.format(a=point_id_obj, b=name))
 
     # RLIN net longwave radiation
         for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
@@ -240,7 +240,7 @@ for feat in lyr:
             rlin_obj = rb.ReadAsArray(px, py, 1, 1)
             rlin.append(rlin_obj)
             rlin_open = []
-        print 'RLIN extract at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('RLIN extract at {a} {b} done'.format(a=point_id_obj, b=name))
 
 
     # RTOT net shortwave radiation
@@ -254,7 +254,7 @@ for feat in lyr:
             rg_obj = rb.ReadAsArray(px, py, 1, 1)
             rg.append(rg_obj)
             rg_open = []
-        print 'RG extract at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('RG extract at {a} {b} done'.format(a=point_id_obj, b=name))
 
     # refET PM
         for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
@@ -266,7 +266,7 @@ for feat in lyr:
             etrs_obj = rb.ReadAsArray(px, py, 1, 1)
             etrs_Pm.append(etrs_obj)
             etrs_open = []
-        print 'refET PM  extract at at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('refET PM  extract at at {a} {b} done'.format(a=point_id_obj, b=name))
 
     # TEMP
         for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
@@ -296,7 +296,7 @@ for feat in lyr:
 
             rslt = (max_temp_obj + min_temp_obj)/2
             temp.append(rslt)
-        print 'TEMP extract at at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('TEMP extract at at {a} {b} done'.format(a=point_id_obj, b=name))
 
     # Precipitation
         for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
@@ -310,7 +310,7 @@ for feat in lyr:
             ppt_obj = rb.ReadAsArray(px, py, 1, 1)
             ppt.append(ppt_obj)
             ppt_open = []
-        print 'Precip extract at at {a} {b} done'.format(a=point_id_obj, b=name)
+        print('Precip extract at at {a} {b} done'.format(a=point_id_obj, b=name))
 
         point_id = np.array(point_id).squeeze()
         date = [rec.strftime('%Y/%m/%d') for rec in date]
@@ -345,5 +345,5 @@ for feat in lyr:
                    recs, fmt=['%s', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f',
                    '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f', '%1.3f'],
                    delimiter=',')
-        print "You have been saved!"
+        print("You have been saved!")
 

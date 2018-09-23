@@ -57,7 +57,7 @@ def get_distributed_recharge(date_range, ndvi, prism, penman, raster_out_data, s
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     #initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'Recharge_GIS', 'Array_Results', 'initialize')
     initial_conditions_path = os.path.join(os.path.abspath(os.sep), 'F:\\', 'ETRM_Inputs', 'initialize')

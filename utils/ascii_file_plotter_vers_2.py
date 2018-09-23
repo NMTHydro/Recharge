@@ -201,7 +201,7 @@ def run_ascii():
     code_col = '7'
     df = df_filter(df, desirable_codes, code_col)
 
-    print "The Filtered Dataframe {}".format(df)
+    print("The Filtered Dataframe {}".format(df))
 
     # TODO - CHANGE header = True and index = True if you want headers or indices in the .csv
     df.to_csv("{}/filtered_{}.csv".format(output_path, filename), header=False, index=False)

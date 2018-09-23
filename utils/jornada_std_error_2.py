@@ -36,7 +36,7 @@ def formatter(df_dict):
 
     for key, value in df_dict.iteritems():
 
-        print "key \n {}".format(key)
+        print("key \n {}".format(key))
 
         good_dates = []
         values = []
@@ -59,7 +59,7 @@ def formatter(df_dict):
                     good_dates.append(date)
                 # good_dates.append(date)
 
-        print "good dates {} pixel {}, length {}".format(good_dates, key, len(good_dates))
+        print("good dates {} pixel {}, length {}".format(good_dates, key, len(good_dates)))
 
         # turn good dates into a series to delete the repetitions
         good_dates = set(good_dates)
@@ -75,10 +75,10 @@ def formatter(df_dict):
 
 
 
-        print "good dates as a set", good_dates
-        print "length of set", len(good_dates)
+        print("good dates as a set", good_dates)
+        print("length of set", len(good_dates))
 
-        print "length of values", len(values)
+        print("length of values", len(values))
         for i in values:
             g_dates = []
             g_a = []
@@ -97,26 +97,26 @@ def formatter(df_dict):
 
             good_vals.append((g_dates, g_a, g_b, g_c, g_d, g_e))
 
-            print "==="
-            print len(g_dates)
-            print len(g_a)
-            print len(g_b)
-            print len(g_c)
-            print len(g_d)
-            print len(g_e)
-            print "===="
+            print("===")
+            print(len(g_dates))
+            print(len(g_a))
+            print(len(g_b))
+            print(len(g_c))
+            print(len(g_d))
+            print(len(g_e))
+            print("====")
 
-        print "good values", len(good_vals)
+        print("good values", len(good_vals))
 
         for i in good_vals:
-            print "****"
-            print len(i[0])
-            print len(i[1])
-            print len(i[2])
-            print len(i[3])
-            print len(i[3])
-            print len(i[3])
-            print "***"
+            print("****")
+            print(len(i[0]))
+            print(len(i[1]))
+            print(len(i[2]))
+            print(len(i[3]))
+            print(len(i[3]))
+            print(len(i[3]))
+            print("***")
 
 
             # data = {'date': good_vals[0], 'j_30': i[1], 'j_60': i[2], 'j_90': i[3], 'j_110': i[4], 'j_130': i[5]}
@@ -199,7 +199,7 @@ def parse_data():
 
         df_dict[key] = loc_list
 
-    print "another look", df_dict['000']
+    print("another look", df_dict['000'])
 
     pix_dictionary = formatter(df_dict)
 

@@ -157,7 +157,7 @@ def plot_storage(pixel, locations, storage_series):
 
         dates = series[0]
 
-        print "DATES {}".format(dates)
+        print("DATES {}".format(dates))
 
         dates = [datetime.strptime(i, '%m/%d/%Y') for i in dates]
             # for i in dates:
@@ -186,7 +186,7 @@ def main():
     p = 'jornada_data.csv'
     # read the csv in with pandas
     df = pd.read_csv(p, header=72)
-    print df.keys()
+    print(df.keys())
 
     # We use this dictionary to keep track of which locations correspond to which pixels.
     pixel_location_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
@@ -217,7 +217,7 @@ def main():
 
         plot_storage(pixel, locations, storage)
 
-        print "DAS {}".format(len(storage))
+        print("DAS {}".format(len(storage)))
 
         # timeseries = calculate(das)
 

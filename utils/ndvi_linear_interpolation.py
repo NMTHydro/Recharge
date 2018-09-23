@@ -45,11 +45,11 @@ def format_date(date, year):
 
     date = date - year_jd
     d = jd2gcal(year_jd, date)
-    print "datedate", d
+    print("datedate", d)
 
     # test
     for i in (1, 10, 100):
-        print "{num:02d}".format(num=i)
+        print("{num:02d}".format(num=i))
 
     date_string = "{}_{a:02d}_{b:02d}".format(d[0], a=d[1], b=d[2])
 
@@ -67,7 +67,7 @@ def read_files(file_list):
     for img_file in file_list:
         img_obj = gdal.Open(img_file)
         if img_obj is None:
-            print 'Couldnt open' + img_file
+            print('Couldnt open' + img_file)
 
             gdal.sys.exit(1)
         img_file_list.append(img_obj)
@@ -78,10 +78,10 @@ def format_list(lst):
 
     length = len(lst)
 
-    print "length of list", length
-    print "heres the list", lst
+    print("length of list", length)
+    print("heres the list", lst)
 
-    print "range {}".format(range(length))
+    print("range {}".format(range(length)))
 
     tuple_list = []
     for i in range(length):
@@ -93,7 +93,7 @@ def format_list(lst):
             tupper = (lst[i - 1], lst[i])
             tuple_list.append(tupper)
 
-    print "tuple list {}".format(tuple_list)
+    print("tuple list {}".format(tuple_list))
 
     return tuple_list
 
@@ -117,28 +117,28 @@ def findRasterIntersect(raster1, raster2):
     # r1 has left, top, right, bottom of dataset's bounds in geospatial coordinates.
     r1 = [gt1[0], gt1[3], gt1[0] + (gt1[1] * raster1.RasterXSize), gt1[3] + (gt1[5] * raster1.RasterYSize)]
     r2 = [gt2[0], gt2[3], gt2[0] + (gt2[1] * raster2.RasterXSize), gt2[3] + (gt2[5] * raster2.RasterYSize)]
-    print '\t1 bounding box: %s' % str(r1)
-    print '\t2 bounding box: %s' % str(r2)
+    print('\t1 bounding box: %s' % str(r1))
+    print('\t2 bounding box: %s' % str(r2))
 
     test_list = [r1[0], r2[0]]
 
     # find intersection between bounding boxes
     intersection = [max(test_list), min(r1[1], r2[1]), min(r1[2], r2[2]), max(r1[3], r2[3])]
     if r1 != r2:
-        print '\t** different bounding boxes **'
+        print('\t** different bounding boxes **')
         # check for any overlap at all...
         if (intersection[2] < intersection[0]) or (intersection[1] < intersection[3]):
             intersection = None
-            print '\t*** no overlap ***'
+            print('\t*** no overlap ***')
             return
         else:
-            print '\tintersection:', intersection
+            print('\tintersection:', intersection)
             left1 = int(round((intersection[0] - r1[0]) / gt1[1]))  # difference divided by pixel dimension
             top1 = int(round((intersection[1] - r1[1]) / gt1[5]))
             col1 = int(round((intersection[2] - r1[0]) / gt1[1])) - left1  # difference minus offset left
             row1 = int(round((intersection[3] - r1[1]) / gt1[5])) - top1
 
-            print "left 1: {}, top1: {}, col1: {}, row1: {}".format(left1, top1, col1, row1)
+            print("left 1: {}, top1: {}, col1: {}, row1: {}".format(left1, top1, col1, row1))
 
             left2 = int(round((intersection[0] - r2[0]) / gt2[1]))  # difference divided by pixel dimension
             top2 = int(round((intersection[1] - r2[1]) / gt2[5]))
@@ -147,13 +147,13 @@ def findRasterIntersect(raster1, raster2):
 
             # print '\tcol1:',col1,'row1:',row1,'col2:',col2,'row2:',row2
             if col1 != col2 or row1 != row2:
-                print "*** MEGA ERROR *** COLS and ROWS DO NOT MATCH ***"
+                print("*** MEGA ERROR *** COLS and ROWS DO NOT MATCH ***")
             # these arrays should now have the same spatial geometry though NaNs may differ
             array1 = band1.ReadAsArray(left1, top1, col1, row1)
             array2 = band2.ReadAsArray(left2, top2, col2, row2)
 
     else:  # same dimensions from the get go
-        print "same dimensions from the get go..."
+        print("same dimensions from the get go...")
         col1 = raster1.RasterXSize  # = col2
         row1 = raster1.RasterYSize  # = row2
         array1 = band1.ReadAsArray()
@@ -171,7 +171,7 @@ def pull_files(path_to_files):
     for p, dir, files in os.walk(path_to_files):
         for i in files:
             if i.endswith(".img"):
-                print "i", i
+                print("i", i)
 
                 date = i[9:16]
                 year = date[:-3]
@@ -249,28 +249,28 @@ def output_rasters(current_arr, next_arr, slope, start_date, end_date, date_coun
     # output the current arr to a file
 
 
-    print "START -> ndvi{}".format(start_date)
+    print("START -> ndvi{}".format(start_date))
     # reformat the date stirng
     date_string = format_date(start_date, year)
     write_file(current_obj, current_arr, col, row, "NDVI{}".format(date_string))
 
     # output all the in-between rasters to files
     cnt = 1 # TODO - Check here again if problem
-    print "here's the range \n", range(start_date + 1, end_date)
+    print("here's the range \n", range(start_date + 1, end_date))
     for i in range(start_date + 1, end_date): # -1
         interp_arr = np.add(current_arr, (slope * cnt))
-        print "Bout to write ndvi_{}".format(i)
+        print("Bout to write ndvi_{}".format(i))
         # reformat the date String
         date_string = format_date(i, year)
         write_file(current_obj, interp_arr, col, row, "NDVI{}".format(date_string))
-        print "wrote a file. Count: {}".format(cnt)
+        print("wrote a file. Count: {}".format(cnt))
         cnt += 1
 
 
     # # output the next arr to a file
 
     # todo fix the filename thing...
-    print "END -> ndvi_{}".format(end_date)
+    print("END -> ndvi_{}".format(end_date))
 
     date_string = format_date(end_date, year)
 
@@ -289,7 +289,7 @@ def interpolator(jd_list, path_list, raster_obj_list, year):
     end_date = jd_list[-1]
     # we need a total count of the number of days between our images.
     date_count = end_date - start_date # + 1
-    print "date count", date_count
+    print("date count", date_count)
     # this creates a range of every date between start and end.
     date_range = range(start_date, end_date + 1)
     # print "date range", date_range
@@ -330,7 +330,7 @@ def run_interpolator():
     # for i in raster_obj_list:
     #     findRasterIntersect(i[0], i[1])
 
-    print 'jd list \n', jd_list
+    print('jd list \n', jd_list)
 
     # use the lists to run the interpolation.
     for i, k, j, year in zip(jd_list, path_list, raster_obj_list, year_list):

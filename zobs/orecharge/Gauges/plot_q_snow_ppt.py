@@ -15,7 +15,7 @@ recs = []
 for line in rows:
     recs.append([datetime.datetime.strptime(line[0], '%Y/%m/%d %H:%M'),  # date
     float(line[1]), float(line[2])])  # discharge
-print "Data points: " + str(len(recs))
+print("Data points: " + str(len(recs)))
 all_recs = np.array(recs)
 
 # Bring in snow
@@ -31,7 +31,7 @@ recs = []
 for line in rows:
     recs.append([datetime.datetime.strptime(line[1], '%m/%d/%Y'),  # date
     float(line[3])])  # discharge
-print "Data points: " + str(len(recs))
+print("Data points: " + str(len(recs)))
 snow = np.array(recs)
 snow_dates = snow[:, 0]
 snow_in = snow[:, 1]

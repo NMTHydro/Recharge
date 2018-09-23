@@ -60,7 +60,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
             arr = insert(arr, y, ndvi_range, axis=0)
             arr = arr[0:6]
             var_arrs.append(arr)
-            print 'shape arr: {}'.format(arr.shape)
+            print('shape arr: {}'.format(arr.shape))
             arr = []
         elif y == 5:
             arr = insert(ones_, 0, zeros, axis=0)
@@ -78,7 +78,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
             arr = []
         y += 1
 
-    print 'variable arrays: {}'.format(var_arrs)
+    print('variable arrays: {}'.format(var_arrs))
     normalize_list = [2, 0.20, 0.20, 2, 0.20, 0.50]
 
     # site_list = ['Bateman', 'Navajo_Whiskey_Ck', 'Quemazon', 'Sierra_Blanca', 'SB_1', 'SB_2', 'SB_4', 'SB_5', 'VC_1',
@@ -101,17 +101,17 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
         mx, my = int(geom.GetX()), int(geom.GetY())
         site_dict[name]['Coords'] = '{} {}'.format(mx, my)
         file_name = os.path.join(extracts, '{}.csv'.format(name))
-        print file_name
+        print(file_name)
         site_dict[name]['etrm'] = get_etrm_time_series(file_name, single_file=True)
 
     # print 'site dict before running etrm: {}'.format(site_dict)
 
     for i, var_arr in enumerate(var_arrs):
         factor = FACTORS[i]
-        print 'running modified factor: {}'.format(factor)
-        print ''
+        print('running modified factor: {}'.format(factor))
+        print('')
         for key, val in site_dict.iteritems():
-            print '\n site: {} \n '.format(key)
+            print('\n site: {} \n '.format(key))
             results = []
             for col in var_arr.T:
                 etrm = Processes(SIMULATION_PERIOD, static_inputs=statics, initial_inputs=initials,
@@ -121,11 +121,11 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
 
                 # print 'tracker: {}'.format(tracker)
                 results.append(tracker['tot_infil'][-1])
-                print 'total infil: {} \n results: {}'.format(tracker['tot_infil'][-1], results)
+                print('total infil: {} \n results: {}'.format(tracker['tot_infil'][-1], results))
 
             df.iloc[site_list.index(key), FACTORS.index(factor)] = divide(array(results), 14.0)
-        print 'df after site {}: \n {}'.format(key, df)
-    print 'df: {}'.format(df)
+        print('df after site {}: \n {}'.format(key, df))
+    print('df: {}'.format(df))
 
     # tot_data : precip, et, tot_transp, tot_evap, infil, runoff, snow_fall, cum_mass, end_mass
 
@@ -156,7 +156,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
             sens_list = array(sens_list)
             df_norm.iloc[site_list.index(site_name), FACTORS.index(param[0])] = sens_list
             if yy == 20:
-                print 'done'
+                print('done')
                 break
             yy += 1
         xx += 1

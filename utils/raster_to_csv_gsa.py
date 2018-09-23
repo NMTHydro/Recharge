@@ -43,14 +43,14 @@ def raster_to_csv(path, output_path):
     # georefference
     transform = datasource.GetGeoTransform()
     xorigin = transform[0]
-    print 'x oringin', xorigin
+    print('x oringin', xorigin)
     yorigin = transform[3]
-    print 'yorigin', yorigin
+    print('yorigin', yorigin)
     pixelwidth = transform[1]
-    print 'widht of pixel', pixelwidth
+    print('widht of pixel', pixelwidth)
     pixelheight = transform[5]
     # todo - is the pixelheight being 29.9999 a problem?
-    print 'pixelheight', pixelheight
+    print('pixelheight', pixelheight)
 
     # X and Y raster coordinates
     # build an array of all-zeros in the shape of the raster
@@ -59,7 +59,7 @@ def raster_to_csv(path, output_path):
     test_arr = np.zeros((rows, cols))
     x_arr = np.zeros((rows,cols))
     y_arr = np.zeros((rows, cols))
-    print 'test arr', test_arr
+    print('test arr', test_arr)
 
     it = np.nditer(test_arr, flags=['multi_index'])
     while not it.finished:
@@ -84,7 +84,7 @@ def raster_to_csv(path, output_path):
         it.iternext()
 
 
-    print "the x, y coords of the test array", x_arr, '\n', y_arr
+    print("the x, y coords of the test array", x_arr, '\n', y_arr)
 
 
 

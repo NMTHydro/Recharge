@@ -38,7 +38,7 @@ def amf_observation_analysis(amf_file_path, save_cleaned_data=None):
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     inputs = os.path.join('F:\\', 'ETRM_Inputs')
     amf_path = os.path.join(inputs, 'ameriflux_sites')

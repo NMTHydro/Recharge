@@ -139,9 +139,9 @@ def nrml_rzsm(data, df_long):
     :return: normalized dataset
     """
 
-    print 'length of data', len(data)
+    print('length of data', len(data))
 
-    print 'length of data long', len(df_long)
+    print('length of data long', len(df_long))
 
     # convert from strings to float
     data = [float(i) for i in data]
@@ -149,9 +149,9 @@ def nrml_rzsm(data, df_long):
 
     # Get min and max from a longer dataset
     ma = max(data_long)
-    print "ma", ma
+    print("ma", ma)
     mi = min(data_long)
-    print "mi", mi
+    print("mi", mi)
 
     # normalized scale
     n0 = 0
@@ -159,7 +159,7 @@ def nrml_rzsm(data, df_long):
 
     # create a new normalized dataset
     nrml_data = [n0 + (value - mi)/(ma - mi) for value in data]
-    print "lenght of normalized data", len(nrml_data)
+    print("lenght of normalized data", len(nrml_data))
 
     return nrml_data
 
@@ -231,7 +231,7 @@ def run():
             csv_path = os.path.join(path, i)
             tracker_path_dict[name] = csv_path
 
-    print "tracker path dictionary \n", tracker_path_dict['001']
+    print("tracker path dictionary \n", tracker_path_dict['001'])
 
     # Build the jornada ETRM dictionary relating every transect measurement point to a ETRM pixel.
     jornada_etrm = build_jornada_etrm() #location_set, tracker_path_dict
@@ -249,8 +249,8 @@ def run():
     # within the loop open the file in append mode (a)
 
     for key, value in jornada_etrm.iteritems():
-        print "key -> ", key
-        print "value -> ", value
+        print("key -> ", key)
+        print("value -> ", value)
 
         #===== TRACKER ======
         df_tracker = pd.read_csv(tracker_path_dict[value])
@@ -349,15 +349,15 @@ def nrml_rzsm_for_error(data):
     :return: normalized dataset
     """
 
-    print 'length of data', len(data)
+    print('length of data', len(data))
 
-    print "DATA", data
+    print("DATA", data)
 
     # Get min and max from a long dataset
     ma = max(data)
-    print "ma", ma
+    print("ma", ma)
     mi = min(data)
-    print "mi", mi
+    print("mi", mi)
 
     # normalized scale
     n0 = 0
@@ -365,8 +365,8 @@ def nrml_rzsm_for_error(data):
 
     # create a new normalized dataset
     nrml_data = [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) for value in data]
-    print "lenght of normalized data", len(nrml_data)
-    print "actual normal data array", nrml_data
+    print("lenght of normalized data", len(nrml_data))
+    print("actual normal data array", nrml_data)
 
     return nrml_data
 
@@ -389,7 +389,7 @@ def depth_average(j_30, j_60, j_90, j_110, j_130):
         # multiply each probe measurement by a depth weighting term and get the average of all depth weighted values
         # 30cm(0-45), 60cm(45-75), 90cm(75-100), 110cm(100-120), 130cm(120-150) <- Depth weighting of the probes
 
-        print "values {} {} {} {} {}".format(j3, j6, j9, j11, j13)
+        print("values {} {} {} {} {}".format(j3, j6, j9, j11, j13))
 
         # print "numerator", ((j3 * float(45/150)) + (j6 * float(30/150)) + (j9 * float(25/150)) + (j11 * float(20/150)) + (j13 * float(30/150)))
         #
@@ -404,7 +404,7 @@ def depth_average(j_30, j_60, j_90, j_110, j_130):
         #          (j13 * float(30/150))) / 5.0
         javg_lst.append(d_avg)
 
-    print "j avg list", javg_lst
+    print("j avg list", javg_lst)
 
     return javg_lst
 
@@ -537,13 +537,13 @@ def find_error():
 
             related_stats_dict[key] = _loc_dict
 
-    print "updated related statistics dictionary \n {}".format(related_stats_dict)
+    print("updated related statistics dictionary \n {}".format(related_stats_dict))
 
 
     ### find the Standard error of the mean for each pixel
     std_err_dict = {}
     for key, value in related_stats_dict.iteritems():
-        print "pixel {}".format(key)
+        print("pixel {}".format(key))
 
         # start a count to count the tubes in a given pixel.
         num_tubes = 0
@@ -814,13 +814,13 @@ def storage_plot():
         # get the TAW
         # minimum
         mi = min(total_storage)
-        print "this is the min {}".format(mi)
+        print("this is the min {}".format(mi))
         # maximum
         ma = max(total_storage)
-        print "this is the max {}".format(ma)
+        print("this is the max {}".format(ma))
         taw = ma - mi
 
-        print "This is the TAW {}".format(taw)
+        print("This is the TAW {}".format(taw))
 
         # storage_taw_dict[key] = (total_storage, taw)
 
@@ -929,7 +929,7 @@ def storage_plot_mod():
         # print "Key {}".format(key)
 
         swc = df_long[df_long['location'] == key]
-        print "SWC \n", swc
+        print("SWC \n", swc)
 
         # get five sets of storages from the swc measurements for each tube...
         storages = calc_storage_mod(swc)

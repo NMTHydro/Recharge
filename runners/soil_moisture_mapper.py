@@ -42,7 +42,7 @@ def get_dates(config_path):
             yaml_thing = yaml.load(rfile)
                 # print key, value
         except:
-            print 'exception'
+            print('exception')
     #print "yaml thing", yaml_thing
 
 
@@ -114,7 +114,7 @@ def tiff_pathmaker(tiff_root):
     for roots, dirs, files in os.walk(tiff_root, topdown=True):
 
         # TODO - build the nested dict
-        print "roots", roots
+        print("roots", roots)
 
         #roots = '00{}'.format(n)
 
@@ -163,12 +163,12 @@ def tiff_pathmaker(tiff_root):
                 d['drew'] = drew_date_dict_list
 
 
-    print 'de date dict list', de_date_dict_list
-    print 'len of date dict list {}'.format(len(de_date_dict_list))
-    print 'len dr date dict list', len(dr_date_dict_list)
-    print 'len drew date dic list', len(drew_date_dict_list)
+    print('de date dict list', de_date_dict_list)
+    print('len of date dict list {}'.format(len(de_date_dict_list)))
+    print('len dr date dict list', len(dr_date_dict_list))
+    print('len drew date dic list', len(drew_date_dict_list))
 
-    print 'd', d
+    print('d', d)
 
     return d
 

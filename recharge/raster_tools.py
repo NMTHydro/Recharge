@@ -58,22 +58,22 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
     # de = depletions.ix[:, 2]
     # de = de.values.tolist()[0:]
     # de = array(de)
-    print 'de shape', de.shape
-    print 'de', de
+    print('de shape', de.shape)
+    print('de', de)
 
     # dr = depletions.ix[:, 3]
     # dr = dr.values.tolist()[0:]
     # dr = array(dr)
-    print'dr shape', dr.shape
+    print('dr shape', dr.shape)
 
     # drew = depletions.ix[:, 4]
     # drew = drew.values.tolist()[0:]
     # drew = array(drew)
-    print'drew shape', drew.shape
+    print('drew shape', drew.shape)
 
     d = de + dr + drew
-    print 'depletion ->', d
-    print 'depletion shape', d.shape
+    print('depletion ->', d)
+    print('depletion shape', d.shape)
 
     # ones = np.ones(32787,) # 32768 needs to be 32787
 
@@ -85,12 +85,12 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
     #     value = int(value)
 
     # taw_unmod = array(taw_unmod, dtype=float)
-    print 'taw_unmod shape', taw_unmod.shape
-    print 'taw_unmod', taw_unmod
+    print('taw_unmod shape', taw_unmod.shape)
+    print('taw_unmod', taw_unmod)
     quotient = d / taw_unmod
-    print 'Quotient', quotient
+    print('Quotient', quotient)
     unmod_soil_arr = 1.0 - quotient
-    print 'unmodified rzsm array', unmod_soil_arr
+    print('unmodified rzsm array', unmod_soil_arr)
 
     # print 'taw shape', taw_unmod.shape
 
@@ -102,7 +102,7 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
     quotient = d / taw_mod
     mod_soil_arr = 1.0 - quotient
 
-    print 'modified rzsm array', mod_soil_arr
+    print('modified rzsm array', mod_soil_arr)
 
     # ---- Get Arrays Back into shape! -----
     convert_array_to_raster(os.path.join(output_path, 'unmod.tif'), unmod_soil_arr, geo)
@@ -132,7 +132,7 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     del out_data_set, output_band
 
     if not os.path.isfile(output_path):
-        print "Not a valid file: '{}' - Raster could not be written!".format(output_path)
+        print("Not a valid file: '{}' - Raster could not be written!".format(output_path))
         return
 
 def convert_raster_to_array(input_raster_path, raster=None, band=1):
@@ -155,7 +155,7 @@ def convert_raster_to_array(input_raster_path, raster=None, band=1):
     # print "filepath", os.path.isfile(p)
     # print p
     if not os.path.isfile(p):
-        print 'Not a valid file: {}'.format(p)
+        print('Not a valid file: {}'.format(p))
 
     raster_open = gdal.Open(p)
     ras = array(raster_open.GetRasterBand(band).ReadAsArray(), dtype=float)
@@ -192,15 +192,15 @@ def apply_mask_pixel_tracker(pix_mask, arr):
     out = None
     idxs = get_mask(pix_mask)
     if idxs is not None:
-        print "array shape", arr.shape
-        print 'indices', idxs.shape
+        print("array shape", arr.shape)
+        print('indices', idxs.shape)
         out = arr[idxs].flatten()
     return out
 
 
 def get_mask(path):
     if os.path.isfile(path):
-        print "here is the mask", path
+        print("here is the mask", path)
         path, file_name = os.path.dirname(path), os.path.basename(path)
     else:
 
@@ -247,7 +247,7 @@ def save_daily_pts(wfile, day, data):
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
     month_day = day.strftime('%d')
-    print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
+    print(('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day)))
     for row in data:
         timestamp = '{},{},{}'.format(year, this_month, month_day)
         # use map(str, row) to convert each element from a float to a str
@@ -264,7 +264,7 @@ def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, 
     year = day.strftime('%Y')
     this_month = day.strftime('%m')
     month_day = day.strftime('%d')
-    print('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day))
+    print(('Saving daily NDVI data for {}-{}-{}'.format(year, this_month, month_day)))
     for a, b, c, d, e, f, g, h, i in zip(ndvi, temp, precip, etr, petr, nlcd, dem, slope, aspect):
         with open(filename, "a") as wfile:
             wfile.write(
@@ -322,7 +322,7 @@ def make_results_dir(out_root=None, shapes=None):
 
             results_directories[tab_folder] = d
 
-    print 'results dirs: {}'.format(pformat(results_directories, indent=2))
+    print('results dirs: {}'.format(pformat(results_directories, indent=2)))
     return results_directories
 
 
@@ -359,7 +359,7 @@ def tiff_framer(mask_path, tiff_list):
 
     st = time.time()
     arrs = [convert_raster_to_array(*os.path.split(tiff_path)) for tiff_path in tiff_list]
-    print 'get arrays', time.time() - st
+    print('get arrays', time.time() - st)
 
     nrows, ncols = arrs[0].shape
 
@@ -369,7 +369,7 @@ def tiff_framer(mask_path, tiff_list):
 
     st = time.time()
     rows = [rowfactory(ri, ci) for ri in xrange(nrows) for ci in xrange(ncols) if mask_arr[ri, ci]]
-    print 'get rows', time.time() - st
+    print('get rows', time.time() - st)
 
     df = DataFrame(rows)
     return df
@@ -381,6 +381,6 @@ if __name__ == '__main__':
     tnames = ['de_30_12_2013.tif', 'dr_30_12_2013.tif']
 
     mp = os.path.join(rr, 'mask', 'zuni_1.tif')
-    print tiff_framer(mp, [os.path.join(rr, ti) for ti in tnames])
+    print(tiff_framer(mp, [os.path.join(rr, ti) for ti in tnames]))
 
 # =================================== EOF =========================

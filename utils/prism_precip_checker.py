@@ -37,13 +37,13 @@ def days_prior_func(date_list, days_prior):
     :return: a dictionary with a list of all the dates prior
     """
 
-    print "days prior", days_prior
+    print("days prior", days_prior)
     storage = {}
     for date in date_list:
 
         main_day = datetime.strptime(date, "%Y-%m-%d")
 
-        print "main day", main_day
+        print("main day", main_day)
 
         lst = []
         for i in range(0, days_prior, 1):
@@ -52,11 +52,11 @@ def days_prior_func(date_list, days_prior):
             d = datetime.strftime(d, "%Y-%m-%d")
             lst.append(d)
 
-        print "list", lst
+        print("list", lst)
 
         storage["{}".format(date)] = lst
 
-    print "storage", storage
+    print("storage", storage)
     return storage
 
 
@@ -71,7 +71,7 @@ def find_files(date_list, prism_path, days_prior):
 
     days_prior_dict = days_prior_func(date_list, days_prior)
 
-    print "prior days", days_prior
+    print("prior days", days_prior)
     date_dict = {}
     for path, directory, file in os.walk(prism_path):
 
@@ -96,7 +96,7 @@ def find_files(date_list, prism_path, days_prior):
                         # date_dict["{}".format(date)] = p
             # print "length {}".format(len(p_list))
             date_dict["{}".format(key)] = p_list
-    print "DATE DICT", date_dict
+    print("DATE DICT", date_dict)
     return date_dict
 
 def raster_reader(date_dict):
@@ -132,8 +132,8 @@ def format_outputter(raster_dict):
         write_file.write("Prism Output \n \n \n \n ")
         for key, value in raster_dict.iteritems():
 
-            print "value[0]", value[0]
-            print "value[0][0]", value[0][0]
+            print("value[0]", value[0])
+            print("value[0][0]", value[0][0])
 
             write_file.write("\n \n \n{}\n \n \n".format(key))
 
@@ -143,7 +143,7 @@ def format_outputter(raster_dict):
                 write_file.write("Array {}\n".format(str[-8:]))
                 # for i in array:
                 zero_array = not np.any(array)
-                print "Zero Arr -> {}".format(zero_array)
+                print("Zero Arr -> {}".format(zero_array))
                 write_file.write("{}  {}\n".format("All zeroes?", zero_array))
 
 

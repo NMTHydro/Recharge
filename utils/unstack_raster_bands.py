@@ -34,7 +34,7 @@ def unstack_rasters(in_path, out_path, start_date, end_date):
 
     for day in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
         doy = day.timetuple().tm_yday
-        print 'day of year: {}'.format(doy)
+        print('day of year: {}'.format(doy))
         obj = [1, 49, 81, 113, 145, 177, 209, 241, 273, 305, 337]
         if doy < 49:
             start = 1
@@ -43,7 +43,7 @@ def unstack_rasters(in_path, out_path, start_date, end_date):
                                                                              str(nd).rjust(3, '0'))
             raster_path = os.path.join(in_path, raster)
             dst = os.path.join(out_path, '{}_{}.tif'.format(day.year, doy))
-            print 'dst: {}     band {}'.format(dst, doy)
+            print('dst: {}     band {}'.format(dst, doy))
             translate = 'gdal_translate -b {} {} {}'.format(doy, raster_path, dst)
             call(translate)
 
@@ -62,14 +62,14 @@ def unstack_rasters(in_path, out_path, start_date, end_date):
                                                                                      str(nd).rjust(3, '0'))
                     raster_path = os.path.join(in_path, raster)
                     dst = os.path.join(out_path, '{}_{}.tif'.format(day.year, doy))
-                    print 'dst: {}     band {}'.format(dst, doy)
+                    print('dst: {}     band {}'.format(dst, doy))
                     translate = 'gdal_translate -b {} {} {}'.format(band_num, raster_path, dst)
                     call(translate)
 
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     stacked_path = os.path.join(root, 'Downloads', 'stacked_ndvi')
     unstacked_path = os.path.join(root, 'Downloads', 'unstacked_ndvi')

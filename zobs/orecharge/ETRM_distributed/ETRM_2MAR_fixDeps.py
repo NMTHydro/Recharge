@@ -10,7 +10,7 @@ from osgeo import osr
 import numpy as np
 
 startTime = datetime.datetime.now()
-print startTime
+print(startTime)
 
 # np.seterr(divide='ignore', invalid='ignore')
 
@@ -130,7 +130,7 @@ taw_open = []
 
 for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     doy = dday.timetuple().tm_yday
-    print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year)
+    print("Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year))
 
     #  NDVI to kcb
     if dday.year == 2000:
@@ -458,7 +458,7 @@ output_names = ['infil', 'et', 'precip', 'runoff', 'snow_ras', 'mass', 'dr', 'de
 x = 0
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'C:\\Recharge_GIS\\Array_Results\\{a}.tif'.format(a=name)
     cols = dataset.RasterXSize

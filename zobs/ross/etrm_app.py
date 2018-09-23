@@ -67,7 +67,7 @@ class App(object):
             func = getattr(self, cmd)
             func(*args)
         else:
-            print 'Invalid command {}'.format(cmd)
+            print('Invalid command {}'.format(cmd))
 
     # commands
     def _help(self, *args):
@@ -76,18 +76,18 @@ class App(object):
             msg = HELP[cmd]
         except KeyError:
             msg = '"{}" is not a valid command'.format(cmd)
-        print msg
+        print(msg)
 
     def _commands(self, *args):
-        print '''************ Available Commands ************
+        print('''************ Available Commands ************
 commands: List all available commands
 exit: Exit the program
 quit: Same as exit
 help <command>: Display additional information about <command>
-'''
+''')
 
     def _welcome(self):
-        print '''====================================================================================
+        print('''====================================================================================
  _______  _______  ______    __   __
 |       ||       ||    _ |  |  |_|  |
 |    ___||_     _||   | ||  |       |
@@ -103,10 +103,10 @@ New Mexico Tech/New Mexico Bureau of Geology
 Available commands are enumerated using "commands"
 
 For more information regarding a specific command use "help <command>". Replace <command> with the command of interest
-'''
+''')
 
     def _exit(self):
-        print 'Good Bye'
+        print('Good Bye')
 
 
 if __name__ == '__main__':

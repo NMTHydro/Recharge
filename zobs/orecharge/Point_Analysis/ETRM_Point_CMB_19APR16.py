@@ -76,7 +76,7 @@ for site in codes:
     extract_name = names[codes.index(site)]
     rech_ind = float(cmb_rech_ind[codes.index(site)])
     name = 'C:\\Users\\David\\Documents\\Recharge\\CMB\\CMB_extracts\\{a}_extract.csv'.format(a=site)
-    print 'Processing site {} code {}'.format(extract_name, site)
+    print('Processing site {} code {}'.format(extract_name, site))
     # Get a numpy object of all raster-extracted data out of the csv it is held in
     recs = []
     try:
@@ -85,7 +85,7 @@ for site in codes:
         lines = fid.readlines()[:]
         fid.close()
     except IOError:
-        print "couldn't find "  # + '{a}'.format(a=fid)
+        print("couldn't find ")  # + '{a}'.format(a=fid)
         break
     rows = [line.split(',') for line in lines]
     for line in rows:

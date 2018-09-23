@@ -48,13 +48,13 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
         etrm = Processes(simulation_period, save_csv, static_inputs=static_inputs, point_dict=amf_dict,
                          initial_inputs=initial_path)
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
-        print '\n key : {}'.format(key)
+        print('\n key : {}'.format(key))
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         tracker = etrm.run(simulation_period, point_dict=amf_dict, point_dict_key=key, modify_soils=True,
                            apply_rofrac=0.7, allen_ceff=0.8)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
-        print 'this should be your csv: {}'.format(csv_path_filename)
+        print('this should be your csv: {}'.format(csv_path_filename))
 
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
 
@@ -62,7 +62,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
 
         obs_etrm_comb_out = os.path.join(save_combo, '{}_Ceff.csv'.format(val['Name']))
 
-        print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
+        print('this should be your combo csv: {}'.format(obs_etrm_comb_out))
         amf_obs_etrm_combo.to_csv(obs_etrm_comb_out, index_label='Date')
         # print 'tracker for {}: {}'.format(key, tracker)
 
@@ -71,7 +71,7 @@ def get_ameriflux_data(amf_file_path, simulation_period, etrm_extract=None,
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     inputs = os.path.join( 'H:\\', 'ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
     amf_path = os.path.join(inputs, 'ameriflux_sites') # OK
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output') # OK
     amf_obs_processed = os.path.join(amf_path, 'AMF_obs_processed') # OK
     amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo') # OK
-    print amf_obs_root # testing
+    print(amf_obs_root) # testing
     get_ameriflux_data(amf_obs_root, SIMULATION_PERIOD, etrm_extract=amf_extract,
                        static_inputs=static_inputs_path, initial_path=initial_conditions_path,
                        save_csv=amf_trackers, save_combo=amf_etrm_combo, save_cleaned_data=False)

@@ -10,7 +10,7 @@ from osgeo import osr
 import numpy as np
 
 startTime = datetime.datetime.now()
-print startTime
+print(startTime)
 
 # np.seterr(divide='ignore', invalid='ignore')
 
@@ -128,7 +128,7 @@ rew_open = []
 
 for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     doy = dday.timetuple().tm_yday
-    print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year)
+    print("Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year))
 
     #  NDVI to kcb
     if dday.year == 2000:
@@ -136,7 +136,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         ras_list = os.listdir('E:\\NDVI_std_2000')
         for raster in ras_list:
             if raster == 'temp.tif':
-                print 'found temp tif'
+                print('found temp tif')
                 os.remove(raster)
             if doy > 48:
                 start_band = str(raster)[1:4]
@@ -264,10 +264,10 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         swe = np.ones(ppt.shape, dtype='int64') * 5
 
     if dday.timetuple().tm_yday > sMon.timetuple().tm_yday or dday.timetuple().tm_yday < eMon.timetuple().tm_yday:
-        print "monsoon day"
+        print("monsoon day")
         ksat = ksat * 2/24.
     else:
-        print "non-monsoon day"
+        print("non-monsoon day")
         ksat = ksat * 6/24.
 
     kc_max_1 = kcb + 0.05
@@ -409,7 +409,7 @@ output_names = ['infil', 'et', 'precip', 'runoff', 'snow_ras', 'mass', 'dr', 'de
 x = 0
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'C:\\Recharge_GIS\\Array_Results\\{a}.tiff'.format(a=name)
     cols = dataset.RasterXSize

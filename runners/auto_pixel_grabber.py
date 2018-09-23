@@ -220,7 +220,7 @@ def frameit(mod_dict, obs_dict):
 
     for pixel, tuple_list in mod_dict.items():
 
-        print pixel
+        print(pixel)
 
         tuple_list_sort = sorted(tuple_list, key = lambda tup: tup[0])
         tuple_list_sort = sorted(tuple_list_sort, key = lambda tup: tup[0][-1])
@@ -236,7 +236,7 @@ def frameit(mod_dict, obs_dict):
 
     for pixel, tuple_list in obs_dict.items():
 
-        print pixel
+        print(pixel)
         tuple_list_sort = sorted(tuple_list, key=lambda tup: tup[0])
         #tuple_list_sort = sorted(tuple_list_sort, key=lambda tup: tup[0][-1])
         # yay
@@ -261,7 +261,7 @@ def frameit(mod_dict, obs_dict):
 
         together_frame[pixel] = frame
 
-    print 'together frame', together_frame
+    print('together frame', together_frame)
     return together_frame
 
 def xml_write(frame_dict):
@@ -291,7 +291,7 @@ def run():
 
     """
 
-    print 'my hairy butt'
+    print('my hairy butt')
 
     # get pixel shapefile
     pixel_file = "/Users/Gabe/Desktop/pixel_masks/pixel_shapefile.shp"

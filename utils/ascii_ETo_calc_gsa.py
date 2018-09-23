@@ -35,7 +35,7 @@ def get_percentile(close_values, percentile_value):
     for temp, diff in zip(close_values, diff_list):
 
         if diff == ts_dry_diff:
-            print 'here is the one {}'.format(temp)
+            print('here is the one {}'.format(temp))
 
             closest_value = temp
 
@@ -49,7 +49,7 @@ def parse_file(path, first_col, num_cols):
     :return:
     """
 
-    print 'path -> {}, first col -> {}, num_cols -> {}'.format(path, first_col, num_cols)
+    print('path -> {}, first col -> {}, num_cols -> {}'.format(path, first_col, num_cols))
 
     ascii_unformatted_dict = {}
     ascii_unformatted_dict["good_lines"] = []
@@ -95,7 +95,7 @@ def parse_file(path, first_col, num_cols):
 
     #format the headers list
     headers_list = []
-    print 'ascii unformatted', ascii_unformatted_dict
+    print('ascii unformatted', ascii_unformatted_dict)
     for i in ascii_unformatted_dict['bands']:
         headers_list.append(i)
 
@@ -220,7 +220,7 @@ def get_metdata():
 
     met_df = pd.read_csv(metpath, skiprows=[0, 1])
 
-    print 'met_DF \n', met_df
+    print('met_DF \n', met_df)
 
     return met_df
 
@@ -230,23 +230,23 @@ def calculations(ascii_df, met_df, image):
 
     # get the index of the row of the metdata file that contains the proper image
     met_df = met_df[met_df['Image'] == image]
-    print "do we have the right row? \n", met_df
+    print("do we have the right row? \n", met_df)
 
     # get the index of the image
     met_indx = met_df[met_df['Image'] == image].index
-    print 'the met index', met_indx
+    print('the met index', met_indx)
 
     # get the ETo
-    print 'marker', met_df['Eto']
+    print('marker', met_df['Eto'])
     eto = met_df.loc[met_indx, 'Eto']
-    print 'eto', eto
+    print('eto', eto)
 
     # get tair in Celcius
     tair = met_df.loc[met_indx, 'Air T']
 
     # Calculate air temperature in Kelvin
     tairk = tair + 273.15
-    print 'tairk', tairk
+    print('tairk', tairk)
 
     # change all Ts values to NaN if surface_temp <= 0; Ts = B5 in ascii_df
     ascii_df['B5'] = ascii_df['B5'].mask(ascii_df['B5'] <= 0.0, np.nan)
@@ -258,7 +258,7 @@ def calculations(ascii_df, met_df, image):
     rb6 = ascii_df['B10']
 
     ascii_df['ndwi'] = (rb6 - rb3)/(rb6 + rb3)
-    print 'ascii w ndvi', ascii_df.head(5)
+    print('ascii w ndvi', ascii_df.head(5))
 
     ascii_full = ascii_df
 
@@ -302,15 +302,15 @@ def calculations(ascii_df, met_df, image):
     n = len(ts)
 
     # find the pixel value of ts closest to the 95th and 5th percentile
-    print "all the stats {}".format([mean, minimum, maximum, p1, p5, p10, p90, p95, p99, n])
+    print("all the stats {}".format([mean, minimum, maximum, p1, p5, p10, p90, p95, p99, n]))
 
     close_to_fith = ascii_full[(ascii_full['B5'] > p1) & (ascii_full['B5'] < p10)].index
 
-    print 'temps close to fifth', ascii_full.loc[close_to_fith, 'B5']
+    print('temps close to fifth', ascii_full.loc[close_to_fith, 'B5'])
 
     close_to_90fith = ascii_full[(ascii_full['B5'] > p90) & (ascii_full['B5'] < p99)].index
 
-    print 'temps close to ninetyfifth', ascii_full.loc[close_to_90fith, 'B5']
+    print('temps close to ninetyfifth', ascii_full.loc[close_to_90fith, 'B5'])
 
     temps_cold_close = ascii_full.loc[close_to_fith, 'B5']
     temps_dry_close = ascii_full.loc[close_to_90fith, 'B5']
@@ -321,10 +321,10 @@ def calculations(ascii_df, met_df, image):
     ts_cold = get_percentile(temps_cold_close, ts_p5)
     ts_dry = get_percentile(temps_dry_close, ts_p95)
 
-    print 'ts dry', ts_dry
+    print('ts dry', ts_dry)
 
-    print 'the dry index', ascii_full[ascii_full['B5'] == ts_dry].index
-    print 'the cold index', ascii_full[ascii_full['B5'] == ts_cold].index
+    print('the dry index', ascii_full[ascii_full['B5'] == ts_dry].index)
+    print('the cold index', ascii_full[ascii_full['B5'] == ts_cold].index)
 
 
     return ascii_full, ts_cold, ts_dry, eto
@@ -534,7 +534,7 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
     # print 'these are the drymask indexes', indexes_drymask
 
     # make the drymask of zeros
-    print 'ze length', len(ascii_rn_g['rn'])
+    print('ze length', len(ascii_rn_g['rn']))
     drymask_zeros = np.zeros((len(ascii_rn_g['rn']), 1))
     # print 'zero array for drymask', drymask_zeros
     ascii_rn_g['drymask'] = drymask_zeros
@@ -542,7 +542,7 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
 
     # fill in the ones in the correct locations
     ascii_rn_g.loc[indexes_drymask, 'drymask'] = 1
-    print 'ascii rn g after drymask is added', ascii_rn_g['drymask']
+    print('ascii rn g after drymask is added', ascii_rn_g['drymask'])
 
     ascii_rn_g_full = ascii_rn_g
 
@@ -559,10 +559,10 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
     # IF ALB<0.20 THEN DELETE;
     ascii_rn_g = ascii_rn_g.drop(ascii_rn_g[ascii_rn_g['B1'] < 0.2].index)
 
-    print 'after culling', ascii_rn_g
+    print('after culling', ascii_rn_g)
 
     # find the median and the mean of the culled Ts
-    print 'ts of dry dataframe', ascii_rn_g['B5']
+    print('ts of dry dataframe', ascii_rn_g['B5'])
 
     # todo - is it possible that the dataframe comes up empty?
 
@@ -571,33 +571,33 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
 
         # find the albedo albedo and G of the hotpixel
         hotpixel_indxs = oringinal_df[oringinal_df['B5'] == tshot].index
-        print 'them hotpixel indxs', hotpixel_indxs
+        print('them hotpixel indxs', hotpixel_indxs)
 
         rndry = oringinal_df.loc[hotpixel_indxs, 'rn']
         albdry = oringinal_df.loc[hotpixel_indxs, 'B1']
         gdry = oringinal_df.loc[hotpixel_indxs, 'gwri']
-        print 'the dry rn alb and gdry, respectively \n', rndry, albdry, gdry
+        print('the dry rn alb and gdry, respectively \n', rndry, albdry, gdry)
 
         # TODO - Is this necessary now?
         # IF TS=. THEN DELETE;
         # IF RNDRY=. THEN DELETE;
 
-        print 'ascii calc', ascii_rn_g_full
-        print 'tshot', tshot
-        print 'rndry', rndry
-        print 'albdry', albdry
-        print 'gdry', gdry
+        print('ascii calc', ascii_rn_g_full)
+        print('tshot', tshot)
+        print('rndry', rndry)
+        print('albdry', albdry)
+        print('gdry', gdry)
         return ascii_rn_g_full, tshot, rndry, albdry, gdry
 
     else:
-        print 'the culled dataframe was not empty'
-        print 'test', ascii_rn_g['B5']
+        print('the culled dataframe was not empty')
+        print('test', ascii_rn_g['B5'])
         dry_temps = np.array(ascii_rn_g['B5'])
-        print 'dry temps', dry_temps
+        print('dry temps', dry_temps)
         mean = np.mean(dry_temps)
         median = np.median(dry_temps)
 
-        print 'xx11'
+        print('xx11')
 
         if median == None:
             tshot = ts_dry
@@ -606,15 +606,15 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
 
             hotpixel_indxs = oringinal_df[oringinal_df['B5'] == tshot].index
 
-            print 'xx13'
+            print('xx13')
 
-            print 'them hotpixel indxs', hotpixel_indxs
+            print('them hotpixel indxs', hotpixel_indxs)
 
             rndry = oringinal_df.loc[hotpixel_indxs, 'rn']
             albdry = oringinal_df.loc[hotpixel_indxs, 'B1']
             gdry = oringinal_df.loc[hotpixel_indxs, 'gwri']
 
-            print 'the dry rn alb and gdry, respectively \n', rndry, albdry, gdry
+            print('the dry rn alb and gdry, respectively \n', rndry, albdry, gdry)
 
             # TODO - Is this necessary now?
             # IF TS=. THEN DELETE;
@@ -625,19 +625,19 @@ def calculations3(ascii_rn_g, ts_cold, ts_dry):
         else:
             tshot = median
 
-            print 'xx12'
+            print('xx12')
 
             # find the albedo albedo and G of the hotpixel
 
             hotpixel_indxs = oringinal_df[oringinal_df['B5'] == tshot].index
 
-            print 'them hotpixel indxs', hotpixel_indxs
+            print('them hotpixel indxs', hotpixel_indxs)
 
             rndry = oringinal_df.loc[hotpixel_indxs, 'rn']
             albdry = oringinal_df.loc[hotpixel_indxs, 'B1']
             gdry = oringinal_df.loc[hotpixel_indxs, 'gwri']
 
-            print 'the dry rn alb and gdry, respectively \n', rndry, albdry, gdry
+            print('the dry rn alb and gdry, respectively \n', rndry, albdry, gdry)
 
             # TODO - Is this necessary now?
             # IF TS=. THEN DELETE;
@@ -673,18 +673,18 @@ def calculations4(ascii_rn_g, tshot, ts_cold, rndry, albdry, gdry, eto, output_p
     b = float(rndry - gdry)
     e = (rn - gwri - b * ndti) * 3600/1000000/2.45
 
-    print 'this is e', e
+    print('this is e', e)
 
     # ETOF=E/ETO;
-    print 'eto test', eto
+    print('eto test', eto)
     etof = e / float(eto)
 
     # add these to the ascii
     ascii_rn_g['e'] = e
     ascii_rn_g['etof'] = etof
 
-    print 'ascii etof', ascii_rn_g['etof']
-    print 'ascii ts', ascii_rn_g['B5']
+    print('ascii etof', ascii_rn_g['etof'])
+    print('ascii ts', ascii_rn_g['B5'])
 
     # === ALL WATER PIXELS HAVE ETOF=1.05; ===
     # IF NDVI<0.00 AND TS<TSCOLD+(TSHOT-TSCOLD)/2.0 AND ALB<0.15 THEN ETOF=1.05
@@ -751,7 +751,7 @@ def calculations4(ascii_rn_g, tshot, ts_cold, rndry, albdry, gdry, eto, output_p
     xy_df = ascii_rn_g.loc[:, ['X', 'Y', 'B5', 'ndti', 'etof']]
     # IF TS=. THEN TS=0;
     nan_temps_indx = xy_df[xy_df['B5'].isnull()].index
-    print 'here are the indices ! ', nan_temps_indx
+    print('here are the indices ! ', nan_temps_indx)
     xy_df.loc[nan_temps_indx, 'B5'] = 0.00
     # IF TS=. THEN NDTI=0;
     xy_df.loc[nan_temps_indx, 'ndti'] = 0.00
@@ -764,7 +764,7 @@ def calculations4(ascii_rn_g, tshot, ts_cold, rndry, albdry, gdry, eto, output_p
     nan_etof_indx = xy_df[xy_df['etof'].isnull()].index
     xy_df.loc[nan_etof_indx, 'etof'] = 0.00
 
-    print 'the final resultant dataframe {}'.format(xy_df)
+    print('the final resultant dataframe {}'.format(xy_df))
 
     xy_df.to_csv(output_path)
 
@@ -797,7 +797,7 @@ def run():
     # do the second batch of calculations from the SAS program
     ascii_rn_g = calculations2(ascii_df, ascii_ndwi, ts_cold, ts_dry)
 
-    print 'ascii rn g', ascii_rn_g
+    print('ascii rn g', ascii_rn_g)
 
     # the third batch of calculations that were done
     ascii_rn_g_full, tshot, rndry, albdry, gdry = calculations3(ascii_rn_g, ts_cold, ts_dry)

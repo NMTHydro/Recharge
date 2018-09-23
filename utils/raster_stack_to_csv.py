@@ -52,7 +52,7 @@ def data_frame_formatter(x_list, y_list, raster_dictionary):
 
     ras_dict = {}
 
-    print "x, y is done. Starting k, v loop"
+    print("x, y is done. Starting k, v loop")
 
     for k, v in raster_dictionary.iteritems():
 
@@ -66,16 +66,16 @@ def data_frame_formatter(x_list, y_list, raster_dictionary):
         #print y
         #========
 
-        print "v[0]"
-        print v[0]
+        print("v[0]")
+        print(v[0])
 
-        print 'lenght of ravel v[0] for k = {}'.format(k)
+        print('lenght of ravel v[0] for k = {}'.format(k))
 
-        print len(v[0].ravel().tolist())
+        print(len(v[0].ravel().tolist()))
 
         ras_dict["{}".format(k)] = v[0].ravel().tolist()
 
-    print "Done wi kv loop"
+    print("Done wi kv loop")
 
     # col_list = ["x", "y"]
 
@@ -115,11 +115,11 @@ def grapher(df):
     ideal_ndvi = []
     for col in df.columns:
 
-        print col
+        print(col)
 
         if str(col).endswith("NDVI"):
 
-            print df[col]
+            print(df[col])
 
             for row in df[col]:
                 if row >= 0.8:
@@ -130,7 +130,7 @@ def grapher(df):
 
     df['ideal_ETrF'] = ideal_ndvi
 
-    print "enhanced dataframe", df
+    print("enhanced dataframe", df)
 
 
     # now plot ideal ETrf vs normal ETRF and dont forget small gridlines for Jan.
@@ -205,16 +205,16 @@ def run():
 
         ras = raster.read(1)
 
-        print 'ras shape 0', ras.shape[0]
+        print('ras shape 0', ras.shape[0])
 
-        print 'ras shape 1', ras.shape[1]
+        print('ras shape 1', ras.shape[1])
 
         window = ((0, ras.shape[0]), (0, ras.shape[1]))
 
-        print "WINDOW", window
+        print("WINDOW", window)
         bounds = raster.window_bounds(window)
 
-        print "BOUNDS", bounds
+        print("BOUNDS", bounds)
 
 
     # Take the bounds from the minimum raster and for each raster in the dir,
@@ -231,23 +231,23 @@ def run():
                 with rasterio.open(tiff_path) as r:
                     T0 = r.affine  # upper-left pixel corner affine transform
 
-                    print "Here is T0", T0
+                    print("Here is T0", T0)
 
                     window = r.window(*bounds)
 
-                    print "edited window", window
+                    print("edited window", window)
 
                     top_left = [bounds[0], bounds[-1]]
 
 
-                    print "Here is top left", top_left
+                    print("Here is top left", top_left)
 
-                    print 'r.window', r.window
+                    print('r.window', r.window)
 
                     A = r.read(1, window=window)
 
-                print "A", A
-                print "A shape", A.shape
+                print("A", A)
+                print("A shape", A.shape)
 
 
 
@@ -260,7 +260,7 @@ def run():
                 fwd = Affine.from_gdal(*geotransform)
                 # use the affine matrix to shift half a raster over.
                 T1 = fwd * Affine.translation(0.5, 0.5)
-                print " The new T1 ", T1
+                print(" The new T1 ", T1)
                 # make a grid to hold the columns and rows based on the shape of the raster you read in.
                 col, row = np.meshgrid(np.arange(A.shape[1]), np.arange(A.shape[0]))
                 # convert col and row to UTM centroids using translated affine matrix
@@ -276,7 +276,7 @@ def run():
 
     y_list = y.ravel().tolist()
 
-    print "Starting the formatter"
+    print("Starting the formatter")
     # add the raster dict and the list of x and y coordinates separately.
     df = data_frame_formatter(x_list, y_list, raster_dict)
 

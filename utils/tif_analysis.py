@@ -30,5 +30,5 @@ sand_tif = 'total_precip_2000_2013_11OCT16.tif'
 geo = get_geo(input_path)
 ppt = convert_raster_to_array(input_path, sand_tif)
 
-print 'mean precip = {}'.format(ppt.mean())
+print('mean precip = {}'.format(ppt.mean()))
 # ==========================  EOF  ==============================================

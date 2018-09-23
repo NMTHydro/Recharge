@@ -89,22 +89,22 @@ def closure_check(ec_dataset, Rn, LE, H, timeseries):
     # TODO - If there is no ground heat flux, average over 24 hours to negate impact of G. Ask Dan the proper way.
     except:
         KeyError
-        print 'No ground heat flux at this station. Consider averaging over a daily period.'
+        print('No ground heat flux at this station. Consider averaging over a daily period.')
         G = 0
     try:
         stored_H = ec_dataset['SH']
         stored_LE = ec_dataset['SLE']
     except:
         KeyError
-        print 'No sensible or latent heat storage terms'
+        print('No sensible or latent heat storage terms')
         stored_H = 0
         stored_LE = 0
 
     # Todo - Get Dan's help with this.
     closure_error = abs((((Rn-G) - (LE + H)) - (stored_H + stored_LE))/Rn) * 100
 
-    print 'median closure error: {}, average closure error {}'.format(
-        np.median(closure_error.values), np.mean(closure_error.values))
+    print('median closure error: {}, average closure error {}'.format(
+        np.median(closure_error.values), np.mean(closure_error.values)))
 
     plotter1(timeseries, closure_error)
 
@@ -139,11 +139,11 @@ def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
         # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
         halfhour_data = pd.DataFrame({'timeseries':timeseries, 'Rn':Rn, 'LE':LE, 'H':H})
         #([[timeseries, Rn, LE, H]], columns=['timeseries', 'Rn', 'LE', 'H'])
-        print halfhour_data
+        print(halfhour_data)
         halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
         daily_time = halfhour_data.resample('d').mean()
-        print 'resampled!', daily_time
-        print 'daily', daily_time[0]
+        print('resampled!', daily_time)
+        print('daily', daily_time[0])
         # normalize all the fluxes to the net radiation
         Rn = ec_dataset['NETRAD']
         Rn_av = daily_time['Rn']
@@ -180,7 +180,7 @@ def analyze(path, x, y):
     ec_dataset = pd.read_csv(path, header=2)
 
     # print ec_dataset.head()
-    print ec_dataset[ec_dataset[y] != -9999].head()
+    print(ec_dataset[ec_dataset[y] != -9999].head())
     ec_dataset = ec_dataset[ec_dataset[y] != -9999]
 
     if x.startswith("TIMESTAMP"):
@@ -195,7 +195,7 @@ def analyze(path, x, y):
         # convert latent heat flux into mm h20 by multiplying by the latent heat of vaporization todo - check calc w Dan
         mmh20 = b * 7.962e-4 # 4.09243e-7 <- instantaneous (mm/s)/m^2
 
-    print mmh20.head()
+    print(mmh20.head())
 
     # # check energy balance closure
     # check_energybal(ec_dataset, timeseries=a)

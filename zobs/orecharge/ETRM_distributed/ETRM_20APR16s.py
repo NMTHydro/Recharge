@@ -13,7 +13,7 @@ import numpy as np
 np.set_printoptions(linewidth=700, precision=2)
 
 startTime = datetime.datetime.now()
-print startTime
+print(startTime)
 def cells(array):
     window = array[480:510, 940:970]
     return window
@@ -144,7 +144,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     if dday != start:
         pKcb = kcb
     doy = dday.timetuple().tm_yday
-    print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year)
+    print("Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year))
     #  NDVI to kcb
     if dday.year == 2000:
         path = 'F:\\NDVI\\NDVI_std_all'
@@ -444,8 +444,8 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     mass = rain + mlt - (ro + transp + evap + dp_r + ((pDr - dr) + (pDe - de) + (pDrew - drew)))
     tot_mass += abs(mass)
     cum_mass += mass
-    print mass[480, 940]
-    print tot_mass[480, 940]
+    print(mass[480, 940])
+    print(tot_mass[480, 940])
 
     pltDay.append(dday)
     pltRain.append(rain[480, 940])
@@ -484,7 +484,7 @@ now = datetime.datetime.now()
 tag = '{}_{}_{}_{}'.format(now.month, now.day, now.hour, now.minute)
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'C:\\Recharge_GIS\\Array_Results\\{a}.tif'.format(a=name)
     cols = dataset.RasterXSize

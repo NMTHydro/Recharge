@@ -58,7 +58,7 @@ def convert_raster_to_array(input_raster_path, raster=None, band=1):
     # print "filepath", os.path.isfile(p)
     # print p
     if not os.path.isfile(p):
-        print 'Not a valid file: {}'.format(p)
+        print('Not a valid file: {}'.format(p))
 
     raster_open = gdal.Open(p)
     ras = array(raster_open.GetRasterBand(band).ReadAsArray(), dtype=float)
@@ -68,17 +68,17 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     driver = gdal.GetDriverByName('GTiff')
     out_data_set = driver.Create(output_path, geo['cols'], geo['rows'],
                                  geo['bands'], geo['data_type'])
-    print 'out dataset', out_data_set
+    print('out dataset', out_data_set)
     out_data_set.SetGeoTransform(geo['geotransform'])
     out_data_set.SetProjection(geo['projection'])
 
     output_band = out_data_set.GetRasterBand(output_band)
-    print 'heres the array to save convere_array_to_raster ', arr
+    print('heres the array to save convere_array_to_raster ', arr)
     output_band.WriteArray(arr, 0, 0)
     del out_data_set, output_band
 
     if not os.path.isfile(output_path):
-        print "Not a valid file: '{}' - Raster could not be written!".format(output_path)
+        print("Not a valid file: '{}' - Raster could not be written!".format(output_path))
         return
 
 
@@ -92,7 +92,7 @@ def get_raster_geo_attributes(root):
     # statics = [filename for filename in os.listdir(statics_path) if filename.endswith('.tif')]
     # file_name = statics[0]
     file_name = next((fn for fn in os.listdir(root) if fn.endswith('.tif')), None)
-    print 'filename', file_name
+    print('filename', file_name)
     dataset = gdal.Open(os.path.join(root, file_name))
 
     band = dataset.GetRasterBand(1)
@@ -159,7 +159,7 @@ def run():
     for dirpath, dirnames, filenames in os.walk(root, topdown=False):
 
         for file in filenames:
-            print file
+            print(file)
 
             if file.endswith(".tif"):
                 name = file.split(".")[0]
@@ -196,7 +196,7 @@ def run():
 
     format_raster_conv(geo_att, root, output_path, master_dict)
 
-    print "DONE"
+    print("DONE")
 
 
 

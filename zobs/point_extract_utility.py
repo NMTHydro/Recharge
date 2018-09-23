@@ -50,7 +50,7 @@ def get_dynamic_inputs_from_shape(shapefile,  simulation_period, out_location):
             name = feat.GetField('Name')
         except ValueError:
             name = feat.GetField('Sample')
-        print name
+        print(name)
         geom = feat.GetGeometryRef()
         coords = geom.GetX(), geom.GetY()
         """Took these last three lines out bc it was skipping Valles Coniferous and we don't want that necessarily."""
@@ -59,7 +59,7 @@ def get_dynamic_inputs_from_shape(shapefile,  simulation_period, out_location):
         #else:
         for day in rrule.rrule(rrule.DAILY, dtstart=simulation_period[0], until=simulation_period[1]):
             if day.timetuple().tm_yday == 01:
-                print 'year {}'.format(day.year)
+                print('year {}'.format(day.year))
 
             min_temp = get_prism(prism, day, variable='min_temp', coords=coords)
             max_temp = get_prism(prism, day, variable='max_temp', coords=coords)
@@ -74,7 +74,7 @@ def get_dynamic_inputs_from_shape(shapefile,  simulation_period, out_location):
 
             df.loc[day] = dynamics
 
-        print 'df for {}: \n{}'.format(name, df)
+        print('df for {}: \n{}'.format(name, df))
         csv_path_filename = os.path.join(out_location, '{}.csv'.format(name))
         df.to_csv(csv_path_filename, na_rep='nan', index_label='Date', header=True)
 

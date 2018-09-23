@@ -32,18 +32,18 @@ class BaseConfigurer:
     user_interaction = True
 
     def get_configuration(self):
-        print '--------------- {} Get Configuration---------------'.format(self.__class__.__name__)
+        print('--------------- {} Get Configuration---------------'.format(self.__class__.__name__))
         while 1:
             kind = self._get_kind()
             if kind is None:
                 kind = 'cmb'
 
             if self._validate_kind(kind):
-                print 'kind = {}'.format(kind)
+                print('kind = {}'.format(kind))
                 break
             else:
                 if not self.user_interaction:
-                    print 'failed to get configuration. could not get valid kind. kind={}'.format(kind)
+                    print('failed to get configuration. could not get valid kind. kind={}'.format(kind))
                     sys.exit(1)
 
         if kind == 'cmb':
@@ -54,19 +54,19 @@ class BaseConfigurer:
         while 1:
             start = self._get_start_date()
             if self._validate_date_format(start):
-                print 'start date = {}'.format(start)
+                print('start date = {}'.format(start))
                 break
             if not self.user_interaction:
-                print 'failed to get configuration. could not get valid start date. "{}"'.format(start)
+                print('failed to get configuration. could not get valid start date. "{}"'.format(start))
                 sys.exit(1)
 
         while 1:
             end = self._get_end_date()
             if self._validate_date_format(end):
-                print 'end date = {}'.format(end)
+                print('end date = {}'.format(end))
                 break
             if not self.user_interaction:
-                print 'failed to get configuration. could not get valid end date. "{}"'.format(end)
+                print('failed to get configuration. could not get valid end date. "{}"'.format(end))
                 sys.exit(1)
 
         cfg.simulation_period = self._get_simulation_period(start, end)

@@ -8,7 +8,7 @@ import numpy as np
 np.set_printoptions(linewidth=700, precision=2)
 
 startTime = datetime.datetime.now()
-print startTime
+print(startTime)
 
 
 def cells(array):
@@ -34,7 +34,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         pass
     else:
         x += 1
-        print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year)
+        print("Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year))
         #  PRISM to mintemp, maxtemp, temp
         if dday.year in [2000, 2001, 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]:
             path = "F:\\PRISM\\Temp\\Minimum_standard"
@@ -73,7 +73,7 @@ now = datetime.datetime.now()
 tag = '{}_{}'.format(now.month, now.day)
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'C:\\Recharge_GIS\\Array_Results\\{a}.tif'.format(a=name)
     cols = dataset.RasterXSize

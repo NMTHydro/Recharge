@@ -66,7 +66,7 @@ def parse_file(path, first_col, num_cols):
                 bestln = [float(i) for i in goodln]
                 ascii_unformatted_dict["good_lines"].append(bestln)
 
-    print "the full unformatted dict \n", ascii_unformatted_dict
+    print("the full unformatted dict \n", ascii_unformatted_dict)
 
     # use zip to kick ass
     #format the headers list
@@ -74,12 +74,12 @@ def parse_file(path, first_col, num_cols):
     for i in ascii_unformatted_dict['files']:
         headers_list.append(i)
 
-    print "headers list", headers_list
+    print("headers list", headers_list)
 
     # add the headers list to the ascii_unformatted_dict
     ascii_unformatted_dict['headers'] = headers_list
 
-    print "this should work", ascii_unformatted_dict['headers']
+    print("this should work", ascii_unformatted_dict['headers'])
 
     ascii_dict = {}
     for i in ascii_unformatted_dict['headers']:
@@ -93,7 +93,7 @@ def parse_file(path, first_col, num_cols):
 
             ascii_dict[h].append(val)
 
-    print "ascii dict", ascii_dict
+    print("ascii dict", ascii_dict)
 
     return ascii_dict
 

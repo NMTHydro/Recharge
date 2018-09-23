@@ -9,7 +9,7 @@ import os
 from osgeo import ogr
 import numpy as np
 startTime = datetime.now()
-print startTime
+print(startTime)
 
 
 # Define user-controlled constants, these are constants to start with day one, replace
@@ -48,9 +48,9 @@ for feat in lyr:
             fid = open(file_name)
             lines = fid.readlines()[:]
             fid.close()
-            print name
+            print(name)
         except IOError:
-            print "couldn't find " + '{a}'.format(a=fid)
+            print("couldn't find " + '{a}'.format(a=fid))
             # break
         rows = [line.split(',') for line in lines]
 
@@ -133,7 +133,7 @@ for feat in lyr:
         tot_transp = 0.0
         tot_evap = 0.0
         cum_mass = 0.0
-        print 'Starting {a}...........'.format(a=name)
+        print('Starting {a}...........'.format(a=name))
         # for dday in rrule.rrule(rrule.DAILY, dtstart=snotel_start_obj, until=snotel_end_obj):
         for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
             if dday == start:

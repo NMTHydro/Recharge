@@ -11,7 +11,7 @@ import numpy as np
 np.set_printoptions(linewidth=700, precision=2)
 
 startTime = datetime.datetime.now()
-print startTime
+print(startTime)
 def cells(array):
     window = array[480:510, 940:970]
     return window
@@ -172,7 +172,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     if dday != start:
         pKcb = kcb
     doy = dday.timetuple().tm_yday
-    print "Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year)
+    print("Time : {a} day {b}_{c}".format(a=str(datetime.datetime.now() - startTime), b=doy, c=dday.year))
     #  NDVI to kcb
     if dday.year == 2000:
         path = 'F:\\NDVI\\NDVI_std_all'
@@ -477,7 +477,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         tag = 'saved_on_{}_{}'.format(now.month, now.day)
         for element in outputs:
             name = output_names[x]
-            print "Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year)
+            print("Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year))
             driver = gdal.GetDriverByName('GTiff')
             filename = 'C:\\Recharge_GIS\\Array_Results\\forPeter_3MAY\\{a}_{b}_{c}.tif'.format(a=name, b=dday.month, c=dday.year)
             cols = dataset.RasterXSize
@@ -502,7 +502,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         tag = 'saved_on_{}_{}'.format(now.month, now.day)
         for element in outputs:
             name = output_names[x]
-            print "Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year)
+            print("Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year))
             driver = gdal.GetDriverByName('GTiff')
             filename = 'C:\\Recharge_GIS\\Array_Results\\forPeter_3MAY\\{a}_{b}_{c}.tif'.format(a=name, b=dday.month, c=dday.year)
             cols = dataset.RasterXSize
@@ -528,7 +528,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         tag = 'saved_on_{}_{}'.format(now.month, now.day)
         for element in outputs:
             name = output_names[x]
-            print "Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year)
+            print("Saving {}_{}_{}_{}".format(name, dday.day, dday.month, dday.year))
             driver = gdal.GetDriverByName('GTiff')
             filename = 'C:\\Recharge_GIS\\Array_Results\\forPeter_3MAY\\{a}_{b}_{c}.tif'.format(a=name, b=dday.month, c=dday.year)
             cols = dataset.RasterXSize
@@ -576,7 +576,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
             tag = 'saved_on_{}_{}'.format(now.month, now.day)
             for element in outputs:
                 name = output_names[x]
-                print "Saving {a}_{b}_{c}".format(a=name, b=dday.month, c=dday.year)
+                print("Saving {a}_{b}_{c}".format(a=name, b=dday.month, c=dday.year))
                 driver = gdal.GetDriverByName('GTiff')
                 filename = 'F:\\Monthly_results\\{a}_{b}_{c}.tif'.format(a=name, b=dday.month, c=dday.year)
                 cols = dataset.RasterXSize
@@ -628,7 +628,7 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
             x = 0
             for element in outputs:
                 name = output_names[x]
-                print "Saving {a}_{c}".format(a=name, c=dday.year)
+                print("Saving {a}_{c}".format(a=name, c=dday.year))
                 driver = gdal.GetDriverByName('GTiff')
                 filename = 'F:\\Annual_results\\{a}_{c}.tif'.format(a=name, c=dday.year)
                 cols = dataset.RasterXSize
@@ -656,8 +656,8 @@ for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
     mass = rain + mlt - (ro + transp + evap + dp_r + ((pDr - dr) + (pDe - de) + (pDrew - drew)))
     tot_mass += abs(mass)
     cum_mass += mass
-    print mass[480, 940]
-    print tot_mass[480, 940]
+    print(mass[480, 940])
+    print(tot_mass[480, 940])
 
     pltDay.append(dday)
     pltRain.append(rain[480, 940])
@@ -696,7 +696,7 @@ now = datetime.datetime.now()
 tag = '{}_{}_{}_{}'.format(now.month, now.day, now.hour, now.minute)
 for element in outputs:
     name = output_names[x]
-    print "Saving {a}".format(a=name)
+    print("Saving {a}".format(a=name))
     driver = gdal.GetDriverByName('GTiff')
     filename = 'F:\\ETRM_14yr_results\\{a}.tif'.format(a=name)
     cols = dataset.RasterXSize

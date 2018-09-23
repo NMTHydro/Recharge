@@ -72,7 +72,7 @@ def notes_part_1():
 
     datasource = driver.Open('sites.shp', 0) # read only
     if datasource is None:
-        print "could not open" + path
+        print("could not open" + path)
         sys.exit(1) #what is sys btw? <- exits w/ error code
 
     # ==== Opening a layer (shapefile) ====
@@ -88,13 +88,13 @@ def notes_part_1():
 
     # number of features in the layer:
     num_features = layer.GetFeatureCount()
-    print "Feature count {}".format(num_features)
+    print("Feature count {}".format(num_features))
 
     # get the extent as a tuple
     extent = layer.GetExtent()
-    print "Extent {}".format(extent)
-    print "uppper left {}".format(extent[0], extent[3])
-    print "upper right {}".format(extent[1], extent[2]) # kida werd its 0,3 and 1,2 but whatever
+    print("Extent {}".format(extent))
+    print("uppper left {}".format(extent[0], extent[3]))
+    print("upper right {}".format(extent[1], extent[2])) # kida werd its 0,3 and 1,2 but whatever
 
     # ==== Getting Features ====
 
@@ -127,9 +127,9 @@ def notes_part_1():
     x = geometry.GetX()
     y = geometry.GetY()
 
-    print "geometry {}"
-    print " geometry x {}"
-    print " geometry y {}"
+    print("geometry {}")
+    print(" geometry x {}")
+    print(" geometry y {}")
 
     # ===== DESTRUCTION (Destroying Objects) ======
 
@@ -157,15 +157,15 @@ def feature_count():
 
     layer = datasource.GetLayer()
 
-    print "Here's the layer {}".format(layer)
+    print("Here's the layer {}".format(layer))
 
-    print "Now we're going to print out the id, x and y coords for each point"
+    print("Now we're going to print out the id, x and y coords for each point")
 
     # How many features are there anyway?
 
     num = layer.GetFeatureCount()
 
-    print "There are {} features in the layer".format(num)
+    print("There are {} features in the layer".format(num))
 
     feature = layer.GetFeature(0)
     # feature = layer.GetNextFeature()
@@ -174,22 +174,22 @@ def feature_count():
         feature = layer.GetNextFeature()
 
         if feature is None:
-            print "blank feature"
+            print("blank feature")
 
         else:
 
             count += 1
 
-            print "count", count
+            print("count", count)
 
-            print "Heres the feature {}".format(feature)
+            print("Heres the feature {}".format(feature))
 
         # for each feature print id, x and y coords
 
 
             id = feature.GetField('id')
 
-            print "id -> {}".format(id)
+            print("id -> {}".format(id))
 
             # geometry obj
 
@@ -198,11 +198,11 @@ def feature_count():
             x = geometry.GetX()
             y = geometry.GetY()
 
-            print "Here is x -> {}, here is y -> {}".format(x, y)
+            print("Here is x -> {}, here is y -> {}".format(x, y))
 
             cover = feature.GetFieldAsString('cover')
 
-            print "Cover -> {}".format(cover)
+            print("Cover -> {}".format(cover))
 
 if __name__ == "__main__":
     feature_count()

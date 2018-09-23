@@ -59,7 +59,7 @@ location in the dict."""
     count = 0
     outer_dict = {}
     ds = ogr.Open(coords_path)
-    print "this is ds: {}".format(ds)
+    print("this is ds: {}".format(ds))
     lyr = ds.GetLayer()
     for feat in lyr:
         try:
@@ -88,7 +88,7 @@ def get_extracted_data(point_dict, simulation_period, etrm_extract=None,
 
     get_etrm_time_series(etrm_extract, dict_=point_dict)
 
-    print 'amf dict w/ etrm input time series: \n{}'.format(point_dict)  # fix this so it appends to all sites
+    print('amf dict w/ etrm input time series: \n{}'.format(point_dict))  # fix this so it appends to all sites
     # print 'ameriflux dict: {}'.format(amf_dict)
 
     for key, val in point_dict.iteritems():
@@ -97,9 +97,9 @@ def get_extracted_data(point_dict, simulation_period, etrm_extract=None,
         etrm = Processes(simulation_period, save_csv, static_inputs=static_inputs, point_dict=point_dict,
                          initial_inputs=initial_path)
 
-        print 'point dict, pre-etrm run {}'.format(point_dict) # for testing
+        print('point dict, pre-etrm run {}'.format(point_dict)) # for testing
 
-        print '\n key : {}'.format(key)
+        print('\n key : {}'.format(key))
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
 
         tracker = etrm.run(simulation_period, point_dict=point_dict, point_dict_key=key, modify_soils=True,
@@ -109,7 +109,7 @@ def get_extracted_data(point_dict, simulation_period, etrm_extract=None,
 
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
-        print 'this should be your csv: {}'.format(csv_path_filename)
+        print('this should be your csv: {}'.format(csv_path_filename))
 
         # saves the model results to the tracker. Keep this part.
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
@@ -132,7 +132,7 @@ def get_extracted_data(point_dict, simulation_period, etrm_extract=None,
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     inputs = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs') # 'F:\\', 'ETRM_Inputs'
     coords_path = os.path.join('/', 'Users', 'Gabe', 'Desktop', 'QGIS_Ameriflux',
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     csv_output = os.path.join(amf_path, 'AMF_ETRM_output') # OK
     amf_obs_processed = os.path.join(amf_path, 'AMF_obs_processed') # OK
     amf_etrm_combo = os.path.join(amf_path, 'AMF_results_combo') # OK
-    print amf_obs_root # testing
+    print(amf_obs_root) # testing
 
     # a function that takes uses GDAL to get the coordinates of points.
     point_dict = get_point_dict(coords_path)

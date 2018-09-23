@@ -37,7 +37,7 @@ def linear_adj(ndvi_arr, etrf_arr, Adj_low, Adj_high):
 
     shape = ndvi_arr.shape
 
-    print "shape array should be", shape, etrf_arr.shape
+    print("shape array should be", shape, etrf_arr.shape)
 
     ndvi_bare = 0.15  # After Rick Allen Nov. 2016
 
@@ -95,13 +95,13 @@ def write_raster(stack_path, etrf_name,image, path):
 
         cee_rs = src.crs
 
-        print 'coord system', cee_rs
+        print('coord system', cee_rs)
 
         T = src.affine
 
-        print 'transform', T
+        print('transform', T)
 
-        print "dtype", image.dtype
+        print("dtype", image.dtype)
 
     path = os.path.join(path, 'ETrF_adj_4_20110818.tif')
 
@@ -146,16 +146,16 @@ def find_bounds(stack_location):
 
         ras = raster.read(1)
 
-        print 'ras shape 0', ras.shape[0]
+        print('ras shape 0', ras.shape[0])
 
-        print 'ras shape 1', ras.shape[1]
+        print('ras shape 1', ras.shape[1])
 
         window = ((0, ras.shape[0]), (0, ras.shape[1]))
 
-        print "WINDOW", window
+        print("WINDOW", window)
         bounds = raster.window_bounds(window)
 
-        print "BOUNDS", bounds
+        print("BOUNDS", bounds)
 
         return bounds
 
@@ -183,8 +183,8 @@ def raster_dict_maker(stack_location):
 
                     A = r.read(1)
 
-                print "A", A
-                print "A shape", A.shape
+                print("A", A)
+                print("A shape", A.shape)
 
                 raster_dict['{}'.format(tf.split(".")[0])] = (A, tiff_path)
 
@@ -225,17 +225,17 @@ def run():
 
     etrf_arr = raster_dict[etrf_name][0]
 
-    print 'ndvi array', ndvi_arr
+    print('ndvi array', ndvi_arr)
 
-    print 'etrf array', etrf_arr
+    print('etrf array', etrf_arr)
 
 
     etrf_adj_arr = linear_adj(ndvi_arr, etrf_arr, Adj_low, Adj_high)
 
 
-    print "adjusted etrf array", etrf_adj_arr
+    print("adjusted etrf array", etrf_adj_arr)
 
-    print "adjust shape", etrf_adj_arr.shape
+    print("adjust shape", etrf_adj_arr.shape)
 
 
     write_raster(stack_path, etrf_name, etrf_adj_arr, output_path)

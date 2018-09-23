@@ -42,9 +42,9 @@ amf_length = []
 amf_array = []
 select_codes = []
 for code in codes:
-    print code
+    print(code)
     amf_name = amfdict['{a}'.format(a=code)]['Name']
-    print amf_name
+    print(amf_name)
     folder = "C:\\Users\\David\Documents\\Recharge\\aET\\AMF_Data\\" + '{a}'.format(a=amf_name)
     os.chdir(folder)
     csvList = os.listdir(folder)
@@ -72,7 +72,7 @@ for code in codes:
     norm = [x for x in range(1, 366)]
     leap = [x for x in range(1, 367)]
     leaps = ['2004', '2008', '2012']
-    print 'You have {a} rows of --RAW-- data from {b}'.format(a=len(amf_data), b=amf_name)
+    print('You have {a} rows of --RAW-- data from {b}'.format(a=len(amf_data), b=amf_name))
 
     #  (year, dtime, H, LE, FG, RN, RG, RGin, RGout)
     # H  = sensible heat flux
@@ -102,7 +102,7 @@ for code in codes:
     amf_data_WS_WD_RH_TA = amf_data_WS_WD_RH[amf_data_WS_WD_RH.TA != '-9999.0']
     amf_data_WS_WD_RH_TA_VPD = amf_data_WS_WD_RH_TA[amf_data_WS_WD_RH_TA.TA != '-9999.0']
     del amf_data_WS, amf_data_WS_WD, amf_data_WS_WD_RH, amf_data_WS_WD_RH_TA
-    print 'You have {a} rows of FLUX  data from {b}'.format(a=len(amf_data_H_LE_RG_RGout_RGL_RGLout_RN), b=amf_name)
+    print('You have {a} rows of FLUX  data from {b}'.format(a=len(amf_data_H_LE_RG_RGout_RGL_RGLout_RN), b=amf_name))
 
 # Find all complete days (48) records with no NULL values, makes lists, merge, stack, put in dataframe object
     rn = []
@@ -175,16 +175,16 @@ for code in codes:
         rl_set.append(float(row[10]) * (0.0864 / 48))
         rlOut_set.append(float(row[11]) * (0.0864 / 48))
 
-    print 'You have {a} DAYS of CLEAN RN/LE/H/RAD data from {b}'.format(a=len(bal), b=amf_name)
+    print('You have {a} DAYS of CLEAN RN/LE/H/RAD data from {b}'.format(a=len(bal), b=amf_name))
     bal_data = zip(date_bal, doy_bal, year_doy_bal, rn, le, h, rg, rgOut, rl, rlOut, aEt, err_rn_le_h, err_rn_rg_grOut_rl_rlOut)
     bal_data = np.array(bal_data)
-    print 'The mean energy balance closure error is: {a}'.format(a=np.mean(bal_data[:, 11]))
+    print('The mean energy balance closure error is: {a}'.format(a=np.mean(bal_data[:, 11])))
     bal_data = np.column_stack(bal_data)
     bal_data = np.transpose(bal_data)
     bal_data = pd.DataFrame(bal_data, columns=['date', 'doy', 'year_doy_bal', 'rn', 'le', 'h', 'rg',
                                                'rgOut', 'rl', 'rlOut', 'aEt', 'err_rn_le_h', 'err_rn_rg_grOut_rl_rlOut'])
     bal_data_lowErr = bal_data[bal_data.err_rn_le_h <= 0.20]
-    print 'You have {a} DAYS  of [0.0 < CLOSURE ERROR < 0.10] data from {b}'.format(a=len(bal_data_lowErr), b=amf_name)
+    print('You have {a} DAYS  of [0.0 < CLOSURE ERROR < 0.10] data from {b}'.format(a=len(bal_data_lowErr), b=amf_name))
     amf_array.append(bal_data)
     amf_length.append(len(bal_data))
     filepath = 'C:\\Users\\David\\Documents\\Recharge\\aET\\AMF_Cleaned_Data'
@@ -251,16 +251,16 @@ for code in codes:
 #     amf_names.append(amf_name)
 
 meta_amf = zip(select_codes, amf_names, amf_array, amf_length)
-print codes
-print amf_names
+print(codes)
+print(amf_names)
 
-print ''
-print ''
-print ''
-print 'Moving on to EXTRACT PARAMETERS.................................................................'
-print ''
-print ''
-print ''
+print('')
+print('')
+print('')
+print('Moving on to EXTRACT PARAMETERS.................................................................')
+print('')
+print('')
+print('')
 
 # Load up all data needed for ETRM from extract .csv
 # EXTRACT PARAMETERS
@@ -268,7 +268,7 @@ print ''
 for site in select_codes:
     extract_name = amf_names[select_codes.index(site)]
     name = 'C:\\Users\\David\\Documents\\Recharge\\aET\\AMF_extracts\\AMF{a}_extract.csv'.format(a=site)
-    print 'Processing site {} code AMF{}'.format(extract_name, site)
+    print('Processing site {} code AMF{}'.format(extract_name, site))
     # Get a numpy object of all raster-extracted data out of the csv it is held in
     recs = []
     try:
@@ -277,7 +277,7 @@ for site in select_codes:
         lines = fid.readlines()[:]
         fid.close()
     except IOError:
-        print "couldn't find " + '{a}'.format(a=fid)
+        print("couldn't find " + '{a}'.format(a=fid))
         # break
     rows = [line.split(',') for line in lines]
     for line in rows:
@@ -315,8 +315,8 @@ for site in select_codes:
     coin_data = data[data[:, 0] >= amf_start_obj]
     coin_data = coin_data[coin_data[:, 0] <= amf_end_obj]
 
-    print 'Site {a} at {d} runs from {b} to {c}'.format(a=amf_names[panel],
-                                                        b=amf_start_obj, c=amf_end_obj, d=select_codes[panel])
+    print('Site {a} at {d} runs from {b} to {c}'.format(a=amf_names[panel],
+                                                        b=amf_start_obj, c=amf_end_obj, d=select_codes[panel]))
 
     # Create indices to plot point time series, these are empty lists that will
     # be filled as the simulation progresses
@@ -364,12 +364,12 @@ for site in select_codes:
     a_min = 0.45
     a_max = 0.90
     pA = a_min
-    print 'Starting {a}...........'.format(a=amf_names[panel])
+    print('Starting {a}...........'.format(a=amf_names[panel]))
 
     for dday in rrule.rrule(rrule.DAILY, dtstart=start, until=end):
         if dday == start:
             day = 0
-            print '......................at day zero'
+            print('......................at day zero')
         else:
             day += 1
         day_of_year = dday.timetuple().tm_yday
@@ -384,7 +384,7 @@ for site in select_codes:
             tew = (fc - 0.5 * wp) * ze  # don't use time-dependent etrs for long-term simulations
             taw = data[0, 14]
             aws = data[0, 15] * 100.
-            print 'TAW is {a} and AWS is {b}'.format(a=taw, b=aws)
+            print('TAW is {a} and AWS is {b}'.format(a=taw, b=aws))
             rew = min((2+(tew/3.)), 0.8 * tew)
 
             pDr = taw
@@ -396,7 +396,7 @@ for site in select_codes:
 
             ksat_init = data[0, 2] * 86.4 / 10.  # from micrometer/sec to mm/day
             old_ksat = data[0, 1] * 1000 / 3.281  # from ft/dat to mm/day
-            print 'SSURGO Ksat is {a} and bedrock Ksat is {b}'.format(a=ksat_init, b=old_ksat)
+            print('SSURGO Ksat is {a} and bedrock Ksat is {b}'.format(a=ksat_init, b=old_ksat))
 
         if sMon < dday < eMon:
             ksat = ksat_init / 12.
@@ -571,10 +571,10 @@ for site in select_codes:
 
     amf_eta_mean = np.mean(df_amf.iloc[:, 10].values)
     etrm_eta_mean = np.mean(np.array(pltEta))
-    print ''
-    print 'AMF ET mean: {}mm/day  ETRM ET mean:  {}mm/day'.format(amf_eta_mean, etrm_eta_mean)
-    print 'Cumulative mass balance error: {}'.format(cum_mass)
-    print ''
+    print('')
+    print('AMF ET mean: {}mm/day  ETRM ET mean:  {}mm/day'.format(amf_eta_mean, etrm_eta_mean))
+    print('Cumulative mass balance error: {}'.format(cum_mass))
+    print('')
     if dday == end:
         fdata = np.column_stack((pltSnow_fall, pltRain, pltMlt, pltEta, pltRo, pltDp_r, pltDr, pltDe, pltDrew, pltMass))
         np.savetxt('C:\\Users\\David\\Documents\\Recharge\\aET\extra_data\\calibration_1APR.csv',

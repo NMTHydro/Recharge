@@ -19,9 +19,9 @@ os.chdir(folder)
 csvList = os.listdir(folder)
 # make sure that this is getting the right string from the file name
 files = [str(name[1:8]) for name in csvList]
-print files
-print len(files)
-print csvList
+print(files)
+print(len(files))
+print(csvList)
 
 #  Create layer from polygon fc so it is selectable by attribute
 
@@ -33,17 +33,17 @@ arcpy.MakeFeatureLayer_management("C:\\Recharge_GIS\\Watersheds\\nm_wtrs_11DEC15
 for row in cursor:
     gPoly = row.getValue(field)
     polyStr = str(gPoly)
-    print gPoly
+    print(gPoly)
     gstr = arcpy.AddFieldDelimiters("C:\\Recharge_GIS\\Watersheds\\nm_wtrs_11DEC15.shp", field)
     sqlExp = gstr + " = " + polyStr
-    print sqlExp
+    print(sqlExp)
     geo = arcpy.SelectLayerByAttribute_management("wtrshds_lyr", "NEW_SELECTION", sqlExp)
-    print "USGS code: " + str(gPoly)
+    print("USGS code: " + str(gPoly))
 
 #  Get csv data from gauges and identify time interval of needed precip data
 
     if polyStr in files:
-        print "true"
+        print("true")
         folder = 'C:\\Users\David\\Documents\\Recharge\\Gauges\\Gauge_Data_HF_csv'
         os.chdir(folder)
         pos = files.index(gPoly)
@@ -59,7 +59,7 @@ for row in cursor:
             except ValueError:
                 recs.append([datetime.datetime.strptime(line[2], '%m/%d/%Y'),  # date
                 float(0.0)])  # discharge
-        print "Data points: " + str(len(recs))
+        print("Data points: " + str(len(recs)))
         qRecs = np.array(recs)
 
 #  Make start and end dates correspond with available PRISM data (i.e., 1984-01-01 to 2013-12-31)
@@ -68,12 +68,12 @@ for row in cursor:
         beginPrecip = datetime.datetime(1984, 1, 1)
         if start < beginPrecip:
             start = beginPrecip
-        print "Data start: " + str(start)
+        print("Data start: " + str(start))
         end = qRecs[len(qRecs)-1, 0]
         endPrecip = datetime.datetime(2013, 12, 31)
         if end > endPrecip:
             end = endPrecip
-        print "Data end: " + str(end)
+        print("Data end: " + str(end))
 
 #  Loop through raster data, clipping and creating arrays of data:  Date Q Ppt
         rasSq = 1013.02**2/1000  # ppt [mm -> m] and cellsize (x*y) [m*m]
@@ -98,7 +98,7 @@ for row in cursor:
                         arr = arcpy.RasterToNumPyArray(rasPart, nodata_to_value=0)
                         arrVal = np.multiply(arr, rasSq)
                         arrSum = arrVal.sum()
-                        print "Sum of precip on " + str(day) + ":  " + str(arrSum)
+                        print("Sum of precip on " + str(day) + ":  " + str(arrSum))
                         precip.append(arrSum)
                         date.append(day)
                         for rec in qRecs:
@@ -119,7 +119,7 @@ for row in cursor:
                         arr = arcpy.RasterToNumPyArray(rasPart, nodata_to_value=0)
                         arrVal = np.multiply(arr,rasSq)
                         arrSum = arrVal.sum()
-                        print "Sum of precip on " + str(day) + ":  " + str(arrSum)
+                        print("Sum of precip on " + str(day) + ":  " + str(arrSum))
                         precip.append(arrSum)
                         date.append(day)
                         for rec in qRecs:
@@ -135,10 +135,10 @@ for row in cursor:
         date = [rec.strftime('%Y/%m/%d') for rec in date]
         date = np.array(date,object)
         data = np.column_stack((date,q,ppt))
-        print data
+        print(data)
         np.savetxt(('C:\\Users\David\\Documents\\Recharge\\Gauges\\Gauge_ppt_csv\\' + str(gPoly) + ".csv"),
                    data, fmt=['%s', '%1.1f', '%1.3f'], delimiter=',')
-        print "You have been saved!"
+        print("You have been saved!")
 
 
         

@@ -49,13 +49,13 @@ def make_spider_plot(dataframe, ndvi, all_pct, temps, fig_path=None, show=False)
     display_pct = [(int(x)) for x in add(multiply(all_pct, 100.0), -100)]
 
     dfs = os.listdir(dataframe)
-    print 'pickled dfs: {}'.format(dfs)
+    print('pickled dfs: {}'.format(dfs))
     filename = '_basic_sensitivity_2.pkl'
     if filename in dfs:
         df = read_pickle(os.path.join(dataframe, filename))
         df.to_csv(os.path.join(fig_path, 'sample_df_basic_2.csv'))
         pass
-        print df
+        print(df)
         xx = 1
         for index, row in df.iterrows():
             fig = plt.figure(xx, figsize=(20, 10))
@@ -63,7 +63,7 @@ def make_spider_plot(dataframe, ndvi, all_pct, temps, fig_path=None, show=False)
             ax2 = ax1.twiny()
             ax3 = ax1.twiny()
             fig.subplots_adjust(bottom=0.2)
-            print 'shape temps: {}, shape row[0]: {}'.format(len(temps), len(row[0]))
+            print('shape temps: {}, shape row[0]: {}'.format(len(temps), len(row[0])))
             ax2.plot(temps, row[0], 'black', label='Temperature (+/- 5 deg C)', marker='8')
             ax1.plot(display_pct, row[1], 'blue', label='Precipitation (+/- 50%)', marker='8')
             ax1.plot(display_pct, row[2], 'purple', label='Reference Evapotranspiration (+/- 50%)', marker='8')

@@ -33,7 +33,7 @@ CLI_ENABLED = False
 
 
 def run_dataset():
-    print 'Running Dataset'
+    print('Running Dataset')
 
     cfg = Config()
     for runspec in cfg.runspecs:
@@ -44,12 +44,12 @@ def run_dataset():
 
 
 def run_model(cfg_path=None):
-    print 'Running Model'
-    print 'supplied cfg_path {}'.format(cfg_path)
+    print('Running Model')
+    print('supplied cfg_path {}'.format(cfg_path))
     cfg = Config(cfg_path)
-    print 'Using configuration from {}'.format(cfg.path)
+    print('Using configuration from {}'.format(cfg.path))
     for i, runspec in enumerate(cfg.runspecs):
-        print 'Using mask path {}'.format(runspec.mask)
+        print('Using mask path {}'.format(runspec.mask))
         runspec.output_root = '{}{:03n}'.format(runspec.output_root, i)
         # TODO - make a modified make_results_dir to only create of the 'outer' folder.
         make_results_dir(runspec.output_root)
@@ -60,21 +60,21 @@ def run_model(cfg_path=None):
 
 
 def run_rew():
-    print 'Running REW'
+    print('Running REW')
     generate_rew_tiff()
 
 
 def run_help():
-    print 'help'
+    print('help')
 
 
 def run_commands():
     keys = ('model', 'rew', 'help')
-    print 'Available Commands: {}'.format(','.join(keys))
+    print('Available Commands: {}'.format(','.join(keys)))
 
 
 def welcome():
-    print '''====================================================================================
+    print('''====================================================================================
  _______  _______  ______    __   __
 |    ___||       ||    _ |  |  |_|  |
 |   |___ |_     _||   |_||_ |       |
@@ -89,7 +89,7 @@ New Mexico Tech/New Mexico Bureau of Geology
 Available commands are enumerated using "commands"
 
 For more information regarding a specific command use "help <command>". Replace <command> with the command of interest
-'''
+''')
 
 
 def run(cfg_path=None):
@@ -119,7 +119,7 @@ def run(cfg_path=None):
 
 
 if __name__ == '__main__':
-    print('Sys.argv {}'.format(sys.argv))
+    print(('Sys.argv {}'.format(sys.argv)))
     if len(sys.argv) == 1:
         run()
     else:

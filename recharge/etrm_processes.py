@@ -90,7 +90,7 @@ class Processes(object):
         if cfg.use_verify_paths:
             paths.verify()
 
-        print '##############################', paths.mask, cfg.mask
+        print('##############################', paths.mask, cfg.mask)
         # Define user-controlled constants, these are constants to start with day one, replace
         # with spin-up data when multiple years are covered
 
@@ -146,12 +146,12 @@ class Processes(object):
         self._winter_evap_limiter = runspec.winter_evap_limiter
         self._winter_end_day = runspec.winter_end_day
         self._winter_start_day = runspec.winter_start_day
-        print '---------- CONFIGURATION ---------------'
+        print('---------- CONFIGURATION ---------------')
         for attr in ('date_range', 'use_individual_kcb',
                      'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                      'ro_reinf_frac', 'swb_mode', 'rew_ceff', 'evap_ceff'):
-            print '{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr)))
-        print '----------------------------------------'
+            print('{:<20s}{}'.format(attr, getattr(self, '_{}'.format(attr))))
+        print('----------------------------------------')
         self._is_configured = True
 
     def run(self):
@@ -317,7 +317,7 @@ class Processes(object):
         :return taw_uniform array
 
         """
-        print '===========================\nrunning uniform_taw\n==========================='
+        print('===========================\nrunning uniform_taw\n===========================')
         m = self._master  # testing 6/2/17
         s = self._static
         taw = s['taw']
@@ -352,7 +352,7 @@ class Processes(object):
         self._info('Initialize initial model state')
         m = self._master
         # JIR
-        print 'initial dr {}'.format(initial['dr'])
+        print('initial dr {}'.format(initial['dr']))
         # m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
         m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
 
@@ -862,10 +862,10 @@ class Processes(object):
 
         func = self._output_function
         ms = [func(m[k]) for k in ('infil', 'etrs', 'eta', 'precip', 'ro', 'swe', 'soil_storage')]
-        print 'today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(*ms)
+        print('today infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}, stor {}'.format(*ms))
 
         ms = [func(m[k]) for k in ('tot_infil', 'tot_etrs', 'tot_eta', 'tot_precip', 'tot_ro', 'tot_swe')]
-        print 'total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms)
+        print('total infil: {}, etrs: {}, eta: {}, precip: {}, ro: {}, swe: {}'.format(*ms))
 
     def _do_mass_balance(self, date, swb):
         """ Checks mass balance.
@@ -1099,10 +1099,10 @@ class Processes(object):
         lines = ['{},{}'.format(date, ','.join(values))]
         if is_first:
             header = 'date,{}'.format(','.join(keys))
-            print 'writinsad heasder', msg, header
+            print('writinsad heasder', msg, header)
             lines.insert(0, header)
 
-        print '{} - path {}'.format(msg, path)
+        print('{} - path {}'.format(msg, path))
         with open(path, 'a') as wfile:
             for line in lines:
                 wfile.write('{}\n'.format(line))
@@ -1167,11 +1167,11 @@ class Processes(object):
     #     print '--------------------------------------------------------------------------------'
 
     def _info(self, msg):
-        print '-------------------------------------------------------'
-        print msg
-        print '-------------------------------------------------------'
+        print('-------------------------------------------------------')
+        print(msg)
+        print('-------------------------------------------------------')
 
     def _debug(self, msg):
-        print '%%%%%%%%%%%%%%%% {}'.format(msg)
+        print('%%%%%%%%%%%%%%%% {}'.format(msg))
 
 # ============= EOF =============================================

@@ -31,11 +31,11 @@ def raster_sieve(masking_arr, target_masked_arr, iterator):
 
     objective_arr = target_masked_arr * masking_arr
 
-    print "good values", objective_arr
+    print("good values", objective_arr)
 
-    print "mean of sieved values", objective_arr.mean()
+    print("mean of sieved values", objective_arr.mean())
 
-    print "new mean of the changed masking_arr", masking_arr.mean()
+    print("new mean of the changed masking_arr", masking_arr.mean())
 
     return objective_arr
 
@@ -85,7 +85,7 @@ def main():
     for i in range(num_features):
 
         feature = layer_obj.GetFeature(i)
-        print "feature id {}".format(feature.GetField('id'))
+        print("feature id {}".format(feature.GetField('id')))
 
         # this name is used for the naming convention of the output tables...
         feature_name = 'polygonid{}'.format(feature.GetField('id'))
@@ -119,7 +119,7 @@ def main():
         yorigin = geotrans[3]
         pix_w = geotrans[1]
         pix_h = geotrans[5]
-        print 'pix_h', pix_h
+        print('pix_h', pix_h)
 
         # get the offsets -> you should figure out what the offset is and why it's calculated this way...
         x_off = int((xmin - xorigin)/pix_w)
@@ -131,10 +131,10 @@ def main():
 
         # create memory target raster -> What's a memory raster?
         # The target dataset is an empty shell that we burn the vector onto when we rasterize
-        print "test xcxc", x_count, y_count
+        print("test xcxc", x_count, y_count)
         target_ds = gdal.GetDriverByName('MEM').Create('', x_count, y_count, 1, gdal.GDT_Byte) # why not float 32?
 
-        print 'target_ds', target_ds
+        print('target_ds', target_ds)
 
         target_ds.SetGeoTransform((xmin, pix_w, 0, ymax, 0, pix_h, )) # why the blank space?!?!?!?
 
@@ -158,14 +158,14 @@ def main():
         # mask the raster with numpy
         masked_raster_arr = np.ma.masked_array(data_raster, np.logical_not(data_mask))
         # print "first masked arr", masked_raster_arr
-        print "mean same ol", np.mean(masked_raster_arr)
+        print("mean same ol", np.mean(masked_raster_arr))
 
         # make this batch-file capable for a rasters path with many rasters....
         # try to use glob to get the job done here....
 
         for raster_path_string in glob.glob('{}/*{}.img'.format(rasters_path, search_string)):
 
-            print 'raster path string', raster_path_string
+            print('raster path string', raster_path_string)
 
             filename = raster_path_string.split('/')[-1]
             raster_name = filename.split('_')[0]
@@ -200,7 +200,7 @@ def main():
 
             masked_raster_arr_prime = np.ma.masked_array(data_raster_prime, np.logical_not(data_mask))
             # print 'masked arr raster', masked_raster_arr_prime
-            print "mean", np.mean(masked_raster_arr_prime)
+            print("mean", np.mean(masked_raster_arr_prime))
 
             # you've got two masked arrays, time to iterate through the class one
             # need to ravel(), set to list, take the set of the list, and iterate through set.
@@ -208,10 +208,10 @@ def main():
             list_arr = rav_arr.tolist()
             set_arr = set(list_arr)
 
-            print "set, finally -> {}".format(set_arr)
+            print("set, finally -> {}".format(set_arr))
 
-            print "how does this look \n {}".format(masked_raster_arr)
-            print "same ol mean?", masked_raster_arr.mean()
+            print("how does this look \n {}".format(masked_raster_arr))
+            print("same ol mean?", masked_raster_arr.mean())
 
             # so we don't mess up our good array as we iterate and change values in-place
             masked_raster_arr
@@ -227,7 +227,7 @@ def main():
 
                 if i != None:
 
-                    print "now we'll take care of this class {}".format(i)
+                    print("now we'll take care of this class {}".format(i))
                     # keep track of the order you process the classes.
                     ids.append(i)
 
@@ -283,7 +283,7 @@ def main():
 
                 # todo - let's try some test outputs to figure out how to format the table that will be output for each feature
 
-                print shape_class_stats
+                print(shape_class_stats)
 
                 # cols = pd.MultiIndex.from_product([headers, ids])
                 #
@@ -304,7 +304,7 @@ def main():
                         shape_class_stats_format[('{}'.format(key), '{}'.format(nest_key))] = lst
 
 
-            print "reformatted nested dictionary \n {}".format(shape_class_stats_format)
+            print("reformatted nested dictionary \n {}".format(shape_class_stats_format))
 
 
             df = pd.DataFrame(shape_class_stats_format)
@@ -315,7 +315,7 @@ def main():
 
             df.to_csv(table_output)
 
-            print "let's see that df!\n ", df
+            print("let's see that df!\n ", df)
 
 
 if __name__ == "__main__":

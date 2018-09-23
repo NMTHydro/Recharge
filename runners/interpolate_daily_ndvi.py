@@ -67,10 +67,10 @@ def time_interpolation(base_dir, day, finalyear):
         i += 1
 
     print('-----------------------------------------------------------------------------')
-    print('DOY:', cnt)
+    print(('DOY:', cnt))
     # print(year)
     raster_first_date = datetime(year, 1, 1) + timedelta(first_date - 1)
-    print('raster first date: ', raster_first_date)
+    print(('raster first date: ', raster_first_date))
 
     td = timedelta(next_date - 1)
     if (cnt >= 353) and (year == finalyear):
@@ -88,7 +88,7 @@ def time_interpolation(base_dir, day, finalyear):
     tail = '{}_{:02n}_{:02n}.tif'.format(year, rfd.tm_mon, rfd.tm_mday)
 
     raster_now = os.path.join(base_dir, '{}'.format(year), 'NDVI{}'.format(tail))
-    print('First raster to interpolate: ', raster_now)
+    print(('First raster to interpolate: ', raster_now))
 
     # resX, resY, cols, rows, Lon, Lat, ndvi, prj, FillVal = read_map(os.path.join(base_dir, raster_now), 'Gtiff')
     ndvi = read_map(os.path.join(base_dir, raster_now), 'Gtiff')[6]
@@ -97,7 +97,7 @@ def time_interpolation(base_dir, day, finalyear):
     tail2 = '{}_{:02n}_{:02n}.tif'.format(newyear, rnd.tm_mon, rnd.tm_mday)
 
     raster_next = os.path.join(base_dir, '{}'.format(newyear), 'NDVI{}'.format(tail2))
-    print('Future raster to interpolate with: ', raster_next)
+    print(('Future raster to interpolate with: ', raster_next))
 
     # resX, resY, cols, rows, Lon, Lat, ndvinext, prj, FillVal = read_map(os.path.join(base_dir, raster_next), 'Gtiff')
     ndvinext = read_map(os.path.join(base_dir, raster_next), 'Gtiff')[6]
@@ -125,16 +125,16 @@ def time_interpolation(base_dir, day, finalyear):
     max_days_diff = float(max_days_diff.days)
     # proportion = float(days_dif / max_days_diff)
     # print('proportion',proportion)
-    print('day', day)
-    print('days difference from next ndvi raster', days_dif)
-    print('out of max days difference', max_days_diff)
+    print(('day', day))
+    print(('days difference from next ndvi raster', days_dif))
+    print(('out of max days difference', max_days_diff))
 
     # Start of the interpolation part....
     if (cnt >= 353) and (year == finalyear):
         interp = 0.0  # Set to 0 otherwise will divide by zero and give error
     else:
         interp = 1 - (days_dif / max_days_diff)  # 1 = weight completely next month values, 0 = previous month
-    print('interp ratio between monthly images', interp)
+    print(('interp ratio between monthly images', interp))
 
     # 0.5 corresponds to half way between arr1 and arr2
     coordinates = ones((R, C)) * interp, x, y

@@ -46,7 +46,7 @@ def run(input_root, coords_path):
 
     get_etrm_time_series(paths.amf_ex_sac_extract, dict_=point_dict)
 
-    print 'amf dict w/ etrm input time series: \n{}'.format(point_dict)  # fix this so it appends to all sites
+    print('amf dict w/ etrm input time series: \n{}'.format(point_dict))  # fix this so it appends to all sites
 
     output = os.path.join(paths.amf_ex_sac_output_root, 'trackers')
     for key, val in point_dict.iteritems():
@@ -58,8 +58,8 @@ def run(input_root, coords_path):
                          paths.amf_trackers,
                          point_dict=point_dict)
 
-        print 'point dict, pre-etrm run {}'.format(point_dict)  # for testing
-        print 'key : {}'.format(key)
+        print('point dict, pre-etrm run {}'.format(point_dict))  # for testing
+        print('key : {}'.format(key))
         # =================================================================
         # TODO: `run` does not return anything. need different way to access tracker.
         # probably not even necessary as tracker results are saved at the end of `run`
@@ -68,7 +68,7 @@ def run(input_root, coords_path):
 
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(output, '{}.csv'.format(val['Name']))
-        print 'this should be your csv: {}'.format(csv_path_filename)
+        print('this should be your csv: {}'.format(csv_path_filename))
 
         # saves the model results to the tracker. Keep this part.
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
@@ -92,7 +92,7 @@ location in the dict."""
     count = 0
     point_dict = {}
     ds = ogr.Open(coords_path)
-    print "this is ds: {}".format(ds)
+    print("this is ds: {}".format(ds))
     lyr = ds.GetLayer()
     for feat in lyr:
         try:

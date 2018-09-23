@@ -33,4 +33,4 @@ for raster in findRasters(INPUT_FOLDER, '*.tif'):
             '250 250 -r "mode" -multi -srcnodata -999 -dstnodata -999 %s %s' % (
                 temp, outRaster)
     call(warp2)
-    print "Done processing {a}".format(a=outRaster)
+    print("Done processing {a}".format(a=outRaster))

@@ -21,7 +21,6 @@ import os
 
 from numpy import array, asarray, where, zeros_like, nonzero
 from numpy.ma import masked_where, nomask
-from osgeo import gdal
 
 from app.paths import paths
 
@@ -118,12 +117,12 @@ class Raster(object):
             z[~masked_arr.mask] = narr.ravel()
             narr = z
         else:
-            print 'tiff shape', tiff_shape
+            print('tiff shape', tiff_shape)
             if tiff_shape is None:
-                print 'You need to define tiff shape (cols,rows) if not using a mask'
+                print('You need to define tiff shape (cols,rows) if not using a mask')
                 import sys
                 sys.exit()
-            print "tiff shape", tiff_shape
+            print("tiff shape", tiff_shape)
             tiff = tiff_shape.split(',')
             # narr = narr.reshape(int(tiff_shape[0]), int(tiff_shape[1]))
             rows = int(tiff[0])
@@ -171,7 +170,7 @@ class Raster(object):
         :return:
         """
         if not os.path.isfile(path):
-            print 'Not a valid file: {}'.format(path)
+            print('Not a valid file: {}'.format(path))
             return
 
         self._path = path
@@ -207,7 +206,7 @@ class Raster(object):
     def _get_masked_indices(self):
         global gmask_path, gmask
         if gmask is None or gmask_path != paths.mask:
-            print 'caching mask: {}'.format(paths.mask)
+            print('caching mask: {}'.format(paths.mask))
             mask = Raster(paths.mask)
             gmask = mask.as_bool_array
             gmask_path = paths.mask
@@ -218,7 +217,7 @@ class Raster(object):
         if paths.mask:
             if gmask is None or gmask_path != paths.mask:
                 if os.path.isfile(paths.mask):
-                    print 'caching mask: {}'.format(paths.mask)
+                    print('caching mask: {}'.format(paths.mask))
                     mask = Raster(paths.mask)
                     gmask = mask.as_bool_array
                     gmask_path = paths.mask

@@ -79,7 +79,7 @@ def tracker_iterator(main_path, list_of_dates):
 
     # print type(out_files)
 
-    print len(out_files) # len outfiles - 16
+    print(len(out_files)) # len outfiles - 16
 
     # dat = []
     # for path in out_files:
@@ -115,7 +115,7 @@ def tracker_iterator(main_path, list_of_dates):
 
     dict = {}
 
-    print "full outfiles", out_files
+    print("full outfiles", out_files)
 
     for i in range(0, 13): # 0, 16
         pix = pd.DataFrame([])
@@ -153,11 +153,11 @@ def run():
     # should evenutally yield a dict of dataframes
     relevant_trackers = tracker_iterator(main_path, list_of_dates)
 
-    print relevant_trackers
+    print(relevant_trackers)
 
 if __name__ == "__main__":
 
-    print "Hello World"
+    print("Hello World")
 
     # run the main function of the script
     run()

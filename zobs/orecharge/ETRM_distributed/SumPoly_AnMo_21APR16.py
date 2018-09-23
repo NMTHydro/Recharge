@@ -32,7 +32,7 @@ output_folder = 'F:\\Monthly_tabulated\\NM_Statewide'
 yr_output_folder = 'F:\\Annual_tabulated\\NM_Statewide'
 
 for in_fold in input_folder:
-    print in_fold
+    print(in_fold)
     temp_folder = 'C:\\Recharge_GIS\\OSG_Data\\qgis_rasters\\temp_layers'
     os.chdir(temp_folder)
     for root, dirs, files in os.walk(".", topdown=False):
@@ -104,7 +104,7 @@ for in_fold in input_folder:
 
                         date_obj = '{}/{}'.format(mo.month, mo.year)
                         date.append(date_obj)
-                    print 'precip for {} done'.format(name)
+                    print('precip for {} done'.format(name))
 
                     for mo in rrule.rrule(rrule.MONTHLY, dtstart=start, until=end):
                         raster = 'snow_ras_{}_{}'.format(mo.month, mo.year)
@@ -117,7 +117,7 @@ for in_fold in input_folder:
 
                         snow_cbm.append(snow_cubic_meters)
                         snow_af.append(snow_acre_feet)
-                    print 'snow for {} done'.format(name)
+                    print('snow for {} done'.format(name))
 
                     for mo in rrule.rrule(rrule.MONTHLY, dtstart=start, until=end):
                         raster = 'et_{}_{}'.format(mo.month, mo.year)
@@ -131,7 +131,7 @@ for in_fold in input_folder:
                         et_acre_feet = et_cubic_meters / 1233.48
                         et_cbm.append(et_cubic_meters)
                         et_af.append(et_acre_feet)
-                    print 'et for {} done'.format(name)
+                    print('et for {} done'.format(name))
 
                     for mo in rrule.rrule(rrule.MONTHLY, dtstart=start, until=end):
                         raster = 'infil_{}_{}'.format(mo.month, mo.year)
@@ -144,7 +144,7 @@ for in_fold in input_folder:
 
                         infil_cbm.append(infil_cubic_meters)
                         infil_af.append(infil_acre_feet)
-                    print 'infil for {} done'.format(name)
+                    print('infil for {} done'.format(name))
 
                     for mo in rrule.rrule(rrule.MONTHLY, dtstart=start, until=end):
                         raster = 'delta_s_mo_{}_{}'.format(mo.month, mo.year)
@@ -157,7 +157,7 @@ for in_fold in input_folder:
 
                         delta_stor_cbm.append(delta_stor_cubic_meters)
                         delta_stor_af.append(delta_stor_acre_feet)
-                    print 'delta storage for {} done'.format(name)
+                    print('delta storage for {} done'.format(name))
 
                 b = np.array([['Date', 'Precipitation [m^3]', 'Precipitation [AF]', 'Snow Water Equivalent [m^3]',
                                'Snow Water Equivalent [AF]', 'Evapotranspiration [m^3]', 'Evapotranspiration [AF]',
@@ -239,7 +239,7 @@ for in_fold in input_folder:
                             "Soil Water Storage Change [AF]\n")
                     np.savetxt(f, yr_recs, fmt=fmt, delimiter=',')
 
-                print "You have been saved!"
+                print("You have been saved!")
 
 # test mask arrays by saving and loading in a GIS
 # driver = gdal.GetDriverByName('GTiff')

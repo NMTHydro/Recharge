@@ -52,7 +52,7 @@ def data_frame_formatter(raster_dictionary):
 
     ras_dict = {}
 
-    print "x, y is done. Starting k, v loop"
+    print("x, y is done. Starting k, v loop")
 
     for k, v in raster_dictionary.iteritems():
 
@@ -68,7 +68,7 @@ def data_frame_formatter(raster_dictionary):
 
         ras_dict["{}".format(k)] = v[0].ravel().tolist() #v[0].tolist()
 
-    print "Done wi kv loop"
+    print("Done wi kv loop")
 
     # col_list = ["x", "y"]
 
@@ -80,7 +80,7 @@ def data_frame_formatter(raster_dictionary):
 
     df = pd.DataFrame(ras_dict, columns=col_list)
 
-    print "Done with main Dataframe"
+    print("Done with main Dataframe")
 
     # AGRICULTURE
     # This way you get rid of the zero values associated with the unmasked areas.
@@ -91,7 +91,7 @@ def data_frame_formatter(raster_dictionary):
 
     df_ag.to_csv("/Volumes/SeagateExpansionDrive/jan_metric/jan_comparison_ag.csv")
 
-    print "Done writing ag data frame"
+    print("Done writing ag data frame")
 
     # NATURAL AREAS
     # This way you get rid of the zero values associated with the unmasked areas.
@@ -102,7 +102,7 @@ def data_frame_formatter(raster_dictionary):
 
     df_nat.to_csv("/Volumes/SeagateExpansionDrive/jan_metric/jan_comparison_nat.csv")
 
-    print "Done writing natural data frame"
+    print("Done writing natural data frame")
 
 
     #============================
@@ -228,16 +228,16 @@ def run():
 
         ras = raster.read(1)
 
-        print 'ras shape 0', ras.shape[0]
+        print('ras shape 0', ras.shape[0])
 
-        print 'ras shape 1', ras.shape[1]
+        print('ras shape 1', ras.shape[1])
 
         window = ((0, ras.shape[0]), (0, ras.shape[1]))
 
-        print "WINDOW", window
+        print("WINDOW", window)
         bounds = raster.window_bounds(window)
 
-        print "BOUNDS", bounds
+        print("BOUNDS", bounds)
 
 
     # Take the bounds from the minimum raster and for each raster in the dir,
@@ -255,26 +255,26 @@ def run():
                 with rasterio.open(tiff_path) as r:
                     T0 = r.affine  # upper-left pixel corner affine transform
 
-                    print T0
+                    print(T0)
 
                     window = r.window(*bounds)
 
-                    print "edited window", window
+                    print("edited window", window)
 
                     A = r.read(1, window=window)
 
-                print "A", A
-                print "A shape", A.shape
-                print 'path', tiff_path
+                print("A", A)
+                print("A shape", A.shape)
+                print('path', tiff_path)
 
 
                 raster_dict['{}'.format(tf.split(".")[0])] = (A, tiff_path)
 
 
 
-    print 'raster dict', raster_dict
+    print('raster dict', raster_dict)
 
-    print "Starting the formatter"
+    print("Starting the formatter")
 
     data_frame_formatter(raster_dict)
 

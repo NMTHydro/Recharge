@@ -8,5 +8,5 @@ for item in files:
     name = '{}'.format(name)
     name = name.replace(' ', '_')
     name = name.lower()
-    print name
+    print(name)
     os.rename(item, name)

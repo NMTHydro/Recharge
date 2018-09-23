@@ -29,7 +29,7 @@ def load_df(path):
 
     :returns dataframe of etrm time series input
     """
-    print 'reading in csv: {}'.format(path)
+    print('reading in csv: {}'.format(path))
     csv = loadtxt(path, dtype=str, delimiter=',')
 
     # extracts should have headers
@@ -62,7 +62,7 @@ def get_etrm_time_series(input_root, dict_):
 
     csv_list = [filename for filename in os.listdir(input_root) if filename.endswith('.csv')]
 
-    print 'etrm extract csv list: {}'.format(csv_list)
+    print('etrm extract csv list: {}'.format(csv_list))
     for path in csv_list:
         name = os.path.splitext(path)[0]
         df = load_df(os.path.join(input_root, path))
@@ -70,7 +70,7 @@ def get_etrm_time_series(input_root, dict_):
         if dict_:
             for key, val in dict_.iteritems():
                 if val['Name'] == name:
-                    print 'updating {} number {} with etrm inputs df'.format(name, key)
+                    print('updating {} number {} with etrm inputs df'.format(name, key))
                     # print 'your df: \n{}'.format(df)
                     dict_[key]['etrm'] = df
 
@@ -147,14 +147,14 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
         folder = os.path.join(path,'AMF_Data',amf_name)
 
         folder_contents = os.listdir(folder)
-        print "this is the folder contents: {}".format(folder_contents)
+        print("this is the folder contents: {}".format(folder_contents))
 
         csv_list = [os.path.join(folder, item) for item in folder_contents]
-        print "this is the new list: {}".format(csv_list)
+        print("this is the new list: {}".format(csv_list))
 
         # amf_data = array([]).reshape(0, ncols)
 
-        print 'attempting to fetch headers: {}'.format(subset)
+        print('attempting to fetch headers: {}'.format(subset))
         amf_data = None
         for item in csv_list:
             p = os.path.join(folder, item)
@@ -172,19 +172,19 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
         amf_data = amf_data[:, 2:]
 
         df = DataFrame(amf_data, index=new_ind, columns=columns)
-        print 'You have {} rows of --RAW-- data from {}'.format(df.shape[0], amf_name)
+        print('You have {} rows of --RAW-- data from {}'.format(df.shape[0], amf_name))
 
         # drop rows with NA values in 'subset'
         df[df == '-9999'] = nan
         df = df[notnull(df)]
         df = df.apply(to_numeric)
         df.dropna(axis=0, how='any', inplace=True)
-        print 'You have {} rows of FlUX  data from {}'.format(df.shape[0], amf_name)
+        print('You have {} rows of FlUX  data from {}'.format(df.shape[0], amf_name))
 
         # Find all complete days (48) records with no NULL values,
         if complete_days_only:
             df = df.groupby(lambda xx: xx.date())
-            print 'df grouped: {}'.format(df)
+            print('df grouped: {}'.format(df))
             df = df.aggregate(lambda xx: sum(xx) if len(xx) > 23 else nan)
 
         df.dropna(axis=0, how='any', inplace=True)
@@ -213,10 +213,10 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
 
         df_low_err = df[df['en_bal_err'] <= close_threshold]
 
-        print 'You have {} DAYS of CLEAN RN/LE/H/RAD data from {}'.format(df.shape[0], amf_name)
-        print 'The mean energy balance closure error is: {}'.format(df['en_bal_err'].mean())
-        print 'You have {} DAYS  of [0.0 < CLOSURE ERROR < {}] data from {}'.format(len(df_low_err), close_threshold,
-                                                                                    amf_name)
+        print('You have {} DAYS of CLEAN RN/LE/H/RAD data from {}'.format(df.shape[0], amf_name))
+        print('The mean energy balance closure error is: {}'.format(df['en_bal_err'].mean()))
+        print('You have {} DAYS  of [0.0 < CLOSURE ERROR < {}] data from {}'.format(len(df_low_err), close_threshold,
+                                                                                    amf_name))
 
         if save_cleaned_data_path:
             p = os.path.join(save_cleaned_data_path, 'ameriflux_sites', 'AMF_ETRM_output', '{}_cleaned_all.csv'.format(amf_name))

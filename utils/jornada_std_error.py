@@ -166,29 +166,29 @@ def find_std_error():
 
         # 30 cm depth
         j_30 = float_data(jornada_var_long['swc_30cm'])
-        print "len j_30", len(j_30)
+        print("len j_30", len(j_30))
         # convert to a float
         # j_30 = j_30.astype(np.float)
 
         # 60cm
         j_60 = float_data(jornada_var_long['swc_60cm'])
-        print "len j_60", len(j_60)
+        print("len j_60", len(j_60))
         # j_60 = j_60.astype(np.float)
 
         # 90cm
         j_90 = float_data(jornada_var_long['swc_90cm'])
-        print "len j_90", len(j_90)
+        print("len j_90", len(j_90))
         # print "here is j_90 -> {}".format(j_90)
         # j_90 = j_90.astype(np.float)
 
         # 110cm
         j_110 = float_data(jornada_var_long['swc_110cm'])
-        print "len j_110", len(j_110)
+        print("len j_110", len(j_110))
         # j_110 = j_110.astype(np.float)
 
         # 130cm
         j_130 = float_data(jornada_var_long['swc_130cm'])
-        print "len j_130", len(j_130)
+        print("len j_130", len(j_130))
         # j_130 = j_130.astype(np.float)
 
         # get the date...
@@ -246,22 +246,22 @@ def find_std_error():
 
         for k, v in value.iteritems():
             if len(arr_lst) == 0:
-                print "k first", k
-                print 'v first', v
-                print "first time!"
+                print("k first", k)
+                print('v first', v)
+                print("first time!")
                 arr_lst = v
-                print "length first time {}".format(len(arr_lst))
+                print("length first time {}".format(len(arr_lst)))
             else:
-                print "k", k
-                print "v", v
-                print "len v", len(v)
+                print("k", k)
+                print("v", v)
+                print("len v", len(v))
                 prev_list = arr_lst
                 arr_lst = v + prev_list
 
-        print "summed list for key {} and list is \n {}".format(key, arr_lst)
+        print("summed list for key {} and list is \n {}".format(key, arr_lst))
         std_error_d[key] = arr_lst
 
-    print "final sum dictionary {}".format(std_error_d)
+    print("final sum dictionary {}".format(std_error_d))
 
 
 
@@ -396,7 +396,7 @@ def parse_data():
         # add the date to the dictionary?
 
     # # as a reminder this is the dictionary that has been normalized
-    print "avg normal dictionary", avg_normal_dictionary
+    print("avg normal dictionary", avg_normal_dictionary)
 
     # the dictionary relating pixels to locations:
     relate_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],
@@ -421,7 +421,7 @@ def parse_data():
 
         df_list.append(_df)
 
-    print "DF list {}".format(df_list)
+    print("DF list {}".format(df_list))
     # === KEEP ====
 
 
@@ -449,15 +449,15 @@ def parse_data():
         df_merge_list = []
         # df_merge = None
         for i in range(len(df_list)):
-            print "i", i
+            print("i", i)
             if i == 0:
-                print "first merge"
+                print("first merge")
                 _df_interim = pd.merge(df_list[i], df_list[i + 1], on='date')
                 df_merge_list.append(_df_interim)
                 # df_merge = _df_interim
                 del _df_interim
             elif i > 0 : # and i < (len(df_list) -1)
-                print 'do the second merge'
+                print('do the second merge')
                 _df_interim = pd.merge(df_merge_list[i-1], df_list[i], on='date')
                 # _df_interim = pd.merge(df_merge, df_list[i], on='date')
                 df_merge_list.append(_df_interim)
@@ -468,7 +468,7 @@ def parse_data():
             #     _df_interim = pd.merge(df_merge_list[i - 1], df_list[i], on='date')
             #     df_merge_list.append(_df_interim)
 
-        print "This is the final merged dataframe {}".format(df_merge_list[-1])
+        print("This is the final merged dataframe {}".format(df_merge_list[-1]))
         related_dfs[key] = df_merge_list[-1]
         del df_merge_list
 

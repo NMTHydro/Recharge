@@ -74,7 +74,7 @@ def data_frame_formatter(raster_dictionary):
 
     ras_dict = {}
 
-    print "x, y is done. Starting k, v loop"
+    print("x, y is done. Starting k, v loop")
 
     for k, v in raster_dictionary.iteritems():
 
@@ -90,7 +90,7 @@ def data_frame_formatter(raster_dictionary):
 
         ras_dict["{}".format(k)] = v[0].ravel().tolist() #v[0].tolist()
 
-    print "Done wi kv loop"
+    print("Done wi kv loop")
 
     # col_list = ["x", "y"]
 
@@ -104,7 +104,7 @@ def data_frame_formatter(raster_dictionary):
 
     #df.to_csv("/Volumes/SeagateExpansionDrive/jan_metric/full_aligned_dataset.csv")
 
-    print "Done with main Dataframe"
+    print("Done with main Dataframe")
 
     return df
 
@@ -116,7 +116,7 @@ def ag(df):
     # Filter out slope values greater than three
     df_ag = df_ag[df_ag['slope_janmetric_20110818_align']<3]
 
-    print "Done writing ag data frame"
+    print("Done writing ag data frame")
     return df_ag
 
 
@@ -131,7 +131,7 @@ def natural(df):
 
     #df_nat.to_csv("/Volumes/SeagateExpansionDrive/jan_metric/jan_comparison_nat.csv")
 
-    print "Done writing natural data frame"
+    print("Done writing natural data frame")
 
     return df_nat
 
@@ -527,16 +527,16 @@ def run():
 
         ras = raster.read(1)
 
-        print 'ras shape 0', ras.shape[0]
+        print('ras shape 0', ras.shape[0])
 
-        print 'ras shape 1', ras.shape[1]
+        print('ras shape 1', ras.shape[1])
 
         window = ((0, ras.shape[0]), (0, ras.shape[1]))
 
-        print "WINDOW", window
+        print("WINDOW", window)
         bounds = raster.window_bounds(window)
 
-        print "BOUNDS", bounds
+        print("BOUNDS", bounds)
 
 
     # Take the bounds from the minimum raster and for each raster in the dir,
@@ -554,26 +554,26 @@ def run():
                 with rasterio.open(tiff_path) as r:
                     T0 = r.affine  # upper-left pixel corner affine transform
 
-                    print T0
+                    print(T0)
 
                     window = r.window(*bounds)
 
-                    print "edited window", window
+                    print("edited window", window)
 
                     A = r.read(1, window=window)
 
-                print "A", A
-                print "A shape", A.shape
-                print 'path', tiff_path
+                print("A", A)
+                print("A shape", A.shape)
+                print('path', tiff_path)
 
 
                 raster_dict['{}'.format(tf.split(".")[0])] = (A, tiff_path)
 
 
 
-    print 'raster dict', raster_dict
+    print('raster dict', raster_dict)
 
-    print "Starting the formatter"
+    print("Starting the formatter")
 
     df = data_frame_formatter(raster_dict)
 

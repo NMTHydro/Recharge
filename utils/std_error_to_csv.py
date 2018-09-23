@@ -112,7 +112,7 @@ def calculate_pixel(df, locations):
         :return:
         """
 
-        print "Doing location {}".format(loc)
+        print("Doing location {}".format(loc))
         # filter the dictionary for all entries corresponding to the swc probe location
         fdf = df[df['location'] == loc]
 
@@ -269,7 +269,7 @@ def main():
     # i is a number. the items (pixel, locations) in the location dict are stored in a tuple
     for i, (pixel, locations) in enumerate(pixel_location_dict.items()):
 
-        print 'pixel number {}'.format(pixel)
+        print('pixel number {}'.format(pixel))
 
         #[[(),()], [(),()]] where the tuples are dates and RZSWF for every swc tube in the pixel
         das = calculate_pixel(df, locations) # gets the storage for each tube

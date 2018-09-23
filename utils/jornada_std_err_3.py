@@ -77,29 +77,29 @@ def formatter(df_dict):
         for num in range(len(value)):
 
             if num == 0:
-                print "A"
+                print("A")
                 unmod_list = value[num][0]
                 # compare this one to the huge list
                 int = intersect(unmod_list, huge_list)
                 intersection_storage.append(int)
 
             elif num > 0:
-                print "B, C ..."
+                print("B, C ...")
                 unmod_list = value[num][0]
                 # compare these ones to the previous intersection storage
                 int = intersect(unmod_list, intersection_storage[num-1])
                 intersection_storage.append(int)
 
             elif num == len(value):
-                print "END"
+                print("END")
                 unmod_list = value[num+1][0] # todo figure out what the hell I'm doing wrong here.
                 # compare to the last intersection storage
                 int = intersect(unmod_list, intersection_storage[-1])
                 intersection_storage.append(int)
 
         intersection_dates[key] = intersection_storage[-1]
-        print "how long is the first intersection storage ? {}".format(len(intersection_storage[0]))
-        print "how long is the last intersection storage ? {}".format(len(intersection_storage[-1]))
+        print("how long is the first intersection storage ? {}".format(len(intersection_storage[0])))
+        print("how long is the last intersection storage ? {}".format(len(intersection_storage[-1])))
     # print "intersection dates dictionary", intersection_dates
 
     # the intersection dictionary contains the most 'parsimonious' selection of dates for a given pixel
@@ -109,8 +109,8 @@ def formatter(df_dict):
     # grab the df dict
     date_formated_dict = []
     for key, value in df_dates.iteritems():
-        print "==========="
-        print "KEY ", key
+        print("===========")
+        print("KEY ", key)
         tim = intersection_dates[key]
         list_o_rings = []
         for i in value:
@@ -131,12 +131,12 @@ def formatter(df_dict):
                     jsm_90.append(c)
                     jsm_110.append(d)
                     jsm_130.append(e)
-            print len(date_lst)
-            print len(jsm_30)
-            print len(jsm_60)
-            print len(jsm_90)
-            print len(jsm_110)
-            print len(jsm_130)
+            print(len(date_lst))
+            print(len(jsm_30))
+            print(len(jsm_60))
+            print(len(jsm_90))
+            print(len(jsm_110))
+            print(len(jsm_130))
             ring = (date_lst, jsm_30, jsm_60, jsm_90, jsm_110, jsm_130)
             # print "ring {}".format(ring)
             list_o_rings.append(ring)
@@ -144,7 +144,7 @@ def formatter(df_dict):
         # print "listo", type(list_o_rings)
         # print "listo [0]", list_o_rings[0]
         # print "key", key
-        print "==========="
+        print("===========")
         # # todo - fix problem here
         # todo also key 11, 12, 3, 4 ... What the ever loving fuck?
         # date_formated_dict[key] = list_o_rings

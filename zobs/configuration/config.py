@@ -34,12 +34,12 @@ class RechargeConfiguration(object):
         self.initial_conditions_path = os.path.join(self.inputs, 'initialize')
 
     def print_config(self):
-        print '------------- {} Config -----------------'.format(self.__class__.__name__)
+        print('------------- {} Config -----------------'.format(self.__class__.__name__))
 
         for attr in ('inputs', 'static_inputs_path', 'initial_conditions_path') + self._get_printable_attributes():
-            print '{:<30s} {}'.format(attr, getattr(self, attr))
+            print('{:<30s} {}'.format(attr, getattr(self, attr)))
 
-        print '-----------------------------------------'
+        print('-----------------------------------------')
 
     def _get_printable_attributes(self):
         pass

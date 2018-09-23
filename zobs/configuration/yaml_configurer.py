@@ -30,7 +30,7 @@ class YAMLConfigurer(BaseConfigurer):
             with open(p, 'r') as rfile:
                 self._yd = yaml.load(rfile)
         else:
-            print 'invalid file: {}'.format(p)
+            print('invalid file: {}'.format(p))
 
     def _get_kind(self):
         return self._yd['kind']

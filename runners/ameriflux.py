@@ -43,7 +43,7 @@ def run(input_root, simulation_period):
         for kk, vv in v.iteritems():
             if isinstance(vv, DataFrame):
                 p = os.path.join(paths.amf_output_root,'{}_{}.csv'.format(k, kk))
-                print 'writing to {}'.format(p)
+                print('writing to {}'.format(p))
                 vv.to_csv(p)
     val = amf_dict.values()[0]
 
@@ -71,7 +71,7 @@ def save_run(etrm, val):
     amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], etrm.tracker), axis=1, join='outer'))
     obs_etrm_comb_out = os.path.join(paths.amf_combo_root, '{}_Ceff.csv'.format(val['Name']))
 
-    print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
+    print('this should be your combo csv: {}'.format(obs_etrm_comb_out))
     amf_obs_etrm_combo.to_csv(obs_etrm_comb_out, index_label='Date')
 
 

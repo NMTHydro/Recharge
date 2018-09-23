@@ -82,7 +82,7 @@ class Paths:
         self.initial_inputs = os.path.join(etrm_input_root, 'initialize')
 
         amf_root = os.path.dirname(etrm_input_root)
-        print 'amf_root: {}'.format(amf_root)
+        print('amf_root: {}'.format(amf_root))
         self.amf_sites = amf_path = os.path.join(amf_root, 'ETRM_inputs_Ameriflux', 'ameriflux_sites')  # OK
         self.amf_extract = os.path.join(amf_path, 'AMF_extracts')
         self.amf_output_root = os.path.join(amf_path, 'AMF_ETRM_output')
@@ -110,11 +110,11 @@ class Paths:
     def set_mask_path(self, path):
         if path:
             self.mask = self.input_path(path)
-            print 'here is the mask path {}'.format(self.mask)
+            print('here is the mask path {}'.format(self.mask))
 
     def set_point_shape_path(self, path):
         self.point_shape = self.input_path(path)
-        print 'here is the shapefile path {}'.format(self.point_shape)
+        print('here is the shapefile path {}'.format(self.point_shape))
 
     def input_path(self, path):
         return os.path.join(self.etrm_input_root, path)
@@ -138,7 +138,7 @@ class Paths:
         for attr in attrs:
             v = getattr(self, attr)
             if not os.path.exists(v):
-                print 'NOT FOUND {}: {}'.format(attr, v)
+                print('NOT FOUND {}: {}'.format(attr, v))
                 nonfound.append((attr, v))
 
         if nonfound:

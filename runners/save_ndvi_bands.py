@@ -52,7 +52,7 @@ def get_kcb(in_path, date_object):
 
                 band = diff + 1
                 raster = '{}_{}_{}.tif'.format(year, start, nd)
-                print('raster', raster)
+                print(('raster', raster))
                 break
     else:
         for i, num in enumerate(NUMS):
@@ -102,7 +102,7 @@ def run():
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
 
-        print('Saving New NDVI file as {}'.format(ndvi_out))
+        print(('Saving New NDVI file as {}'.format(ndvi_out)))
         write_map(ndvi_out, 'Gtiff', x, y, ndvi, prj, fill_val)
 
 if __name__ == '__main__':

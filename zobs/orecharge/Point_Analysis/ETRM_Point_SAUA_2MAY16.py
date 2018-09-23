@@ -18,7 +18,7 @@ np.set_printoptions(threshold=3000, edgeitems=5000)
 pandas.set_option('display.height', 500)
 pandas.set_option('display.max_rows', 500)
 startTime = datetime.now()
-print startTime
+print(startTime)
 
 
 def round_to_value(number, roundto):
@@ -91,8 +91,8 @@ df_norm = pandas.DataFrame(columns=factors, index=site_list)
 yy = 0
 for var_arr in var_arrs:
     factor = factors[yy]
-    print factor
-    print ''
+    print(factor)
+    print('')
     shp_filename = 'C:\\Recharge_GIS\\qgis_layers\\sensitivity_points\\SA_pnts29APR16_UTM.shp'
     ds = ogr.Open(shp_filename)
     lyr = ds.GetLayer()
@@ -104,7 +104,7 @@ for var_arr in var_arrs:
         mx, my = geom.GetX(), geom.GetY()
         path = 'C:\Users\David\Documents\Recharge\Sensitivity_analysis\SA_extracts'
         file_name = '{}\\{}_extract.csv'.format(path, name)
-        print file_name
+        print(file_name)
         extract_data = extract_readIn.read_std_extract_csv(file_name)
         rslts = []
         for col in var_arr.T:
@@ -143,14 +143,14 @@ for param in df.iteritems():
         sens_list = np.array(sens_list)
         df_norm.iloc[site_list.index(site_name), factors.index(param[0])] = sens_list
         if yy == 20:
-            print 'done'
+            print('done')
             break
         yy += 1
     xx += 1
 
 fig_path = 'C:\\Users\\David\\Documents\\ArcGIS\\results\\Sensitivity_analysis\\normalized'
 for index, row in df_norm.iterrows():
-    print index, row
+    print(index, row)
     base = row[0][5]
     lows = []
     for fact in row:

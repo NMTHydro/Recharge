@@ -66,7 +66,7 @@ def x_y_extract(point_path):
     # open the shapefile. Use 0 for read-only mode.
     datasource_obj = driver.Open(point_path, 0)
     if datasource_obj is None:
-        print "cannot open {}".format(point_path)
+        print("cannot open {}".format(point_path))
         sys.exit(1)
 
     # get the layer object from the datasource
@@ -75,7 +75,7 @@ def x_y_extract(point_path):
     # get the features in the layer
     feature_count = layer_obj.GetFeatureCount()
 
-    print "there are {} features".format(feature_count)
+    print("there are {} features".format(feature_count))
 
     # # get the feature of the shapefile. You can loop through features, but there should only be one.
     # feature = layer_obj.GetFeature(2)
@@ -88,7 +88,7 @@ def x_y_extract(point_path):
         # you could get a features 'fields' like feature.GetField('id')
         field = feature.GetField('id')
 
-        print "field -> {}".format(field)
+        print("field -> {}".format(field))
 
         # but we just want the geometry of the feature
         geometry = feature.GetGeometryRef()
@@ -97,7 +97,7 @@ def x_y_extract(point_path):
         x = geometry.GetX()
         y = geometry.GetY()
 
-        print "x -> {}, y -> {}".format(x, y)
+        print("x -> {}, y -> {}".format(x, y))
 
         feature_dict[field] = (x, y)
 
@@ -125,7 +125,7 @@ def raster_extract(raster_path, x, y):
     # open the raster datasource
     datasource_obj = gdal.Open(raster_path)
     if datasource_obj is None:
-        print "Can't open the datasource from {}".format(raster_path)
+        print("Can't open the datasource from {}".format(raster_path))
         sys.exit(1)
 
     # get the size of image (for reading)
@@ -153,7 +153,7 @@ def raster_extract(raster_path, x, y):
     # is this a [rows, columns] thing?
     value = data[y_offset, x_offset]
 
-    print "VALUE {}".format(value)
+    print("VALUE {}".format(value))
 
     # # housekeeping
     # datasource_obj.Destroy()
@@ -176,14 +176,14 @@ def run_point_extract():
 
     # Begin extraction from the point path.
     feature_dictionary = x_y_extract(point_path)
-    print "feature dictionary", feature_dictionary
+    print("feature dictionary", feature_dictionary)
 
     # Use the feature dictionary to extract data from the rasters.
     for feature, tup in feature_dictionary.iteritems():
 
         # Get the X and Y coords from the dictionary and unpack them
         x, y = tup
-        print x, y
+        print(x, y)
 
         # === Iterate the rasters ===
 
@@ -194,7 +194,7 @@ def run_point_extract():
         # store the raster values and image dates for the x and y coordinate pair into the lists
         for path, dir, file in os.walk(raster_path, topdown=False):
 
-            print path, dir, file
+            print(path, dir, file)
 
             for file in file:
                 if file.endswith('.img'):
@@ -206,7 +206,7 @@ def run_point_extract():
                     date_str = file.split('_')[0]
                     date_str = date_str[-12:-5]
 
-                    print "date string {}".format(date_str)
+                    print("date string {}".format(date_str))
 
                     # get a datetime object from a julian date
                     date = datetime.strptime(date_str, '%Y%j').date()
@@ -224,7 +224,7 @@ def run_point_extract():
         # use the pandas.to_csv() method to output to csv
         output_df.to_csv(csv_path)
 
-    print "COMPLETE"
+    print("COMPLETE")
 
 
 if __name__ == "__main__":

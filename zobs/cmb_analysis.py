@@ -33,24 +33,24 @@ def get_cmb_data(cmb_shapefile, extract_path, simulation_period, save_csv, stati
                          initial_inputs=initial_path)
 
         # print 'amf dict, pre-etrm run {}'.format(amf_dict)
-        print 'key : {}'.format(key)
+        print('key : {}'.format(key))
 
         # print 'find etrm dataframe as amf_dict[key][''etrm'']\n{}'.format(amf_dict[key]['etrm'])
         tracker = etrm.run(simulation_period, point_dict=cmb_dict[key], point_dict_key=key)
         # print 'tracker after etrm run: \n {}'.format(tracker)
         csv_path_filename = os.path.join(save_csv, '{}.csv'.format(val['Name']))
 
-        print 'this should be your csv: {}'.format(csv_path_filename)
+        print('this should be your csv: {}'.format(csv_path_filename))
 
         tracker.to_csv(csv_path_filename, na_rep='nan', index_label='Date')
-        print 'tracker for {}: {}'.format(key, tracker)
+        print('tracker for {}: {}'.format(key, tracker))
 
     return None
 
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     inputs = os.path.join('F:\\', 'ETRM_Inputs')
     cmb_path = os.path.join(inputs, 'chloride_mass_balance')
     cmb_shp = os.path.join(cmb_path, 'shapefiles', 'CMB_sites_27SEP16.shp')

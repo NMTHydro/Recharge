@@ -63,7 +63,7 @@ def set_constants(ze=40, p=0.4,
              ke_max=ke_max,
              a_min=a_min, a_max=a_max)
 
-    print 'constants dict: {}\n'.format(pformat(d, indent=2))
+    print('constants dict: {}\n'.format(pformat(d, indent=2)))
 
     return d
 
@@ -115,13 +115,13 @@ def initialize_static_dict(pairs=None):
 
     d = {}
     if pairs is None:
-        print 'Using default static inputs path: {}'.format(paths.static_inputs)
+        print('Using default static inputs path: {}'.format(paths.static_inputs))
         pairs = make_pairs(paths.static_inputs, STATIC_KEYS)
 
-    print '-------------------------------------------------------'
-    print '       Key                  Name'
+    print('-------------------------------------------------------')
+    print('       Key                  Name')
     for k, p in pairs:
-        print 'static {:<20s} {}'.format(k, p)
+        print('static {:<20s} {}'.format(k, p))
         raster = Raster(p, root=paths.static_inputs)
         # print 'raster jjj', raster
         arr = raster.masked()
@@ -140,13 +140,13 @@ def initialize_static_dict(pairs=None):
             arr = initial_tew(arr)
 
         d[k] = arr
-    print '-------------------------------------------------------'
+    print('-------------------------------------------------------')
 
     q = d['quat_deposits']
     taw = d['taw']
     tew = d['tew']
     land_cover = d['land_cover']
-    print 'original Ksat = {}, REW = {}, TAW = {}, land cover = {}'.format(d['soil_ksat'],d['rew'],d['taw'],d['land_cover'])
+    print('original Ksat = {}, REW = {}, TAW = {}, land cover = {}'.format(d['soil_ksat'],d['rew'],d['taw'],d['land_cover']))
 
     # apply high TAW to unconsolidated Quaternary deposits
     min_val = 250
@@ -164,7 +164,7 @@ def initialize_static_dict(pairs=None):
 
     # non_zero = count_nonzero(data < min_val)
     # print 'taw has {} cells below the minimum'.format(non_zero, min_val)
-    print 'taw median: {}, mean {}, max {}, min {}\n'.format(median(taw), taw.mean(), taw.max(), taw.min())
+    print('taw median: {}, mean {}, max {}, min {}\n'.format(median(taw), taw.mean(), taw.max(), taw.min()))
     d['taw'] = taw
 
     # apply tew adjustment
@@ -206,27 +206,27 @@ def initialize_initial_conditions_dict(pairs=None):
     # read in initial soil moisture conditions from spin up, put in dict
 
     if pairs is None:
-        print 'Using default initial inputs path: {}'.format(paths.initial_inputs)
+        print('Using default initial inputs path: {}'.format(paths.initial_inputs))
         pairs = make_pairs(paths.initial_inputs, INITIAL_KEYS)
 
     d = {}
 
-    print '-------------------------------------------------------'
-    print '        Key                  Name'
+    print('-------------------------------------------------------')
+    print('        Key                  Name')
     for k, p in pairs:
-        print 'initial {:<20s} {}'.format(k, p)
+        print('initial {:<20s} {}'.format(k, p))
         raster = Raster(p, root=paths.initial_inputs)
         data = raster.masked()
         d[k] = data
 
         nans = count_nonzero(isnan(data))
         if nans:
-            print '{} has {} nan values'.format(k, nans)
+            print('{} has {} nan values'.format(k, nans))
         nons = count_nonzero(data < 0.0)
         if nons:
-            print '{} has {} negative values'.format(k, nons)
+            print('{} has {} negative values'.format(k, nons))
 
-    print '-------------------------------------------------------\n'
+    print('-------------------------------------------------------\n')
 
     return d
 
@@ -268,17 +268,17 @@ def initialize_tabular_dict(date_range_, write_frequency, outputs):
     tab_dict = {}
 
     input_root = paths.polygons
-    print 'polygon folder: {}'.format(input_root)
+    print('polygon folder: {}'.format(input_root))
     for f in os.listdir(input_root):
-        print 'folder: {}'.format(f)
+        print('folder: {}'.format(f))
         region_type = f.replace('_Polygons', '')
-        print 'region type: {}'.format(region_type)
+        print('region type: {}'.format(region_type))
 
         d = {}
         for ff in os.listdir(os.path.join(input_root, f)):
             if ff.endswith('.shp'):
                 subreg = ff[:-4]
-                print 'sub region : {}'.format(subreg)
+                print('sub region : {}'.format(subreg))
                 df = DataFrame(index=ind, columns=cols).fillna(0.0)
                 d[subreg] = df
 
@@ -377,10 +377,10 @@ def initialize_point_tracker(master, point_arr):
     csv_path = paths.tracker_csv_path
     # make the csvs...
     for index, dataframe in tracker_list:
-        print "COLS", columns
+        print("COLS", columns)
         # dataframe.to_csv(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index)))
         # print "writing cols headers"
-        print "where the trackers go", os.path.join(csv_path, "tracker_pixel_{}.csv".format(index))
+        print("where the trackers go", os.path.join(csv_path, "tracker_pixel_{}.csv".format(index)))
         with open(os.path.join(csv_path, "tracker_pixel_{}.csv".format(index[0])), 'w') as wfile:
             pass
             # writer = csv.writer(wfile)
@@ -413,7 +413,7 @@ def cmb_sample_site_data(shape):
         geom = feat.GetGeometryRef()
         mx, my = geom.GetX(), geom.GetY()
         sample = feat.GetField('Sample')
-        print 'location of {}: {}, {}'.format(sample, mx, my)
+        print('location of {}: {}, {}'.format(sample, mx, my))
         loc = feat.GetField('Location_D')
         elev = feat.GetField('Elevation_')
         infil_ind = feat.GetField('Rech_pct') / 100.

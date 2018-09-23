@@ -72,7 +72,7 @@ def grapher(col_dict, x, y, plot_output, function_count, together=False):
         # We plot everything separately
         for x_item in x:
             count = 0
-            print 'col_dict x item', col_dict[x_item]
+            print('col_dict x item', col_dict[x_item])
             if x_item == 'Date':
                 date_list = col_dict[x_item].tolist()
                 #print 'to stirng', col_dict[x_item].tostring()
@@ -133,12 +133,12 @@ def run_tracker_plot(path, x, y, plot_output, function_count, multi=True):
 
     # now you need to read all the files and return a dict of pandas dataframes.
     dataframe = reader_function(path)
-    print 'dataframe', dataframe
+    print('dataframe', dataframe)
     # send in the dict containing the df to a grapher function and get to graphing!
     col_dict = get_columns(dataframe)
     grapher(col_dict, x, y, plot_output, function_count, together=multi)
 
-    print 'complete?!?!'
+    print('complete?!?!')
 
 if __name__ == "__main__":
     run_tracker_plot()

@@ -10,7 +10,7 @@ from osgeo import gdal, ogr
 import numpy as np
 
 startTime = datetime.now()
-print startTime
+print(startTime)
 
 # Define user-controlled constants, these are constants to start with day one, replace
 # with spin-up data when multiple years are covered
@@ -137,7 +137,7 @@ snow_array = []
 select_codes = []
 select_names = []
 for code in codes:
-    print code
+    print(code)
     snow_name = snowdict['{a}'.format(a=code)]['Name']
     folder = "C:\\Users\\David\\Documents\\Recharge\\Snow\\Data\\{a}".format(a=snow_name)
     os.chdir(folder)
@@ -165,8 +165,8 @@ for code in codes:
             for line in rows:
                 try:
                     if line[0] is '\n':
-                        print "Found newline glitch value:  skipping"
-                        print rows.index(line)
+                        print("Found newline glitch value:  skipping")
+                        print(rows.index(line))
                         del line
                     elif line[1] == 'Date':
                         del line
@@ -214,7 +214,7 @@ for code in codes:
                     pass
             # print "records in " + '{a} is {b}'.format(a=item, b=len(sn_recs))
     sn_data = np.array(sn_recs)
-    print "array length for site " '{c} code {a} is {b}'.format(a=code, b=len(sn_recs), c=snow_name)
+    print("array length for site " '{c} code {a} is {b}'.format(a=code, b=len(sn_recs), c=snow_name))
     # Convert accumulated precipitation to daily precipitation
     current_precip = []
     xx = -1
@@ -233,7 +233,7 @@ for code in codes:
     sn_data = np.column_stack((first_part, replace_precip, last_part))
     # Find null values (i.e. -99.9) in sn_data, don't worry about SNWD values (i.e. sn_data[:, 6, :]), which have null
     # values but we won't be using it
-    print sn_data.shape
+    print(sn_data.shape)
     for x in range(0, len(sn_data[0, :])):
         for y in range(0, len(sn_data[:, 0])):
             z = sn_data[y, x]
@@ -249,13 +249,13 @@ for code in codes:
 # (stel_date, stel_snow, stel_precip, stel_tobs, stel_tmax, stel_tmin, stel_tavg, stel_snwd)
 meta_snow = zip(select_codes, select_names, snow_array, snow_length)
 
-print ''
-print ''
-print ''
-print 'Moving on to EXTRACT PARAMETERS.................................................................'
-print ''
-print ''
-print ''
+print('')
+print('')
+print('')
+print('Moving on to EXTRACT PARAMETERS.................................................................')
+print('')
+print('')
+print('')
 
 #
 #
@@ -277,14 +277,14 @@ master_dem = []
 alpha = 0.15
 beta = 3.965
 site_err = []
-print ''
-print "Temp coefficient  is {} energy coefficient is {}".format(alpha, beta)
-print ''
+print('')
+print("Temp coefficient  is {} energy coefficient is {}".format(alpha, beta))
+print('')
 param_combo.append([round(alpha, 2), round(beta, 3)])
 cal_count += 1
 for site in select_codes:
     extract_name = select_names[select_codes.index(site)]
-    print extract_name
+    print(extract_name)
     folder = 'C:\\Users\\David\\Documents\\Recharge\\Snow\\Data' + '\\{a}'.format(a=extract_name)
     extract_fill = '_extract2'
     name = '{a}\\{b}{c}.csv'.format(a=folder, b=extract_name, c=extract_fill)
@@ -297,7 +297,7 @@ for site in select_codes:
         lines = fid.readlines()[:]
         fid.close()
     except IOError:
-        print "couldn't find " + '{a}'.format(a=fid)
+        print("couldn't find " + '{a}'.format(a=fid))
         # break
     rows = [line.split(',') for line in lines]
 
@@ -590,7 +590,7 @@ for site in select_codes:
         # [day, rain, eta, snow_fall, ro, dr, de, drew, temp, dp_r, ks pDr, etrs, kcb, kr, mlt, swe, max_temp]
 
         if dday == snotel_end_obj:
-            print ' final day '
+            print(' final day ')
             b = ('Ks', 'ETRS', 'ETA', 'Dr', 'PDr', 'Rain', 'Snowfall', 'MLT', 'SWE', 'Recharge', 'Runoff', 'Temp')
             fdata = np.column_stack((pltKs, pltEtrs, pltEta, pltDr, pltPdr,
                                      pltRain, pltSnow_fall, pltMlt, pltSwe, pltDp_r, pltRo, pltTemp))
@@ -649,7 +649,7 @@ for site in select_codes:
 
             snow_diffs = []
             for x, y in zip(etrm_max_swe, snotel_max_swe):
-                print x, y
+                print(x, y)
                 if y == 0.0:
                     pass
                 else:
@@ -658,14 +658,14 @@ for site in select_codes:
             # compare elevation with error
             mn_site_err = (sum(snow_diffs)/float(len(snow_diffs)) + sum(cov_diffs)/float(len(cov_diffs))) / 2
             site_err.append(mn_site_err)
-            print site, site_err
+            print(site, site_err)
 # all sites
     master_dem.append([alpha, beta, np.array(site_err)])
     max_swe_diff_mean.append(sum(snow_diffs)/float(len(snow_diffs)))
     cov_diff_mean.append(sum(cov_diffs)/float(len(cov_diffs)))
 
 for x, y, z in zip(cov_diff_mean, max_swe_diff_mean, codes):
-    print 'covearage error = {} max swe err = {} site code = {}'.format(x, y, z)
+    print('covearage error = {} max swe err = {} site code = {}'.format(x, y, z))
 
 
 cal_err = [(x + y) / 2 for x, y in zip(max_swe_diff_mean, cov_diff_mean)]
@@ -676,11 +676,11 @@ cov_diff_absSum = np.array(cov_diff_mean)
 cal_err = np.array(cal_err)
 
 cal_data = np.column_stack((param_combo, max_swe_diff_sbsSum, cov_diff_absSum, cal_err))
-print cal_data
+print(cal_data)
 least_err = np.array(master_dem[min_err_param_combo][2])
 # dem_info = np.column_stack((name_dem_list, dem_list, ppt_mn__list, temp_mn_list, kcb_mn_list, least_err))
 # print dem_info
-print "Minimized error snow model using melt temp, melt coefficient {}".format(param_combo[min_err_param_combo])
+print("Minimized error snow model using melt temp, melt coefficient {}".format(param_combo[min_err_param_combo]))
 
 path = 'C:\\Users\\David\\Documents\\Recharge\\Snow\\calibration_data\\'
 np.savetxt('{}\\calibration3_{}_{}.csv'.format(path, datetime.now().month, datetime.now().day),

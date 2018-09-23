@@ -31,7 +31,7 @@ def run():
 
     outdir = os.path.dirname(cfg.output_path)
     if not os.path.isdir(outdir):
-        print 'output directory does not exist. making it now: {}'.format(outdir)
+        print('output directory does not exist. making it now: {}'.format(outdir))
         os.makedirs(outdir)
 
     # startday = datetime(2000, 1, 1)
@@ -109,11 +109,11 @@ def run():
 
             runtime = time.time() - st
 
-            print('Time for day = {}'.format(runtime))
+            print(('Time for day = {}'.format(runtime)))
 
     runtime_full = time.time() - st_begin
 
-    print('Time to save entire period = {}'.format(runtime_full))
+    print(('Time to save entire period = {}'.format(runtime_full)))
 
 
 if __name__ == '__main__':

@@ -58,7 +58,7 @@ def convert_raster_to_array(input_raster_path, raster=None, band=1):
     # print "filepath", os.path.isfile(p)
     # print p
     if not os.path.isfile(p):
-        print 'Not a valid file: {}'.format(p)
+        print('Not a valid file: {}'.format(p))
 
     raster_open = gdal.Open(p)
     ras = np.array(raster_open.GetRasterBand(band).ReadAsArray(), dtype=float)

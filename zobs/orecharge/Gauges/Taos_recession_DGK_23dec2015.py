@@ -26,7 +26,7 @@ snow_recs = []
 for line in rows:
     snow_date.append(datetime.datetime.strptime(line[1], '%m/%d/%Y'))  # date
     snow_recs.append([float(line[3]) * 24.5])  # snow
-print "Snow Data points: " + str(len(snow_recs))
+print("Snow Data points: " + str(len(snow_recs)))
 snow_start = snow_date[0]
 snow_end = snow_date[-1]
 
@@ -42,7 +42,7 @@ recs = []
 for line in rows:
     recs.append([datetime.datetime.strptime(line[0], '%Y/%m/%d %H:%M'),  # date
     float(line[1]), float(line[2])])
-print "Gauge Data points: " + str(len(recs))
+print("Gauge Data points: " + str(len(recs)))
 recs = np.array(recs)
 
 # Select gauge and precip records during available snow data time series
@@ -157,11 +157,11 @@ for i in range(0, df.shape[0]):
     del_t = delta_t.total_seconds()
     if delta_t > datetime.timedelta(0, 1800):
         del_q = 0.0  # if del_q is zero, dqdt  won't be recorded
-        print "Long gap between records, passing... " + '{0}'.format(delta_t)
+        print("Long gap between records, passing... " + '{0}'.format(delta_t))
         pass
     elif del_t == 0.0:
         del_q = 0.0  # if del_q is zero, dqdt won't be recorded
-        print "Delta time is zero, this should be the end of the records...."
+        print("Delta time is zero, this should be the end of the records....")
         break
     else:
         next_t = df.iloc[i + 2, 0]
@@ -218,7 +218,7 @@ for i in range(2, df.shape[0]):
             if low < qq <= high:
                 df_bins.set_value(i, xx, dqdt)
             xx += 1
-print "Created bins"
+print("Created bins")
 
 # This following is set-up to get ready to plot the bins, it could use some work probably
 q_bin = []

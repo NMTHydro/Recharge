@@ -36,10 +36,10 @@ def check_rasters(ndvi, prism, penman, period):
     for day in rrule.rrule(rrule.DAILY, dtstart=period[0], until=period[1]):
 
         # print ''
-        print 'day : {}'.format(day)
+        print('day : {}'.format(day))
         ndvi = get_kcb(roots[0], day)
         # print 'type = {}'.format(type(ndvi))
-        print 'ndvi: min = {} max = {}, mean = {}'.format(ndvi.min(), ndvi.max(), ndvi.mean())
+        print('ndvi: min = {} max = {}, mean = {}'.format(ndvi.min(), ndvi.max(), ndvi.mean()))
         # pm = get_penman(roots[2], day)
         # # print 'pm: min = {} max = {}, mean = {}'.format(pm.min(), pm.max(), pm.mean())
         # sum = (pm.sum() / 1000) * (250 ** 2) / 1233.48
@@ -67,7 +67,7 @@ def check_rasters(ndvi, prism, penman, period):
 
 if __name__ == '__main__':
     home = os.path.expanduser('~')
-    print 'home: {}'.format(home)
+    print('home: {}'.format(home))
     root = os.path.join(home)
     dynamic_inputs_path = os.path.join('F:\\', 'ETRM_Inputs')
     ppt_path = os.path.join(dynamic_inputs_path, 'NDVI', 'NDVI_std_all')

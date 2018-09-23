@@ -16,7 +16,7 @@ for x in range(1, 25):
     a = np.where(snow_fall > 3.0, ones * a_max, a)
     a = np.where(snow_fall < 3.0, a_min + (pA - a_min) * np.exp(-k), a)
     a = np.where(a < a_min, a_min, a)
-    print a
+    print(a)
 
 ksat = np.random.randn(10, 10) + 5
 ksat = np.where(ksat < 0.0, 0.0, ksat)

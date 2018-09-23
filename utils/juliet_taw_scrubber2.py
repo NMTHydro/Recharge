@@ -90,11 +90,11 @@ def add_noise(df):
 
     # # Adding Progressive Noise_________________________
     arr1 = np.random.normal(0, 0.005, len(df['rzsm']))
-    print "arr1", arr1
+    print("arr1", arr1)
     sigma1 = 0.005
 
     arr2 = np.random.normal(0, 0.05, len(df['rzsm']))
-    print "arr2", arr2
+    print("arr2", arr2)
     sigma2 = 0.05
 
     noise1 = df['rzsm'] * arr1
@@ -111,8 +111,8 @@ def add_noise(df):
             i = i + k
             progressive_noise_list.append(i)
             sigma_list.append(sigma2)
-    print "the progressive noise list", progressive_noise_list
-    print "the sigma list", sigma_list
+    print("the progressive noise list", progressive_noise_list)
+    print("the sigma list", sigma_list)
     noisy_arr = np.array(progressive_noise_list)
     sigma_arr = np.array(sigma_list)
 
@@ -156,7 +156,7 @@ def format_1(dict):
 
         noise_added["{}".format(key)] = noise_value
 
-    print "noise added", noise_added
+    print("noise added", noise_added)
 
 
 
@@ -166,15 +166,15 @@ def format_1(dict):
 
         output_list = dict["{}".format(key)].split("/")
 
-        print output_list
+        print(output_list)
 
         first_part = output_list[-1]
 
-        print "first part", first_part
+        print("first part", first_part)
 
         path = output_list[0:-1]
 
-        print "path", path
+        print("path", path)
 
         path.append("done")
 
@@ -182,7 +182,7 @@ def format_1(dict):
 
         outpath = "/".join(path)
 
-        print "outpath", outpath
+        print("outpath", outpath)
 
 
 

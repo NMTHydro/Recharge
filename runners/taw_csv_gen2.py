@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     root = '/Volumes/Seagate Expansion Drive/ETRM_results/ETRM_Results_2017_03_13/daily_rasters'
     tnames = ['tot_eta_27_12_2013.tif', 'tot_etrs_27_12_2013.tif',]
-    print os.listdir(mp)
+    print(os.listdir(mp))
     mask_path = os.path.join(mp) # mp, 'zuni_1.tif'
     tiff_path = os.path.join(mask_path, 'zuni_1.tif')
     tiff_framer(root, mask_path, tnames, tiff_path)

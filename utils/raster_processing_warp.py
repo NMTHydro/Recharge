@@ -20,12 +20,12 @@ def reproject_rasters(path, ras, outpath, env_path, output_ras_proj=None, input_
     :return:
     """
 
-    print "The projection", ras.GetProjection()
+    print("The projection", ras.GetProjection())
 
     # get the geotransform from the input raster (ras)
     # ras.GetGeo
 
-    print "reprojecting the raster"
+    print("reprojecting the raster")
 
     # === Format the file name for output ====
     filename = path.split("\\")[-1]
@@ -34,7 +34,7 @@ def reproject_rasters(path, ras, outpath, env_path, output_ras_proj=None, input_
     appendage = "warp_{}_resample.tiff".format(output_ras_proj.split(":")[-1])
     filepath = os.path.join(outpath, "{}_{}".format(filename, appendage))
 
-    print "Filepath of output file -> {}".format(filepath)
+    print("Filepath of output file -> {}".format(filepath))
 
     # format gdal warpcommand to be called by subprocess.call()
     warpcommand = "gdalwarp --config GDAL_DATA {} -overwrite -s_srs {} -t_srs {} -r {} -tr {} -of GTiff {} {}".format(env_path, input_ras_proj,
@@ -42,7 +42,7 @@ def reproject_rasters(path, ras, outpath, env_path, output_ras_proj=None, input_
                                                                                                resample, pixel_size,
                                                                                              path, filepath)
 
-    print "#========== \n Calling the following warp command: \n {} \n #==========".format(warpcommand)
+    print("#========== \n Calling the following warp command: \n {} \n #==========".format(warpcommand))
 
     call(warpcommand)
 
@@ -55,18 +55,18 @@ def process_rasters(tsrs, ssrs, ts, r, input_dir, process_output, env_path):
     driver = gdal.GetDriverByName('GTiff')
     driver.Register()
 
-    print "Running process rasters"
+    print("Running process rasters")
 
     # === run a loop ===
 
     for path, dirs, files in os.walk(input_dir, topdown=False):
 
-        print "path", path
-        print "dirs", dirs
-        print "files", files
+        print("path", path)
+        print("dirs", dirs)
+        print("files", files)
 
         for file in files:
-            print "file processing -> {}".format(file)
+            print("file processing -> {}".format(file))
             if file.endswith("tif"):
 
                 f_path = os.path.join(path, file)
@@ -74,7 +74,7 @@ def process_rasters(tsrs, ssrs, ts, r, input_dir, process_output, env_path):
                 # open the raster and read in
                 razter = gdal.Open(f_path, GA_ReadOnly)  # other option GA_Update
                 if razter is None:
-                    print "can't open {}".format(f_path)
+                    print("can't open {}".format(f_path))
                     sys.exit(1)
 
                 # now reproject using the function
@@ -101,9 +101,9 @@ def zero_out(zeroout_input, zeroout_output_dir):
     driver.Register()
 
     for path, dirs, files in os.walk(zeroout_input, topdown=False):
-        print "path", path
-        print "dirs", dirs
-        print "files", files
+        print("path", path)
+        print("dirs", dirs)
+        print("files", files)
 
         for file in files:
 
@@ -114,7 +114,7 @@ def zero_out(zeroout_input, zeroout_output_dir):
                 # open the raster and read in
                 razter_dataset = gdal.Open(f_path, GA_ReadOnly)  # other option GA_Update
                 if razter_dataset is None:
-                    print "can't open {}".format(f_path)
+                    print("can't open {}".format(f_path))
                     sys.exit(1)
 
                 # set the minimum value to an appropriate one for ETa
@@ -123,18 +123,18 @@ def zero_out(zeroout_input, zeroout_output_dir):
 
                 outrazter = outrazter_band.ReadAsArray().astype(np.float32)
                 negatives = outrazter[outrazter < 0]
-                print "old negatives", negatives
+                print("old negatives", negatives)
                 #maybe works
                 outrazter[np.where(outrazter < 0)] = 0
-                print 'zeroed out', outrazter
-                print "new negatives", outrazter[outrazter < 0]
+                print('zeroed out', outrazter)
+                print("new negatives", outrazter[outrazter < 0])
 
                 # a name and a path for this raster file
                 o_path = os.path.join(zeroout_output_dir, file)
 
                 # get rows and cols
-                print "x", razter_dataset.RasterXSize
-                print 'y', razter_dataset.RasterYSize
+                print("x", razter_dataset.RasterXSize)
+                print('y', razter_dataset.RasterYSize)
                 rows = razter_dataset.RasterYSize
                 cols = razter_dataset.RasterXSize
 
@@ -143,7 +143,7 @@ def zero_out(zeroout_input, zeroout_output_dir):
 
                 out_data = driver.Create(o_path, cols, rows, 1, GDT_Float32)
                 if out_data is None:
-                    print "can't create {}".format(o_path)
+                    print("can't create {}".format(o_path))
                     sys.exit(1)
 
                 out_band = out_data.GetRasterBand(1)
@@ -164,7 +164,7 @@ def fix_names():
     :return:
     """
 
-    print "RUNNING FIX NAMES FUNCTION"
+    print("RUNNING FIX NAMES FUNCTION")
 
     # start with the output path from the zero_out() function
     root = 'E:\SSEB\monthly_NM'
@@ -176,7 +176,7 @@ def fix_names():
 
         if "-" in filename:
 
-            print "filename", filename
+            print("filename", filename)
 
             namelist = filename.split("-")
             new_filename = "_".join(namelist)
@@ -184,7 +184,7 @@ def fix_names():
             # rename the thing
             os.rename(filename, new_filename)
 
-    print "ALL DONE"
+    print("ALL DONE")
 
 
 def main():

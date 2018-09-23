@@ -45,7 +45,7 @@ def generate_dataset(daterange, out):
         extract_prism(day, *args)
         extract_ndvi(day, *args)
         extract_penman(day, *args)
-        print '----------------- day {} -------------------'.format(day.strftime('%m_%d_%Y'))
+        print('----------------- day {} -------------------'.format(day.strftime('%m_%d_%Y')))
 
 
 # ============= data extract ==================================================
@@ -130,7 +130,7 @@ def _extract(tag, pairs, root, out, geo, bounds):
         arr = raster.masked()
         slice_and_save(p, arr, geo, *bounds)
 
-        print '{} {} reduced'.format(tag, k)
+        print('{} {} reduced'.format(tag, k))
 
 
 def extract_mask(out, geo, bounds):
@@ -139,7 +139,7 @@ def extract_mask(out, geo, bounds):
     arr = raster.masked()
     slice_and_save(p, arr, geo, *bounds)
 
-    print 'mask reduced'
+    print('mask reduced')
 
 
 def make_blank_geo_folder(out):

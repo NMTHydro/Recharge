@@ -44,17 +44,17 @@ FACTORS = ['Temperature', 'Precipitation', 'Reference ET', 'Total Available Wate
 
 def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
     dfs = os.listdir(dataframe)
-    print 'pickled dfs: {}'.format(dfs)
+    print('pickled dfs: {}'.format(dfs))
     filename = 'norm_sensitivity.pkl'
     if filename in dfs:
 
         df = read_pickle(os.path.join(dataframe, filename))
         df.to_csv(os.path.join(fig_path, 'sample_norm_df.csv'))
-        print df
+        print(df)
         xx = 1
 
         for index, row in df.iterrows():
-            print index, row
+            print(index, row)
             base = row[0][5]
             lows = []
             for fact in row:
@@ -101,7 +101,7 @@ def make_tornado_plot(dataframe, factors, show=False, fig_path=None):
 
             # Make the y-axis display the factors
             plt.yticks(ys, factors)
-            print 'location: {}'.format(index)
+            print('location: {}'.format(index))
             plt.title('{} [mm]'.format(index.replace('_', ' ')),
                       y=1.05)
             # Set the portion of the x- and y-axes to show

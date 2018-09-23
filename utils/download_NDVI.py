@@ -43,7 +43,7 @@ for mo in files:
         name = mo[0:7]
         i_file = folder + name + '.hdf'
         o_file = output_folder + name
-        print(name,i_file,o_file)
+        print((name,i_file,o_file))
         os.system('python E:\\PythonGit\\Recharge\\pyModis-2.0.5\\scripts\\modis_convert.py -s "( 1 0 )" -g 250 -r {c} -o {a} -e 26913 {b}'.format(a = o_file,b = i_file, c = 'AVERAGE' ))
 
 
@@ -73,7 +73,7 @@ for haha in files:
         call(WGEW)
         NM = 'gdalwarp  -overwrite -s_srs EPSG:26913 -te 107500 3470500 683500 4259000 -tr 250 250 -r {c} -of GTiff "{a}" {b}'.format(a=file_o, b=output_nm,c = 'average')
         call(NM)
-        print "Done processing {a}".format(a=name)
+        print("Done processing {a}".format(a=name))
 
 
 
@@ -106,4 +106,4 @@ for haha in files:
         repro = 'gdalwarp -overwrite -s_srs EPSG:26712 -t_srs EPSG:26912 -srcnodata -3000 -dstnodata -999 -of GTiff -te 576863 3501109 637613 3519609 -tr 250 250 "{a}" {b}'.format(a=file_o, b=output_w)
         call(repro)
 
-        print "Done processing {a}".format(a=name)
+        print("Done processing {a}".format(a=name))

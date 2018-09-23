@@ -119,7 +119,7 @@ def calculate(series):
         ns = [get_matching_date(di, zip(*cs)) for cs in series] # ns is the matching values
         # if the value is not none...
         ns = [ni for ni in ns if ni is not None]
-        print "Here is your ns {}".format(ns)
+        print("Here is your ns {}".format(ns))
         # calculate the error of the mean for that value.
         if ns:
             return datetime.strptime(di, '%m/%d/%Y'), calculate_sem(ns) #, calculate_avg(ns)
@@ -143,7 +143,7 @@ def main():
     p = 'jornada_data.csv'
     # read the csv in with pandas
     df = pd.read_csv(p, header=72)
-    print df.keys()
+    print(df.keys())
 
     # We use this dictionary to keep track of which locations correspond to which pixels.
     pixel_location_dict = {"000": ["C01", "C02"], "001": ["C03", "C04", "C05", "C06", "C07", "C08", "C09"],

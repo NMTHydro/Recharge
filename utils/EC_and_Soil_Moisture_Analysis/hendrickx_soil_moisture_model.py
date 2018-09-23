@@ -33,14 +33,14 @@ def raster_extract(raster_path):
     :param raster_path: string - path to a raster, probably a GeoTIFF
     :return: raster array
     """
-    print 'raster extract running'
+    print('raster extract running')
     # don't forget to register
     gdal.AllRegister()
 
     datasource_obj = gdal.Open(raster_path, GA_ReadOnly)
     # open the raster datasource
     if datasource_obj is None:
-        print "Can't open the datasource from {}".format(raster_path)
+        print("Can't open the datasource from {}".format(raster_path))
         sys.exit(1)
 
     # get the size of image (for reading)
@@ -60,7 +60,7 @@ def raster_extract(raster_path):
     band = datasource_obj.GetRasterBand(1)
     # get the datatype
     dt = band.DataType
-    print 'here is the data type of the original raster -> {}'.format(dt)
+    print('here is the data type of the original raster -> {}'.format(dt))
     # ReadAsArray(xoffset, yoffset, xcount, ycount)
     data = band.ReadAsArray(0, 0, cols, rows).astype(np.float32)
 
@@ -78,20 +78,20 @@ def stress_function(ETrF):
     :param ETrF:
     :return:
     """
-    print 'stress function running'
+    print('stress function running')
     # Make a RZWF array based on the size of ETrF
     dim = ETrF.shape
 
-    print 'dim', dim
+    print('dim', dim)
 
     RZWF = np.zeros(dim)
 
     bool_75 = ETrF >= 0.75
     bool_lessthan75 = ETrF < 0.75
-    print 'bool less than 75', bool_lessthan75.shape
+    print('bool less than 75', bool_lessthan75.shape)
 
     RZWF[bool_75 != 0] = 1.0
-    print 'rzwf post bool', RZWF.shape
+    print('rzwf post bool', RZWF.shape)
     RZWF[bool_lessthan75 != 0] = (ETrF[bool_lessthan75 != 0]/0.75) * ETrF[bool_lessthan75 != 0] + ((ETrF[bool_lessthan75 != 0])/(2 * 0.75 - ETrF[bool_lessthan75 != 0]))*(1-ETrF[bool_lessthan75 != 0])
 
     # for val in tqdm.tqdm(np.nditer(ETrF)):
@@ -121,7 +121,7 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     # we don't need to do an offset
     output_band.WriteArray(array, 0, 0)
 
-    print 'done writing, Master.'
+    print('done writing, Master.')
 
     # set the geotransform in order to georefference the image
     output_dataset.SetGeoTransform(geotransform)
@@ -150,7 +150,7 @@ def main():
     raster_array, arr_3d, transform, dimensions, projection, datatype = raster_extract(path_to_raster)
     # print timeit.timeit('raster_extract()')
 
-    print 'this is the array', raster_array
+    print('this is the array', raster_array)
 
     RZWF_array = stress_function(raster_array)
 

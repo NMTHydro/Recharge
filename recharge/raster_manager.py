@@ -56,7 +56,7 @@ class RasterManager(object):
         # self._outputs = ('infil', 'etrs', 'eta', 'precip', 'kcb')  # infil change to tot_infil
         if write_freq == 'daily':
             # daily outputs should just be normal fluxes, while _outputs are of simulation totals
-            print 'your daily outputs will be from: {}'.format(cfg.daily_outputs)
+            print('your daily outputs will be from: {}'.format(cfg.daily_outputs))
 
         self._geo = get_raster_geo_attributes(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']), cfg.daily_outputs)
@@ -84,7 +84,7 @@ class RasterManager(object):
 
             # dailys = [(element, Raster.fromarray(master[element] - master['p{}'.format(element)]).unmasked()) for element in self._cfg.daily_outputs]
 
-            print "self tiff ", self._cfg.tiff_shape
+            print("self tiff ", self._cfg.tiff_shape)
             tiff_shp = self._cfg.tiff_shape
             dailys = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=tiff_shp)) for element in
                       self._cfg.daily_outputs]
@@ -94,9 +94,9 @@ class RasterManager(object):
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
-            print "Heres the save dates", self._save_dates
+            print("Heres the save dates", self._save_dates)
             if self._save_dates:
-                print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
+                print('Date object {}. {}'.format(date_object, date_object in self._save_dates))
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
 
@@ -106,7 +106,7 @@ class RasterManager(object):
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
         if date_object.day == mo_date[1]:
-            print 'saving monthly data for {}'.format(date_object)
+            print('saving monthly data for {}'.format(date_object))
             self._set_outputs(outputs, date_object, 'monthly')
 
         # save annual data
@@ -122,8 +122,8 @@ class RasterManager(object):
                 self._sum_raster_by_shape(element, date_object)
 
     def save_csv(self):
-        print 'tab dict: \n{}'.format(self._tabular_dict)
-        print 'saving the simulation master tracker'
+        print('tab dict: \n{}'.format(self._tabular_dict))
+        print('saving the simulation master tracker')
         self._save_tabulated_results_to_csv(self._results_dir, paths.polygons)
 
     def _update_raster_tracker(self, vv, var, period):
@@ -140,7 +140,7 @@ class RasterManager(object):
         if period not in periods:
             msg = 'invalid period "{}" cannot update tracker. period must be one of {}'.format(period, periods)
 
-            print msg
+            print(msg)
             raise NotImplementedError(msg)
 
         tracker = self._output_tracker
@@ -151,10 +151,10 @@ class RasterManager(object):
         elif period == 'monthly':
             ckey, lkey = MONTHLY_TRACKER_KEYS
 
-        print 'ckey={}, lkey={}, period={}'.format(ckey, lkey, period)
-        print 'mean value master {} today: {}'.format(var, vv.mean())
-        print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
-        print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
+        print('ckey={}, lkey={}, period={}'.format(ckey, lkey, period))
+        print('mean value master {} today: {}'.format(var, vv.mean()))
+        print('mean value output tracker today: {}'.format(tracker[ckey][var].mean()))
+        print('mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean()))
 
         tracker[ckey][var] = vv
 
@@ -169,7 +169,7 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)  # TODO - date.day missing!
+        print('Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year))  # TODO - date.day missing!
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         # root = rd['root'] # results directory doesn't have a root; all
@@ -197,8 +197,8 @@ class RasterManager(object):
             array_to_save = None
             filename = None
 
-        print 'saving {} raster to {}'.format(key, filename)
-        print 'written array {} mean value: {}'.format(key, array_to_save.mean())
+        print('saving {} raster to {}'.format(key, filename))
+        print('written array {} mean value: {}'.format(key, array_to_save.mean()))
         convert_array_to_raster(filename, array_to_save, self._geo)
 
     def _sum_raster_by_shape(self, parameter, date, data_arr=None):
@@ -258,8 +258,8 @@ class RasterManager(object):
                 arr_sum = masked_arr.sum()
                 param_cubic_meters = (arr_sum / 1000) * (self._geo['resolution'] ** 2)
                 # ==========================================================================
-                print 'tabular dict: {}'.format(self._tabular_dict)
-                print 'parameter: {}'.format(parameter)
+                print('tabular dict: {}'.format(self._tabular_dict))
+                print('parameter: {}'.format(parameter))
                 # ===========================================================================
                 df = self._tabular_dict[region_type][sub_region][parameter, 'CBM']  # <= problem here
 
@@ -271,7 +271,7 @@ class RasterManager(object):
                 df.loc[date] = param_acre_feet
                 # print 'df for {} on {} = {}'.format(parameter, date, df.loc[date])
                 if param_acre_feet > 0.0:
-                    print '{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet)
+                    print('{} {} {:.2e} AF'.format(sub_region, parameter, param_acre_feet))
 
         return None
 
@@ -283,16 +283,16 @@ class RasterManager(object):
         :param polygons: Folder containing polygon folders of each type of geography (counties, etc.)
         :return: None
         """
-        print('results directories: "{}"'.format(pformat(results_directories, indent=2)))
+        print(('results directories: "{}"'.format(pformat(results_directories, indent=2))))
         folders = os.listdir(polygons)
 
-        print 'polygon directories: "{}"'.format(folders)
+        print('polygon directories: "{}"'.format(folders))
         if not folders:
-            print 'no files/folders in "{}"'.format(polygons)
+            print('no files/folders in "{}"'.format(polygons))
             return
 
         for in_fold in folders:
-            print 'saving tab data for input region: {}'.format(in_fold)
+            print('saving tab data for input region: {}'.format(in_fold))
             region_type = os.path.basename(in_fold).replace('_Polygons', '')
 
             root = os.path.join(polygons, os.path.basename(in_fold))
@@ -301,10 +301,10 @@ class RasterManager(object):
             files = [infile for infile in files if infile.endswith('.shp')]
 
             if not files:
-                print 'no shape files in "{}"'.format(root)
+                print('no shape files in "{}"'.format(root))
                 continue
 
-            print 'tab data from shapes: {}'.format(files)
+            print('tab data from shapes: {}'.format(files))
             for element in files:
                 sub_region = element.strip('.shp')
 
@@ -338,7 +338,7 @@ class RasterManager(object):
                     locations = [save_loc_month, save_loc_annu]
 
                 for df, location in zip(dfs, locations):
-                    print 'this should be your location csv: {}'.format(location)
+                    print('this should be your location csv: {}'.format(location))
                     df.to_csv(location, na_rep='nan', index_label='Date')
 
 # ============= EOF =============================================

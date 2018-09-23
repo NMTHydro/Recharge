@@ -52,7 +52,7 @@ def run():
     #print run_dict
 
     # test
-    print "TAW of third run", run_dict['2']['uniform_taw']
+    print("TAW of third run", run_dict['2']['uniform_taw'])
 
     # TODO - edit the 'uniform_taw' value of all the docs in the config.
     taw = 25
@@ -72,7 +72,7 @@ def run():
 
     # YAY it works now...
 
-    print run_dict
+    print(run_dict)
 
     # TODO - rewrite the config file.
 
@@ -82,7 +82,7 @@ def run():
     for i in range (0, len(doclist)):
         doclist_new.append(run_dict["{}".format(i)])
 
-    print "new edited doclist", doclist_new
+    print("new edited doclist", doclist_new)
 
     # Maybe just rewrite the config file old-school
     with open('/Users/Gabe/ETRM_CONFIG_45_gabe_2.yml', 'w') as writefile:

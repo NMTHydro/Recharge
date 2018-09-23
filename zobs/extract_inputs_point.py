@@ -40,7 +40,7 @@ def extract_etrm_point_inputs(input_root, output_root, simulation_period):
     shapefile = os.path.join('/Users', 'Gabe', 'Desktop', 'QGIS_Ameriflux', 'coords_attempt3.shp')
     # shape = os.path.join(sa_path, 'amf_sites_UTM.shp')
 
-    print("Here is the save path {}".format(output_root))
+    print(("Here is the save path {}".format(output_root)))
     get_dynamic_inputs_from_shape(shapefile, simulation_period, output_root)
 
 
