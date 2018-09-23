@@ -17,7 +17,7 @@
 # ============= standard library imports ========================
 import os
 
-#from recharge.raster_tools import convert_raster_to_array
+#from etrm.raster_tools import convert_raster_to_array
 from collections import defaultdict
 
 import numpy as np

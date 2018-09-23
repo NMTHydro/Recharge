@@ -14,7 +14,7 @@
 # limitations under the License.
 # ===============================================================================
 """
-The purpose of this module is to calculate recharge over a defined geographic area.
+The purpose of this module is to calculate etrm over a defined geographic area.
 
 This will save output monthly and annually.  Folders ending in '_Polygons' are put in the location
 'raster_out_data.'

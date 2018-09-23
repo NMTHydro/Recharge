@@ -21,11 +21,11 @@ before_install:
 
 install:
   - conda env create -f travis_environment.yml
-  - source activate recharge
+  - source activate etrm
   - pip install codecov coverage
 
 script:
-  - export GDAL_DATA=/home/travis/miniconda2/envs/recharge/share/gdal
+  - export GDAL_DATA=/home/travis/miniconda2/envs/etrm/share/gdal
   - coverage run setup.py test
 
 after_success:

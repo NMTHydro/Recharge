@@ -1,4 +1,4 @@
-name: recharge
+name: etrm
 channels:
 - defaults
 dependencies:
@@ -69,5 +69,5 @@ dependencies:
   - pdfrw==0.2
   - recommonmark==0.4.0
   - sphinx-rtd-theme==0.1.9
-prefix: //anaconda/envs/recharge
+prefix: //anaconda/envs/etrm
 

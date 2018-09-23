@@ -668,7 +668,7 @@ class Processes(object):
                 ro = where(m['rain'] > 30, 0, ro)
         m['ro'] = ro
 
-        # Calculate Deep Percolation (recharge or infiltration)
+        # Calculate Deep Percolation (etrm or infiltration)
         m['infil'] = dp = maximum(water - ro - et_actual - pdr, 0)
 
         # Calculate depletion in TAW, full root zone
@@ -1154,13 +1154,13 @@ class Processes(object):
     #
     #     print 'total inputs (swe, rain, melt): {}'.format(input_sum)
     #     print 'swe + melt + rain ({}) should equal precip ({})'.format(input_sum, ps)
-    #     print 'total runoff = {}, total recharge = {}'.format(ros, infils)
+    #     print 'total runoff = {}, total etrm = {}'.format(ros, infils)
     #
     #     output_sum = ts + et + ros + infils
     #
     #     output_sum += delta_soil_water + rswe  # added swe to output_sum; Dan, 2/11/17
     #
-    #     print 'total outputs (transpiration, evaporation, runoff, recharge, delta soil water) = {}'.format(output_sum)
+    #     print 'total outputs (transpiration, evaporation, runoff, etrm, delta soil water) = {}'.format(output_sum)
     #     mass_balance = input_sum - output_sum
     #     mass_percent = (mass_balance / input_sum) * 100
     #     print 'overall water balance for {}: {} mm, or {} percent'.format(name, mass_balance, mass_percent)

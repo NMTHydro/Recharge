@@ -17,8 +17,8 @@ import os
 from datetime import datetime
 from pandas import concat, DataFrame
 
-from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series # from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series
-from recharge.etrm_processes import Processes   # from recharge.etrm_processes import Processes
+from recharge.time_series_manager import amf_obs_time_series, get_etrm_time_series # from etrm.time_series_manager import amf_obs_time_series, get_etrm_time_series
+from recharge.etrm_processes import Processes   # from etrm.etrm_processes import Processes
 
 SIMULATION_PERIOD = datetime(2007, 1, 1), datetime(2013, 12, 29) # my-hard coding in time_series manager has disabled this function.
 

@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2016 Jake Ross
+# Copyright 2018 dgketchum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,40 @@
 
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
-from setuptools import setup
 
-setup(name='Recharge',
-      version='0.1',
-      py_modules=[],
-      packages=['recharge', 'app'],
-      test_suite='recharge.test_suite.suite', requires=['numpy', 'pandas', 'matplotlib', 'affine'])
+try:
+      from setuptools import setup
+except ImportError:
+      from distutils.core import setup
+
+with open('README.txt') as f:
+      readme = f.read()
+
+tag = '0.0.1'
+
+setup(name='etrm',
+      version=tag,
+      description='Model evapotranspiraton using soil, remote sensing, and meteorology inputs',
+      long_description=readme,
+      setup_requires=[],
+      py_modules=['app', 'etrm', 'runners'],
+      license='Apache',
+      classifiers=[
+            'Intended Audience :: Science/Research',
+            'Topic :: Scientific/Engineering :: GIS',
+            'License :: OSI Approved :: Apache Software License',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3.6'],
+      keywords='landsat gridded meteorology hydrology remote sensing soil water balance',
+      author='David Ketchum',
+      author_email='dgketchum@gmail.com',
+      platforms='Posix; MacOS X; Windows',
+      packages=['app', 'etrm', 'runners'],
+      download_url='https://github.com/{}/{}/archive/dgk.zip'.format('nmthydro', 'recharge', tag),
+      url='https://github.com/nmthydro/Recharge/tree/dgk',
+      test_suite='tests.test_suite.suite',
+      install_requires=['numpy', 'pandas', 'requests', 'future', 'xarray', 'pyproj', 'gdal', 'xlrd',
+                        'netcdf4'],
+      )
 
 # ============= EOF =============================================

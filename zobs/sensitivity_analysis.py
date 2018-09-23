@@ -130,7 +130,7 @@ def get_sensitivity_analysis(extracts, points, statics, initials, pickle=None):
     # tot_data : precip, et, tot_transp, tot_evap, infil, runoff, snow_fall, cum_mass, end_mass
 
     # "SI = [Q(Po + delP] -Q(Po - delP] / (2 * delP)"
-    # where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter,
+    # where SI = Sensitivity Index, Q = etrm, Po = base value of input parameter,
     # delP = change in value input
     # find sensitivity index
 

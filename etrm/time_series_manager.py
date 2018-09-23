@@ -51,7 +51,7 @@ def load_df(path):
 
 def get_etrm_time_series(input_root, dict_):
     """
-    Read pre-extracted data out of a formatted csv.  Use recharge.point_extract_utility.py to do extract.
+    Read pre-extracted data out of a formatted csv.  Use etrm.point_extract_utility.py to do extract.
 
     :param input_root: path to a folder of csv files.
     :param dict_: dict of point locations

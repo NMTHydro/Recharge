@@ -21,7 +21,7 @@
 # import rasterio.tools.mask as maskit
 # from rasterio import features
 
-#from recharge.raster_tools import convert_raster_to_array
+#from etrm.raster_tools import convert_raster_to_array
 import operator
 from osgeo import gdal, gdalnumeric, ogr, osr
 from PIL import Image, ImageDraw

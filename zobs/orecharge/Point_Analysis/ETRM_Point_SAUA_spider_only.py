@@ -150,7 +150,7 @@ for var_arr in var_arrs:
     yy += 1
 
 # "SI = [Q(Po + delP] -Q(Po - delP] / (2 * delP)"
-# where SI = Sensitivity Index, Q = recharge, Po = base value of input parameter, delP = change in value of input var
+# where SI = Sensitivity Index, Q = etrm, Po = base value of input parameter, delP = change in value of input var
 # find sensitivity index
 
 xx = 0
