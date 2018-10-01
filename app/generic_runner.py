@@ -33,7 +33,12 @@ CLI_ENABLED = False
 
 
 def run_dataset():
-    print 'Running Dataset'
+    """
+    This function produces a reduced area data set of all inputs
+    based on the mask identified in the Config file.
+    :return:
+    """
+    print 'Generating Reduced Dataset'
 
     cfg = Config()
     for runspec in cfg.runspecs:
