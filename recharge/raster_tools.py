@@ -119,6 +119,10 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
     # unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
     # convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
+def convert_array_to_netcdf(output_path, arr, geo, output_band=1):
+    """"""
+    # TODO - Subroutine: initializes netcdf or appends to netcdf array for a given run. Maybe rethink design...
+    pass
 
 def convert_array_to_raster(output_path, arr, geo, output_band=1):
     driver = gdal.GetDriverByName('GTiff')

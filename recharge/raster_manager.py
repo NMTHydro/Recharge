@@ -91,6 +91,13 @@ class RasterManager(object):
 
             # print 'new dailys -> {}'.format(dailys)
 
+            # TODO - Subroutine: For the daily outputs, we should have another parameter here that if triggered will
+            #  output every daily output as a net cdf. We should write a new method in raster_manager to handle
+            #  net cdf outputs (as is done in _set_outputs())
+
+            # To eventually generate a NetCDF
+            self._set_daily_outputs(dailys, date_object, 'daily')
+
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
@@ -112,6 +119,12 @@ class RasterManager(object):
         # save annual data
         if date_object.month == 12 and date_object.day == 31:
             self._set_outputs(outputs, date_object, 'annual')
+
+    def _set_daily_outputs(self, outputs, date_object, period):
+        for element, arr in outputs:
+            self._write_net_cdf(element, date_object, period=period)
+        # TODO - Subroutine: Finish this out
+        pass
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
@@ -158,6 +171,22 @@ class RasterManager(object):
 
         tracker[ckey][var] = vv
 
+    def _write_net_cdf(self, key, date, period=None, master=None):
+        """"""
+        # TODO - Subroutine: A function to append to the netcdf file for a given run
+
+        rd = self._results_dir
+        tracker = self._output_tracker
+
+        name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year) # todo - come up with a fix for this
+        filename = os.path.join(rd['daily_rasters'], name)
+
+        array_to_save = tracker[CURRENT_DAY][key]
+
+        convert_array_to_netcdf(filename, array_to_save, self._geo)
+
+        pass
+
     def _write_raster(self, key, date, period=None, master=None):
         """
         get array from tracker and save to file
@@ -169,7 +198,7 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)  # TODO - date.day missing!
+        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         # root = rd['root'] # results directory doesn't have a root; all

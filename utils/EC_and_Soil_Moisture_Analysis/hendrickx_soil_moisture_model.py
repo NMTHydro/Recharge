@@ -27,6 +27,7 @@ import timeit
 
 # ============= local library imports ===========================
 
+
 def raster_extract(raster_path):
     """
 
@@ -106,22 +107,31 @@ def stress_function(ETrF):
 def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, datatype):
     """
 
+    :param array:
+    :param geotransform:
+    :param output_path:
+    :param output_filename:
+    :param dimensions:
+    :param projection:
+    :param datatype:
     :return:
     """
+
     filename = os.path.join(output_path, output_filename)
 
     driver = gdal.GetDriverByName('GTiff')
     # path, cols, rows, bandnumber, data type (if not specified, as below, the default is GDT_Byte)
+
     output_dataset = driver.Create(filename, dimensions[0], dimensions[1], 1, GDT_Float32)
-
-
 
     # we write TO the output band
     output_band = output_dataset.GetRasterBand(1)
+
     # we don't need to do an offset
     output_band.WriteArray(array, 0, 0)
 
     print 'done writing, Master.'
+
 
     # set the geotransform in order to georefference the image
     output_dataset.SetGeoTransform(geotransform)
@@ -141,31 +151,36 @@ def main():
     """
 
     # testing
-    path_to_raster = 'C:\Users\Mike\Downloads\LT50330362009194PAC02_ETrF.etrf.tif'
+    path_to_raster = '/Users/Gabe/Desktop/NM_DEM_slope/test_RZSM_processing/original_EEFLUX_images_20090713' \
+                     '/LT50330362009194PAC02_ETrF/LT50330362009194PAC02_ETrF.etrf.tif'
 
     output_filename ='LT50330362009194PAC02_RZWF.tif'
 
     output_path = '/Users/Gabe/Desktop/NM_DEM_slope/test_RZSM_processing'
 
     raster_array, arr_3d, transform, dimensions, projection, datatype = raster_extract(path_to_raster)
-    # print timeit.timeit('raster_extract()')
 
-    print 'this is the array', raster_array
 
-    RZWF_array = stress_function(raster_array)
+    print 'This is the Transform', transform
 
-    arr_3d_RZWF = np.zeros(arr_3d.shape)
-
-    arr_3d_RZWF[:, :, 0] = RZWF_array
-
-    # map_plot = plt.imshow(arr_3d[:, :, 0])
-    # plt.show()
+    # # print timeit.timeit('raster_extract()')
     #
-    # rzwf_plot = plt.imshow(arr_3d_RZWF[:, :, 0])
-    # plt.show()
-
-    # now we write the raster to a file.
-    write_raster(RZWF_array, transform, output_path, output_filename, dimensions, projection, datatype)
+    # print 'this is the array', raster_array
+    #
+    # RZWF_array = stress_function(raster_array)
+    #
+    # arr_3d_RZWF = np.zeros(arr_3d.shape)
+    #
+    # arr_3d_RZWF[:, :, 0] = RZWF_array
+    #
+    # # map_plot = plt.imshow(arr_3d[:, :, 0])
+    # # plt.show()
+    # #
+    # # rzwf_plot = plt.imshow(arr_3d_RZWF[:, :, 0])
+    # # plt.show()
+    #
+    # # now we write the raster to a file.
+    # write_raster(RZWF_array, transform, output_path, output_filename, dimensions, projection, datatype)
 
 
 if __name__ == "__main__":
