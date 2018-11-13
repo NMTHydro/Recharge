@@ -119,7 +119,11 @@ def rzs_mapper(output_path, taw_path, taw_unmod_path, de_path, dr_path, drew_pat
     # unmod_soil_arr = remake_array(mask_path, unmod_soil_arr)
     # convert_array_to_raster('/Users/Gabe/Desktop/gdal_raster_output/testifle.tif', unmod_soil_arr, geo_thing)
 
-def convert_array_to_netcdf(output_path, arr, geo, output_band=1):
+def initialize_net_cdf(output_path, arr, geo, output_band=1):
+    # TODO - Subroutine: initializes netcdf or appends to netcdf array for a given run. Maybe rethink design...
+    pass
+
+def append_array_to_netcdf(output_path, arr, geo, output_band=1):
     """"""
     # TODO - Subroutine: initializes netcdf or appends to netcdf array for a given run. Maybe rethink design...
     pass
@@ -132,6 +136,9 @@ def convert_array_to_raster(output_path, arr, geo, output_band=1):
     out_data_set.SetProjection(geo['projection'])
 
     output_band = out_data_set.GetRasterBand(output_band)
+    print 'size of array', arr.shape
+    print 'cols {} and rows {}'.format(geo['cols'], geo['rows'])
+    print 'geotransform {}'.format(geo['geotransform'])
     output_band.WriteArray(arr, 0, 0)
     del out_data_set, output_band
 
@@ -294,7 +301,7 @@ def make_results_dir(out_root=None, shapes=None):
     """
 
     empties = ('annual_rasters', 'monthly_rasters', 'simulation_tot_rasters', 'annual_tabulated',
-               'monthly_tabulated', 'daily_tabulated', 'daily_rasters')
+               'monthly_tabulated', 'daily_tabulated', 'daily_rasters', 'numpy_arrays')
 
     if out_root is None:
         out_root = paths.results_root

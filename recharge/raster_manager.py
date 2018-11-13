@@ -30,7 +30,7 @@ from calendar import monthrange
 
 import gdal
 import ogr
-from numpy import array, where, zeros, nonzero, mean, amax
+from numpy import array, where, zeros, nonzero, mean, amax, save
 
 from app.paths import paths
 from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
@@ -38,13 +38,14 @@ from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_T
 from recharge.dict_setup import initialize_tabular_dict, initialize_raster_tracker
 from recharge.raster import Raster
 from recharge.raster_tools import get_raster_geo_attributes
-from recharge.raster_tools import make_results_dir, convert_array_to_raster
+from recharge.raster_tools import make_results_dir, convert_array_to_raster, append_array_to_netcdf, initialize_net_cdf
 
 
 class RasterManager(object):
     _save_dates = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, taw):
+        self.uniform_taw = taw
         self._cfg = cfg
         self._write_freq = write_freq = cfg.write_freq
         self._simulation_period = simulation_period = cfg.date_range
@@ -86,17 +87,19 @@ class RasterManager(object):
 
             print "self tiff ", self._cfg.tiff_shape
             tiff_shp = self._cfg.tiff_shape
+
+            # TODO - 'rzsm' needs to be in daily outputs for this to work.
             dailys = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=tiff_shp)) for element in
                       self._cfg.daily_outputs]
-
             # print 'new dailys -> {}'.format(dailys)
 
-            # TODO - Subroutine: For the daily outputs, we should have another parameter here that if triggered will
-            #  output every daily output as a net cdf. We should write a new method in raster_manager to handle
-            #  net cdf outputs (as is done in _set_outputs())
+            # TODO - Subroutine:
 
-            # To eventually generate a NetCDF
-            self._set_daily_outputs(dailys, date_object, 'daily')
+            if self.uniform_taw is not None:
+                # getting the TAW value
+                taw_value = self.uniform_taw
+                # To eventually generate .npy files for each day
+                self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
@@ -112,6 +115,8 @@ class RasterManager(object):
 
         # save monthly data
         # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
+
+        # TODO - I don't think these should run automatically GELP
         if date_object.day == mo_date[1]:
             print 'saving monthly data for {}'.format(date_object)
             self._set_outputs(outputs, date_object, 'monthly')
@@ -120,14 +125,14 @@ class RasterManager(object):
         if date_object.month == 12 and date_object.day == 31:
             self._set_outputs(outputs, date_object, 'annual')
 
-    def _set_daily_outputs(self, outputs, date_object, period):
+    def _set_daily_outputs(self, outputs, date_object, taw_value, period):
         for element, arr in outputs:
-            self._write_net_cdf(element, date_object, period=period)
-        # TODO - Subroutine: Finish this out
-        pass
+            self._write_numpy_array(element, date_object, taw_value, period=period)
+        # TODO - Subroutine:
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
+            # TODO - issue with tiny mask here. Don't undo the mask then?
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)
 
@@ -171,21 +176,39 @@ class RasterManager(object):
 
         tracker[ckey][var] = vv
 
-    def _write_net_cdf(self, key, date, period=None, master=None):
-        """"""
-        # TODO - Subroutine: A function to append to the netcdf file for a given run
+    def _write_numpy_array(self, key, date, taw_value, period=None, master=None):
+        """
+        Writes a numpy array directly as a pickled .npy file for use in a TAW optimization subroutine. Enabled by the
+         configuration uniform TAW being specified in ETRM_CONFIG.yml
 
+        :param key: the parameter being saved for example ETa or RZSM
+        :param date: datetime object
+        :param taw_value: the taw interger supplied by uniform_taw
+        :param period: 'daily' in this case
+        :param master: optional master dict?
+        :return:
+        """
+        # TODO - Subroutine:
         rd = self._results_dir
         tracker = self._output_tracker
 
-        name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year) # todo - come up with a fix for this
-        filename = os.path.join(rd['daily_rasters'], name)
+        # filename fontaining the name of parameter saved, the taw value and the date
+        name = 'ETRM_daily_{}_taw_{}_{}_{}_{}.npy'.format(key, taw_value, date.day, date.month, date.year)
+        filename = os.path.join(rd['numpy_arrays'], name)
 
         array_to_save = tracker[CURRENT_DAY][key]
 
-        convert_array_to_netcdf(filename, array_to_save, self._geo)
+        # numpy save as a pickled .npy file
+        save(filename, array_to_save, allow_pickle=True)
 
-        pass
+        # # if the net cdf file is not already there...
+        # if not os.path.isfile(filename):
+        #     # ...then create it
+        #     initialize_net_cdf(filename, array_to_save, self._geo)
+        # else:
+        #     # Otherwise, append the array to the netcdf
+        #     append_array_to_netcdf(filename, array_to_save, self._geo)
+        # pass
 
     def _write_raster(self, key, date, period=None, master=None):
         """

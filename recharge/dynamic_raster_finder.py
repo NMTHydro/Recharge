@@ -227,7 +227,7 @@ def get_prism(date_object, variable='precip', is_reduced = False):
         if is_reduced:
             root = os.path.join('Temp', 'Maximum_standard')
             tail = '{}{:02n}' \
-                   '  {:02n}.tif'.format(year, date_object.month, date_object.day)
+                   '{:02n}.tif'.format(year, date_object.month, date_object.day)#'  {:02n}.tif'.format(year, date_object.month, date_object.day)
             name = 'max_temp_{}'.format(tail)
         else:
             if is_walnut_gulch:

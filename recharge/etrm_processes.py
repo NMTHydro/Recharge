@@ -70,9 +70,10 @@ class Processes(object):
 
     _is_configured = False
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, taw=None):
         # JIR
         # self.tracker = None
+        self.taw = taw
         self.point_tracker = None
         self._initial_depletions = None
 
@@ -114,7 +115,7 @@ class Processes(object):
         shape = self._static['taw'].shape  # Here's where the shape of the grid is determined GELP
         self._master = initialize_master_dict(shape)
 
-        self._raster_manager = RasterManager(cfg)
+        self._raster_manager = RasterManager(cfg, self.taw)
 
         self.initialize()
 

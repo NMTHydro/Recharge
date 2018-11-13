@@ -128,7 +128,7 @@ def _extract(tag, pairs, root, out, geo, bounds):
         raster = Raster(pair, root=root)
         p = make_reduced_path(out, tag, k)
         arr = raster.masked()
-        slice_and_save(p, arr, geo, *bounds)
+        slice_and_save(p, arr, geo, *bounds) # TODO - GELP
 
         print '{} {} reduced'.format(tag, k)
 
@@ -195,7 +195,7 @@ def slice_and_save(p, arr, geo, startc, endc, startr, endr):
     if not os.path.isdir(os.path.dirname(p)):
         os.makedirs(os.path.dirname(p))
     raster = Raster.fromarray(arr)
-    marr = raster.unmasked()
+    marr = raster.unmasked(arr.shape) # todo - GELP: unmasked() modification causing error in reduce_dataset()
     marr = marr[slice(startr, endr), slice(startc, endc)]
     # print 'saving {}'.format(p)
     raster.save(p, marr, geo)

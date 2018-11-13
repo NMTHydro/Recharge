@@ -127,12 +127,12 @@ class Paths:
                  'etrm_output_root',
                  'prism',
                  'ndvi',
-                 'ndvi_std_all',
                  'ndvi_individ',
-                 'ndvi_spline',
                  'penman',
                  'static_inputs',
                  'initial_inputs')
+
+        # GELP removed  'ndvi_spline', 'ndvi_std_all' on Nov 9, 2018
 
         nonfound = []
         for attr in attrs:

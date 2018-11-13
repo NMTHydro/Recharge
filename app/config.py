@@ -79,9 +79,6 @@ yplot: ['rain', 'eta', 'rzsm'] # (default) OPTIONS -> anything in master dict.
 # # === TAW parametrization (default is commented out) ====
 # taw_modification: 1.0 # (default) Will increase TAW by a specified factor.
 # uniform_taw: 25 # changes entire raster to a given TAW value
-
----
-
 '''
 
 DATETIME_FMT = '%m/%d/%Y'

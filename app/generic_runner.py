@@ -59,7 +59,8 @@ def run_model(cfg_path=None):
         # TODO - make a modified make_results_dir to only create of the 'outer' folder.
         make_results_dir(runspec.output_root)
         paths.build(runspec.input_root, runspec.output_root)
-        etrm = Processes(runspec)
+        taw = runspec.uniform_taw
+        etrm = Processes(runspec, taw)
         etrm.configure_run(runspec)
         etrm.run()
 
@@ -128,6 +129,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         run()
     else:
+        print 'the path should be {}'.format(sys.argv[1])
         run(cfg_path=sys.argv[1])
     # run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
 

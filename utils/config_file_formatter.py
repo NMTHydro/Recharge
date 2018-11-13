@@ -61,7 +61,7 @@ def run():
             #print value
             if key == "uniform_taw":
                 run_dict["{}".format(i)]["{}".format(key)] = taw
-                taw += 45
+                taw += 25
                 #print "TAW", taw
 
     # did it work?
