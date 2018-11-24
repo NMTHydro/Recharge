@@ -90,5 +90,5 @@ def run():
                  ymin, xmax,ymax, input_path, output_path)
 
 
-if __name__== "__main__":
+if __name__ == "__main__":
     run()

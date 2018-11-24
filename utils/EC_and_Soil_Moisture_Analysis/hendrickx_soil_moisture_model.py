@@ -20,10 +20,6 @@ import gdal
 import sys
 import numpy as np
 from gdalconst import *
-from matplotlib import pyplot as plt
-# from matplotlib import image as mpimg
-import pandas as pd
-import timeit
 
 # ============= local library imports ===========================
 
@@ -89,10 +85,10 @@ def stress_function(ETrF):
 
     bool_75 = ETrF >= 0.75
     bool_lessthan75 = ETrF < 0.75
-    print 'bool less than 75', bool_lessthan75.shape
+    # print 'bool less than 75', bool_lessthan75.shape
 
     RZWF[bool_75 != 0] = 1.0
-    print 'rzwf post bool', RZWF.shape
+    # print 'rzwf post bool', RZWF.shape
     RZWF[bool_lessthan75 != 0] = (ETrF[bool_lessthan75 != 0]/0.75) * ETrF[bool_lessthan75 != 0] + ((ETrF[bool_lessthan75 != 0])/(2 * 0.75 - ETrF[bool_lessthan75 != 0]))*(1-ETrF[bool_lessthan75 != 0])
 
     # for val in tqdm.tqdm(np.nditer(ETrF)):
