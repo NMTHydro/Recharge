@@ -49,25 +49,37 @@ def create_rzsmf_obs(array_path, out_root, start_date, end_date):
 
     for i in range(total_days):
         current_date = start_date + datetime.timedelta(days=i)
+        print 'day is', current_date
+
         # print 'current date', current_date
+        # # === This method for generating rzsmf from Jan's model. May not make sense for synthetic data. ===
+        # eta = "ETRM_daily_eta_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month, current_date.year)
+        # etrs = "ETRM_daily_etrs_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month,
+        #                                                     current_date.year)
+        # # read the arrays,
+        # eta_arr = np.load(os.path.join(array_path, eta))
+        # etrs_arr = np.load(os.path.join(array_path, etrs))
+        #
+        # # add progressive noise to eta_arr. Sigma = 0.02
+        # normal_eta_noise_array = np.random.normal(0.00, 0.02, eta_arr.shape)
+        # eta_noise = eta_arr * normal_eta_noise_array
+        # eta_arr_noise_added = eta_arr + eta_noise
+        #
+        # # make the etrf array
+        # etrf_arr = eta_arr_noise_added / etrs_arr
+        #
+        # # apply Jan's stress function
+        # rzswf = stress_function(ETrF=etrf_arr)
 
-        eta = "ETRM_daily_eta_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month, current_date.year)
-        etrs = "ETRM_daily_etrs_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month,
-                                                            current_date.year)
-        # read the arrays
-        eta_arr = np.load(os.path.join(array_path, eta))
-        etrs_arr = np.load(os.path.join(array_path, etrs))
+        rzsm = "ETRM_daily_rzsm_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month, current_date.year)
 
-        # get the etrf array
-        etrf_arr = eta_arr / etrs_arr
+        # keep rzsmf naming convention instead of rzsm to distinguish
+        rzswf_arr = np.load(os.path.join(array_path, rzsm))
 
-        # apply Jan's stress function
-        rzswf = stress_function(ETrF=etrf_arr)
-
-        # add 'progressive' noise to rzswf. Sigma = 0.005
-        normal_noise_array = np.random.normal(0.00, 0.005, rzswf.shape)
-        noise = rzswf * normal_noise_array
-        rzswf_error_added = rzswf + noise
+        # add 'progressive' noise to rzswf. Sigma = 0.02
+        normal_noise_array = np.random.normal(0.00, 0.02, rzswf_arr.shape)
+        noise = rzswf_arr * normal_noise_array
+        rzswf_error_added = rzswf_arr + noise
 
         rzswf_name = "synthetic_rzswf_obs_taw_{}_{}_{}_{}.npy".format(taw, current_date.day, current_date.month,
                                                                       current_date.year)
@@ -99,12 +111,13 @@ def data_finder(etrm_root, runs, year, out_root, start_date, end_date, rzsm=Fals
 
 def main():
 
-    etrm_root = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/taw_optimization_etrm_outputs"
+    etrm_root = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
+                "taw_optimization_etrm_outputs_nov_28_2percent"
 
     output_root = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
-                  "taw_optimization_synthetic_observations"
+                  "taw_optimization_synthetic_observations_nov_28_2percent"
 
-    # if rzsm is true we create ETrF and convert to RZSM usin Jan Hendrickx's stress function. If false or not
+    # if rzsm is true we create ETrF and convert to RZSM using Jan Hendrickx's stress function. If false or not
     # specified, we generate synthetic ETa observations.
     rzsm = True
 
@@ -123,3 +136,15 @@ def main():
 if __name__ == '__main__':
 
     main()
+
+    # # to test for zero arrays
+    # output_root = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
+    #               "taw_optimization_synthetic_observations_nov_27_2percent"
+    #
+    # for file in os.listdir(output_root):
+    #
+    #     arr = np.load(os.path.join(output_root, file))
+    #
+    #     print 'this is the array \n', arr
+    #
+    #     print 'this is the average value: {}'.format(np.average(arr))

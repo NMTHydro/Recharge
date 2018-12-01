@@ -8,7 +8,7 @@ from datetime import timedelta
 
 print 'hello world'
 
-def write_raster(array, geotransform, output_path, output_filename, dimensions, projection):
+def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, flip_arr=False):
     """
     Write raster outputs a Geotiff to a specified location.
 
@@ -16,12 +16,13 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     :param geotransform: a list of intergers containing information about the size and resolution of the raster
     :param output_path: path where you want to output the raster.
     :param output_filename:
-    :param dimensions: x and y dimensions of the raster
+    :param dimensions: x and y dimensions of the raster as a tuple
     :param projection: geographic projection string
     :param datatype: NA
     :return: NA
     """
     filename = os.path.join(output_path, output_filename)
+    print 'writing to location {}'.format(filename)
 
     driver = gdal.GetDriverByName('GTiff')
     # path, cols, rows, bandnumber, data type (if not specified, as below, the default is GDT_Byte)
@@ -29,9 +30,11 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
 
     # we write TO the output band
     output_band = output_dataset.GetRasterBand(1)
+
+    if flip_arr:
+        array = np.flipud(array)
+        print 'shape of transpose', array.shape
     # we don't need to do an offset
-    array = np.flipud(array)# todo - transpose can't be right
-    print 'shape of transpose', array.shape
     output_band.WriteArray(array, 0, 0)
 
     print 'done writing, Master.'
@@ -140,7 +143,7 @@ def process_netcdf(path, output_path, projection, name_string):
         outputfilename = "{}{}_{}.tif".format(name_string, tup[0], tup[1])
         array = et_arr[ind]
         print 'size of the array', array.shape
-        write_raster(array, transform, output_path, outputfilename, dimensions, projection)
+        write_raster(array, transform, output_path, outputfilename, dimensions, projection, flip_arr=True)
 
 
 

@@ -208,11 +208,11 @@ def run():
     # path to directory where output config will go:
     output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder"
     # starting TAW value
-    begin_taw = 25
+    begin_taw = 200
     # ending TAW value
-    end_taw = 2000
+    end_taw = 900
     # grid search step size. Each ETRM run will increase the uniform TAW of the RZSW holding capacity by this many mm.
-    taw_step = 25
+    taw_step = 100
 
     # format and output a config file to generate ETRM outputs based on a changing TAW value.
     taw_grid_search(config_path, output_path, begin_taw, end_taw, taw_step)

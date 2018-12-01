@@ -33,6 +33,9 @@ def get_synthetics(list_of_taws, list_of_dates, synpath):
 
     rand_taw = list_of_taws[random_index]
 
+    # hardcoded to do a realistic taw
+    rand_taw = '250'
+
     synthetic_file_list = []
     for date in list_of_dates:
         file_name = 'synthetic_rzswf_obs_taw_{}_{}_{}_{}.npy'.format(rand_taw, date.day, date.month, date.year)
@@ -174,20 +177,25 @@ rzsm = True
 if __name__ =="__main__":
 
     # the path to the results dataset
-    results_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/taw_optimization_etrm_outputs"
+    results_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
+                   "taw_optimization_etrm_outputs_nov_28_2percent"
 
     # the path to the synthetic dataset
-    synpath = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/taw_optimization_synthetic_observations"
+    synpath = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
+              "taw_optimization_synthetic_observations_nov_28_2percent"
+
     # the path to the config file used to run the model
     config = '/Users/Gabe/ETRM_CONFIG.yml'
     # the number of days we want from each growing season
-    n = 5
+    n = 10
+
     if synthetic_mode:
         synthetic_obs, pyrana_results = run_synthetic(synpath, results_path, n, config, rzsm)
 
     else:
         # todo - make run once we have real results.
         run()
+
     # put the observations in the results dictionary
     pyrana_results['obs'] = synthetic_obs
 

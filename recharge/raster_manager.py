@@ -30,7 +30,7 @@ from calendar import monthrange
 
 import gdal
 import ogr
-from numpy import array, where, zeros, nonzero, mean, amax, save
+from numpy import array, where, zeros, nonzero, mean, amax, save, average
 
 from app.paths import paths
 from recharge import OUTPUTS, ANNUAL_TRACKER_KEYS, DAILY_TRACKER_KEYS, MONTHLY_TRACKER_KEYS, \
@@ -93,13 +93,6 @@ class RasterManager(object):
                       self._cfg.daily_outputs]
             # print 'new dailys -> {}'.format(dailys)
 
-            # TODO - Subroutine:
-
-            if self.uniform_taw is not None:
-                # getting the TAW value
-                taw_value = self.uniform_taw
-                # To eventually generate .npy files for each day
-                self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
@@ -109,6 +102,13 @@ class RasterManager(object):
                 print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
+
+            # TODO - Subroutine -celp changed from line 96 to current position Nov 18:
+            if self.uniform_taw is not None:
+                # getting the TAW value
+                taw_value = self.uniform_taw
+                # To eventually generate .npy files for each day
+                self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in self._cfg.daily_outputs]
         # print 'outputs rm {}'.format(outputs)
@@ -127,12 +127,16 @@ class RasterManager(object):
 
     def _set_daily_outputs(self, outputs, date_object, taw_value, period):
         for element, arr in outputs:
+            # GELP TEST
+            # todo - does this mess things up?
+            self._update_raster_tracker(arr, element, period=period)
             self._write_numpy_array(element, date_object, taw_value, period=period)
         # TODO - Subroutine:
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
             # TODO - issue with tiny mask here. Don't undo the mask then?
+            # TODO - Subroutine, am i getting zero arrays because I have not updated the raster tracker yet?
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)
 
@@ -197,6 +201,8 @@ class RasterManager(object):
         filename = os.path.join(rd['numpy_arrays'], name)
 
         array_to_save = tracker[CURRENT_DAY][key]
+        if average(array_to_save) == 0.0:
+            print 'zero warning, array is zero'
 
         # numpy save as a pickled .npy file
         save(filename, array_to_save, allow_pickle=True)
