@@ -37,7 +37,7 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     # we don't need to do an offset
     output_band.WriteArray(array, 0, 0)
 
-    print 'done writing, Master.'
+    print 'done writing.'
 
     # set the geotransform in order to georefference the image
     output_dataset.SetGeoTransform(geotransform)

@@ -19,6 +19,7 @@ import os
 from osgeo import ogr, gdal
 import sys
 from datetime import datetime
+from datetime import date
 import pandas as pd
 
 # ============= local library imports ===========================
@@ -161,18 +162,15 @@ def raster_extract(raster_path, x, y):
     return value
 
 
-def run_point_extract():
-    """"""
-    #===paths====
+def run_point_extract(point_path, raster_path, ending, landsat=False, sseb=False, output_path=None):
+    """
 
-    # output location
-    output_path = '/Users/Gabe/Desktop/juliet_stuff/remote_sensing_data_extraction/output'
-
-    # path to a single point shapefile:
-    point_path = '/Users/Gabe/Desktop/juliet_stuff/remote_sensing_data_extraction/shapefile/data_extracter.shp'
-
-    # path to the rasters (RZWF)
-    raster_path = '/Users/Gabe/Desktop/hard_drive_overflow/METRIC_ETRM_Jornada_RZWF_P33R37'
+    :param output_path:
+    :param point_path:
+    :param raster_path:
+    :param ending:
+    :return:
+    """
 
     # Begin extraction from the point path.
     feature_dictionary = x_y_extract(point_path)
@@ -191,42 +189,75 @@ def run_point_extract():
         raster_date = []
         raster_values = []
 
+        sseb_dict = {}
+
         # store the raster values and image dates for the x and y coordinate pair into the lists
         for path, dir, file in os.walk(raster_path, topdown=False):
 
             print path, dir, file
 
             for file in file:
-                if file.endswith('.img'):
+                if file.endswith(ending):
 
                     # path to the raster file
                     raster_address = os.path.join(path, file)
 
-                    # Format the date into dt object
-                    date_str = file.split('_')[0]
-                    date_str = date_str[-12:-5]
 
-                    print "date string {}".format(date_str)
+                    if landsat:
 
-                    # get a datetime object from a julian date
-                    date = datetime.strptime(date_str, '%Y%j').date()
-                    raster_date.append(date)
+                        # Format the date into dt object
+                        date_str = file.split('_')[0]
+                        date_str = date_str[-12:-5]
+
+                        print "date string {}".format(date_str)
+                        # get a datetime object from a julian date
+                        r_date = datetime.strptime(date_str, '%Y%j').date()
+                        raster_date.append(r_date)
+
+                    if sseb:
+                        name = file.split('.')[0]
+                        year = int(name.split('_')[-2])
+                        month = int(name.split('_')[-1])
+                        r_date = date(year, month, 1)
+                        raster_date.append(r_date)
+
 
                     # get the raster value using raster_extract() function
                     value = raster_extract(raster_address, x, y)
                     raster_values.append(value)
 
-        # format the values from the different dates into a dataframe
-        output_dict = {'date': raster_date, 'value': raster_values}
-        output_df = pd.DataFrame(output_dict, columns=['date', 'value'])
-        csv_path = os.path.join(output_path, "point_shape_id_{}.csv".format(feature))
+        if landsat:
+            # format the values from the different dates into a dataframe
+            output_dict = {'date': raster_date, 'value': raster_values}
+            output_df = pd.DataFrame(output_dict, columns=['date', 'value'])
+            csv_path = os.path.join(output_path, "point_shape_id_{}.csv".format(feature))
 
-        # use the pandas.to_csv() method to output to csv
-        output_df.to_csv(csv_path)
+            # use the pandas.to_csv() method to output to csv
+            output_df.to_csv(csv_path)
+
+        if sseb:
+            output_dict = {'date': raster_date, 'value': raster_values}
+
+            sseb_dict['{}'.format(feature)] = output_dict
+
+    if sseb:
+        return sseb_dict
+
 
     print "COMPLETE"
 
 
 if __name__ == "__main__":
+    # output location
+    output_path = '/Users/Gabe/Desktop/juliet_stuff/remote_sensing_data_extraction/output'
 
-    run_point_extract()
+    # path to a single point shapefile:
+    point_path = '/Users/Gabe/Desktop/juliet_stuff/remote_sensing_data_extraction/shapefile/data_extracter.shp'
+
+    # path to the rasters (RZWF)
+    raster_path = '/Users/Gabe/Desktop/hard_drive_overflow/METRIC_ETRM_Jornada_RZWF_P33R37'
+
+    # files end with this extension
+    ending = '.img'
+
+    run_point_extract(point_path, raster_path, ending, landsat=True, output_path=output_path)

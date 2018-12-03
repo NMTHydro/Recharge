@@ -20,6 +20,8 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime as dt
+from datetime import date
+
 
 # ============= local library imports ===========================
 """5) VARIABLE LIST
@@ -139,7 +141,28 @@ def plotter1(x, y, daily_average=False):
         plt.plot_date(x, y, fillstyle='none')
         plt.show()
 
-def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
+def monthly_time_parse(timeseries):
+
+    timeseries = pd.to_datetime(timeseries)
+
+    mtime_list = []
+    for i in timeseries:
+        year = i.year
+        month = i.month
+        mtime = date(year, month, 1)
+        mtime_list.append(mtime)
+
+    # get rid of duplicates.
+    mtime_set = set(mtime_list)
+    print 'len mtime_set', len(mtime_set)
+    print 'mtime set \n', mtime_set
+    # change back to a list and sort
+    mtime = sorted(list(mtime_set))
+    print 'mtime sorted\n ', mtime
+
+    return mtime
+
+def check_energybal(ec_dataset, timeseries=None, dailyaverage=False, monthlyaverage=False, monthly_cumulative=False):
     """
 
     :param ec_dataset: the full dataset from the EC tower
@@ -147,15 +170,15 @@ def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
     :return: a plot of the energy balance closure over time for the Eddy Covariance tower.
     """
 
-    if not dailyaverage:
-        Rn = ec_dataset['NETRAD']
-        H = ec_dataset['H']
-        LE = ec_dataset['LE']
-        closure_check(ec_dataset, Rn, H, LE, timeseries)
+    # if not dailyaverage:
+    #     Rn = ec_dataset['NETRAD']
+    #     H = ec_dataset['H']
+    #     LE = ec_dataset['LE']
+    #     closure_check(ec_dataset, Rn, H, LE, timeseries)
 
-    #===== daily averaging =====
+    # ===== daily averaging =====
 
-    else:
+    if dailyaverage:
         timeseries = timeseries.values
         Rn = ec_dataset['NETRAD'].values
         H = ec_dataset['H'].values
@@ -178,6 +201,86 @@ def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
         H_av = daily_time['H']
         LE_av = daily_time['LE']
         closure_check(ec_dataset, Rn_av, H_av, LE_av, timeseries_daily, daily_average=True)
+
+    # ===== monthly averaging =====
+    elif monthlyaverage:
+
+        timeseries = timeseries.values
+        Rn = ec_dataset['NETRAD'].values
+        H = ec_dataset['H'].values
+        LE = ec_dataset['LE'].values
+        # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
+
+        # recreate a dataframe of the variables you want to time average on a monthly timestep
+        halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H})
+
+        # resample the dataframe by making the timeseries column into the index and using .resample('d') for day
+        halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
+
+        monthly_time = halfhour_data.resample('m').mean()
+
+        # Get the values of the datetime index as an array
+        timeseries_daily = monthly_time.index.values
+
+        # Net Radiation
+        Rn_av = monthly_time['Rn']
+
+        # Heat
+        H_av = monthly_time['H']
+        LE_av = monthly_time['LE']
+        # closure_check(ec_dataset, Rn_av, H_av, LE_av, timeseries_daily, daily_average=True)
+
+
+    # ===== cumulative monthly =====
+    elif monthly_cumulative:
+        timeseries = timeseries.tolist()
+        # print 'timeseries\n', timeseries
+        Rn = ec_dataset['NETRAD'].values
+        H = ec_dataset['H'].values
+        LE = ec_dataset['LE'].values
+        # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
+
+        # recreate a dataframe of the variables you want to time average on a monthly timestep
+        halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H})
+
+        # set the timeseries column to the index so groupby function can group by year and month of the index.
+        halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
+        halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
+        monthly_cumulative = halfhour_data.groupby([lambda x: x.year, lambda x: x.month]).sum()
+        print 'monthly cumulative \n', monthly_cumulative
+
+        print 'cum index', monthly_cumulative.index
+
+        # last_month = (halfhour_data.index[-1].year, halfhour_data.index[-1].month)
+        # last_date = date(last_month[0], last_month[1], 1)
+        # monthly_time_series = []
+        # for year in monthly_cumulative.index.levels[0]:
+        #     for month in monthly_cumulative.index.levels[1]:
+        #         # print year, month, 1
+        #         year_month = date(year, month, 1)
+        #         if year_month <= last_date:
+        #             monthly_time_series.append(year_month)
+        #         # TODO - NEEDS TO STOP AT 2018 04
+        monthly_list = monthly_time_parse(timeseries)
+        # print 'the monthly cumulatives \n', monthly_cumulative.index.values.tolist
+        # print 'the time series \n', monthly_time_series
+        print 'length of the month', len(monthly_list)
+        print 'lenght of the monthly cumulatives', len(monthly_cumulative.LE)
+
+        # try plotting
+        plt.plot(monthly_list, monthly_cumulative.mmh20)
+        plt.scatter(monthly_list, monthly_cumulative.mmh20)
+        plt.show()
+
+        # # Get the values of the datetime index as an array
+        # timeseries_daily = monthly_time.index.values
+        #
+        # # Net Radiation
+        # Rn_av = monthly_time['Rn']
+        #
+        # # Heat
+        # H_av = monthly_time['H']
+        # LE_av = monthly_time['LE']
 
 
 def analyze(path, x, y):
@@ -207,12 +310,15 @@ def analyze(path, x, y):
         # convert latent heat flux into mm h20 by multiplying by the latent heat of vaporization todo - check calc w Dan
         mmh20 = b * 7.962e-4 # 4.09243e-7 <- instantaneous (mm/s)/m^2
 
-    print mmh20.head()
+    # print mmh20.head()
+
+    # print 'a \n', a
 
     # # check energy balance closure
     # check_energybal(ec_dataset, timeseries=a)
 
-    check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
+    # check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
+    check_energybal(ec_dataset, timeseries=a, monthly_cumulative=True)
 
     # plot the variables
     plotter1(a, mmh20)
@@ -229,8 +335,11 @@ if __name__ == '__main__':
         # path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Wkg_BASE-BADM_11-5/AMF_US-Wkg_BASE_HH_11-5.csv'
         # # path = 'C:\Users\Mike\Downloads\AMF_US-Wkg_BASE_HH_11-5.csv' # Dan's computer
         # todo - there seems to be a bias in the closure error of Sevilleta Grass. WHY?!
-        # Sevilleta Grass
-        path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
+        # # Sevilleta Grass
+        # path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
+
+        # Valles Caldera Mixed
+        path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcm_BASE-BADM_9-5/AMF_US-Vcm_BASE_HH_9-5.csv'
 
         # define variables you want to analyze
         ind_var = 'TIMESTAMP_START'
