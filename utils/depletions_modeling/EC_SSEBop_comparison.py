@@ -189,7 +189,7 @@ def analyze(path, x, y):
 
     # ===== Check closure Error ======
 
-    check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
+    # check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
 
     check_energybal(ec_dataset, timeseries=a, dailyaverage=False)
 
@@ -254,6 +254,8 @@ def main(ec_path, sseb_directory, point_shape, ending):
     plt.plot(ordered_sseb_dict['0']['date'], ordered_sseb_dict['0']['value'], color='red')
     plt.show()
 
+    # todo - now plot a new pixel time series to compare to the pixel that contains the EC tower
+
 
 
 if __name__ == "__main__":
@@ -269,6 +271,7 @@ if __name__ == "__main__":
 
     # SSEB directory
     sseb_dir = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/SSEBOP_Geotiff'
+    ssebn_dir = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/'
 
     # SSEB shape dir
     vcm_shape = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/vcm_point_shape/vcm_point.shp'

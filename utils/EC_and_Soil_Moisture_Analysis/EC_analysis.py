@@ -335,11 +335,11 @@ if __name__ == '__main__':
         # path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Wkg_BASE-BADM_11-5/AMF_US-Wkg_BASE_HH_11-5.csv'
         # # path = 'C:\Users\Mike\Downloads\AMF_US-Wkg_BASE_HH_11-5.csv' # Dan's computer
         # todo - there seems to be a bias in the closure error of Sevilleta Grass. WHY?!
-        # # Sevilleta Grass
-        # path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
+        # Sevilleta Grass
+        path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
 
-        # Valles Caldera Mixed
-        path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcm_BASE-BADM_9-5/AMF_US-Vcm_BASE_HH_9-5.csv'
+        # # Valles Caldera Mixed
+        # path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcm_BASE-BADM_9-5/AMF_US-Vcm_BASE_HH_9-5.csv'
 
         # define variables you want to analyze
         ind_var = 'TIMESTAMP_START'
