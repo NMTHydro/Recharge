@@ -15,7 +15,6 @@
 # ===============================================================================
 
 # ============= standard library imports ========================
-print'why not?'
 import os
 import fiona
 import rasterio
@@ -89,7 +88,6 @@ def main(shpfile_pd, max_depletion, nrcs_taw, plot_output):
 
 
 if __name__ == "__main__":
-    print 'why the fuk'
 
     root = "/Volumes/Seagate_Expansion_Drive"
     # get paths to all the shapefiles, package in dictionary
@@ -103,17 +101,23 @@ if __name__ == "__main__":
             name = file.split('.')[0]
             shapefile_dict[name] = path
 
-    # get path to the max_depletion raster
-    max_dep_neg_corr = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cum_depletions_neg_mod/' \
-                       'max_depletion_2000_2013.tif'
+    # # get path to the max_depletion raster
+    # max_dep_neg_corr = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cum_depletions_neg_mod/' \
+    #                    'max_depletion_2000_2013.tif'
+    # # this one only is positive depletions for ETRM
+    # max_dep_neg_corr = '/Volumes/Seagate_Expansion_Drive/Esther_Results_mult_runs_monthly_annually/' \
+    #                    'ETRM_cumulative_depletions_research/ETRM_WA_pos_only/pyrana_max_depletion_2001_2013.tif'
+    # this one is for positive depletions from 1.25*NDVI
+    max_dep_neg_corr = '/Volumes/Seagate_Expansion_Drive/Esther_Results_mult_runs_monthly_annually/' \
+                       'ETRM_cumulative_depletions_research/ndvi_WA/ndvi_WA_pos_only/' \
+                       'alfalfa_positive_max_depletion_2000_2013.tif'
+
 
     # get path to the NRCS TAW raster
     nrcs_taw_path = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/statics/taw_mod_4_21_10_0.tif'
 
     # where to output plots
-    plot_output = os.path.join(shapefile_root, 'plots')
-
-    print 'hey'
+    plot_output = os.path.join(shapefile_root, 'plots_alfalfa')
 
 
     main(shapefile_dict, max_dep_neg_corr, nrcs_taw_path, plot_output=plot_output)

@@ -83,6 +83,7 @@ def run_W_E_mod(ssebop_path, pris_path, output_folder, ct_ratio):
     :return:
     """
 
+    # this makes it so that there is a way to run the function with either an array or a path to a raster.
     if isinstance(ct_ratio, basestring):
         ct_ratio_arr, transform, dim, proj, dt = raster_extract(ct_ratio)
 

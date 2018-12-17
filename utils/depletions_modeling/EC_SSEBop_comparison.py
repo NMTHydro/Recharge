@@ -59,12 +59,23 @@ def plotter1(x, y, daily_average=False):
         x = x.values
         y = y.values
 
-        plt.plot_date(x, y, fillstyle='none')
+        fig, ax = plt.subplots()
+
+        ax.plot_date(x, y, fillstyle='none')
+
+        ax.set_title('Closure Error for Daily Averaged EC')
+        ax.set_ylabel('Percent Error')
+        ax.set_xlabel('Time')
         plt.show()
     else:
         y = y.values
 
-        plt.plot_date(x, y, fillstyle='none')
+        fig, ax = plt.subplots()
+        ax.plot_date(x, y, fillstyle='none')
+        ax.set_title('Closure Error for 30 minute EC')
+        ax.set_ylabel('Percent Error')
+        ax.set_xlabel('Time')
+
         plt.show()
 
 def closure_check(ec_dataset, Rn, LE, H, timeseries, daily_average=False):
@@ -189,9 +200,9 @@ def analyze(path, x, y):
 
     # ===== Check closure Error ======
 
-    # check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
+    check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
 
-    check_energybal(ec_dataset, timeseries=a, dailyaverage=False)
+    # check_energybal(ec_dataset, timeseries=a, dailyaverage=False)
 
     return halfhour_data
 
@@ -249,9 +260,13 @@ def main(ec_path, sseb_directory, point_shape, ending):
 
     ordered_sseb_dict = order_satellite_obs(sseb_dict)
 
-    plt.plot(monthly_list, monthly_cumulative.mmh20)
-    plt.scatter(monthly_list, monthly_cumulative.mmh20)
-    plt.plot(ordered_sseb_dict['0']['date'], ordered_sseb_dict['0']['value'], color='red')
+    fig, ax = plt.subplots()
+    ax.plot(monthly_list, monthly_cumulative.mmh20)
+    ax.scatter(monthly_list, monthly_cumulative.mmh20)
+    ax.plot(ordered_sseb_dict['0']['date'], ordered_sseb_dict['0']['value'], color='red')
+    ax.set_title('Comparison of Monthly total ET (mm) from SSEB vs EC Clux Tower')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Mon Cumulative ET in mm')
     plt.show()
 
     # todo - now plot a new pixel time series to compare to the pixel that contains the EC tower

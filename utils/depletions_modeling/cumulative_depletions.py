@@ -22,8 +22,8 @@ import numpy as np
 import sys
 from gdalconst import *
 import gdal
-
 # ============= local library imports ===========================
+
 def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, datatype):
     """
 
@@ -118,7 +118,7 @@ def run_W_E():
 
     :return:
     """
-    # todo over 15 years we normalize every monthly map by the total precip. Do the same for SSEB ETa.
+    # over 15 years we normalize every monthly map by the total precip. Do the same for SSEB ETa.
 
     # path to monthly ETa
     ssebop_path = "/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/SSEBOP_Geotiff_warped"
@@ -158,8 +158,6 @@ def run_W_E():
         precip = os.path.join(pris_path, precip_name.format(date.year, date.month))
         ssebop = os.path.join(ssebop_path, ssebop_name.format(date.year, date.month))
 
-
-
         print 'precip', precip
         print 'ssebop', ssebop
 
@@ -181,7 +179,7 @@ def run_W_E():
         depletion_ledger += depletion_delta
 
         # for any values that become negative, make them zero. Assume runoff...Wang-Erlandsson (2016)
-        # todo - comment out to allow depletions to be positive
+        # todo - comment out to ONLY allow positive depletions
         # depletion_counter[depletion_counter < 0.0] = 0.0
 
         # newmax_bool = [depletion_counter > max_depletion]

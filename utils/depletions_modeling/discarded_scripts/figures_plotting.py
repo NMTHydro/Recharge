@@ -142,7 +142,7 @@ def plot_landcover_type():
 
 if __name__ == "__main__":
 
-
+    # TODO - This script sucks and is currently broken.
 
     plot_landcover_type()
 

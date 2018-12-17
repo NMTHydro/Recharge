@@ -37,12 +37,13 @@ def shapefile_extract(shapefile, raster_image):
         geometry = [feature['geometry'] for feature in shp]
 
     with rasterio.open(raster_image) as rast:
+        print 'raster image', raster_image
         image, transform = rasterio.mask.mask(rast, geometry, crop=True)
 
     print 'transform', transform
     print 'shape', image.shape
-    # plt.imshow(image[0])
-    # plt.show()
+    plt.imshow(image[0])
+    plt.show()
     return image[0]
 
 def main(predict_raster, path_dictionary, aoi):
@@ -51,7 +52,8 @@ def main(predict_raster, path_dictionary, aoi):
 
     et_precip_ratio = shapefile_extract(aoi, predict_raster)
     # et_precip_ratio = et_precip_ratio[et_precip_ratio > -3000000000000]
-    et_precip_ratio = et_precip_ratio[3:-3, 3:-3]
+    et_precip_ratio = et_precip_ratio[5:-5, 5:-5]
+    # et_precip_ratio = et_precip_ratio[100:-100, 100:-100]
     et_precip_ratio = et_precip_ratio.flatten()
 
     target = pd.DataFrame({'et_precip_ratio': et_precip_ratio})
@@ -61,7 +63,8 @@ def main(predict_raster, path_dictionary, aoi):
         clipped = shapefile_extract(aoi, v)
         # get rid of nulls
         # clipped = clipped[clipped > -3000000000000]
-        clipped = clipped[3:-3, 3:-3]
+        clipped = clipped[5:-5, 5:-5]
+        # clipped = clipped[100:-100, 100:-100]
         clipped = clipped.flatten()
         p_dict[k] = clipped
 
@@ -77,7 +80,7 @@ def main(predict_raster, path_dictionary, aoi):
     # x2 = p_dict['slope']
     # # x3 = p_dict['dem']
 
-    X = p_frame[['aspect', 'slope']]
+    X = p_frame[['aspect', 'slope', 'dem']]
     print 'xshape', X.shape
     # X = sm.add_constant(X)
     Y = target['et_precip_ratio']
@@ -94,7 +97,10 @@ def main(predict_raster, path_dictionary, aoi):
     print '\n\n ========= \n aspect \n ========= \n \n '
     aspect_x = p_frame['aspect']
 
-    plt.scatter(aspect_x, Y)
+    plt.scatter(aspect_x, Y, facecolors='none', edgecolors='b')
+    plt.title('Depletion Ratio vs Aspect')
+    plt.xlabel('aspect')
+    plt.ylabel('SSEB_ET/PRISM_precip')
     plt.show()
 
     aspect_x = sm.add_constant(aspect_x)
@@ -110,7 +116,10 @@ def main(predict_raster, path_dictionary, aoi):
 
     slope_x = p_frame['slope']
 
-    plt.scatter(slope_x, Y)
+    plt.scatter(slope_x, Y, facecolors='none', edgecolors='b')
+    plt.title('Depletion Ratio vs Slope')
+    plt.xlabel('Slope')
+    plt.ylabel('SSEB_ET/PRISM_precip')
     plt.show()
 
     slope_x = sm.add_constant(slope_x)
@@ -118,34 +127,43 @@ def main(predict_raster, path_dictionary, aoi):
     print slope_model.summary()
 
 
+    # ==== NDVI single ====
+    print '\n\n ========= \n NDVI \n ========= \n \n '
+    ndvi_x = p_frame['ndvi1']
 
-    # ==== eta single ====
-    print '\n\n ========= \n eta \n ========= \n \n '
-    eta_x = p_frame['eta']
-
-    plt.scatter(eta_x, Y)
+    plt.scatter(ndvi_x, Y, facecolors='none', edgecolors='b')
+    plt.title('Depletion Ratio vs NDVI')
+    plt.xlabel('NDVI')
+    plt.ylabel('SSEB_ET/PRISM_precip')
     plt.show()
 
-    eta_x = sm.add_constant(eta_x)
-    eta_model = sm.OLS(Y, eta_x).fit()
-    print eta_model.summary()
+    ndvi_x = sm.add_constant(ndvi_x)
+    ndvi_model = sm.OLS(Y, ndvi_x).fit()
+    print ndvi_model.summary()
 
     # ==== DEM single ====
     print '\n\n ========= \n DEM \n ========= \n \n '
     dem_x = p_frame['dem']
 
-    plt.scatter(dem_x, Y)
+    plt.scatter(dem_x, Y, facecolors='none', edgecolors='b')
+    plt.title('Depletion Ratio vs Elevation')
+    plt.xlabel('Elevation in meters')
+    plt.ylabel('SSEB_ET/PRISM_precip')
     plt.show()
 
     dem_x = sm.add_constant(dem_x)
     dem_model = sm.OLS(Y, dem_x).fit()
-    print eta_model.summary()
+    print ndvi_model.summary()
 
-
-
-    plt.scatter(p_frame['eta'], p_frame['eta2'])
+    plt.scatter(p_frame['dem'], p_frame['ndvi1'])
+    plt.title('testing elevation and NDVI (August 1st) relationship')
+    plt.xlabel('elevation (m)')
+    plt.ylabel('NDVI')
     plt.show()
 
+    plt.scatter(p_frame['ndvi1'], p_frame['ndvi2'])
+    plt.title('testing extraction method comparing the same extracted ndvi aug 1 to ndvi aug 4')
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -154,8 +172,8 @@ if __name__ == "__main__":
     #  scale and res
 
     # get the sseb/PRISM ratio raster
-    # ratio = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cumulative_prism_sseb_ratio/ct_sseb_p_ratio_2013_12_QGIS.tif'
-    ratio = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cumulative_SSEB/ct_ssebop_2013_12.tif'
+    ratio = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cumulative_prism_sseb_ratio/ct_sseb_p_ratio_2013_12_QGIS.tif'
+    # ratio = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/cumulative_SSEB/ct_ssebop_2013_12.tif'
 
     # get the aspect raster
     aspect = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/terrain/aspect_nm60mdem_pyrana_warp.tif'
@@ -167,15 +185,20 @@ if __name__ == "__main__":
     dem = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/terrain/nm60mdem_pyrana_warp.tif'
 
     # throw eta in there to test the algorithm
-    eta = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI_std_all/2000_207.tif'
 
-    eta2 = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI_std_all/2000_207.tif'
+    # throw in some NDVI to test
+    ndvi1 = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI/2000/NDVI2000_08_01.tif'
 
-    # get the shapefile of the AOI <-needs to be correct crs
+    ndvi2 = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI/2000/NDVI2000_08_04.tif'
+
+    # # get the shapefile of the AOI <-needs to be correct crs
     study_area = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/terrain/terrain_regresion_aoi.shp'
+    # study_area = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/terrain/terrain_regression_large.shp'
+    # study_area = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/terrain/terrain_regresion_aoi_medium.shp'
+
 
     # TODO - get the NDVI raster
 
-    params_test = {'aspect': aspect, 'slope': slope, 'eta': eta, 'eta2': eta2, 'dem': dem} #'dem': dem
+    params_test = {'aspect': aspect, 'slope': slope, 'dem': dem, 'ndvi1': ndvi1, 'ndvi2': ndvi2} #'dem': dem 'eta': eta, 'eta2': eta2,
 
     main(predict_raster=ratio, path_dictionary=params_test, aoi=study_area)
