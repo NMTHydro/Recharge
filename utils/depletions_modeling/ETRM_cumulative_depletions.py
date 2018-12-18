@@ -35,6 +35,7 @@ def PyRana_WE(data_path, output_path, date_specs):
     (start_month, start_year, end_month, end_year) = date_specs
     months_in_series = ((end_year - start_year) * 12) + (end_month - start_month)
 
+    # start and enddate as datetimes for datetime functionality
     start_date = datetime(start_year, start_month, 1).date()
     end_date = datetime(end_year, end_month, 1).date()
 
@@ -61,6 +62,7 @@ def PyRana_WE(data_path, output_path, date_specs):
 
         total_eta += eta_arr
 
+        # this month's change in depletion
         depletion_delta = depletion_calc(eta_arr, precip_arr)
 
         # add to the running depletion tally
@@ -88,8 +90,8 @@ def PyRana_WE(data_path, output_path, date_specs):
     write_raster(max_depletion, transform, output_path, max_depletion_name, dim, proj, dt)
 
     # output total SSEBop (to test wheter it looks like the netcdf file)
-    total_ssebop_name = "total_eta_{}_{}.tif".format(start_date.year, end_date.year)
-    write_raster(total_eta, transform, output_path, total_ssebop_name, dim, proj, dt)
+    total_eta_name = "total_eta_{}_{}.tif".format(start_date.year, end_date.year)
+    write_raster(total_eta, transform, output_path, total_eta_name, dim, proj, dt)
 
 
 if __name__ == "__main__":

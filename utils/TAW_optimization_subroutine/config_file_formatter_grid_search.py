@@ -112,6 +112,7 @@ def taw_grid_search(config_path, output_path, begin_taw, end_taw, taw_step):
 
     print 'no nubs', config_param_order
 
+    # todo - Dan don't worry about the formatting just use yaml.load_all() and yaml.dump() with dictionaries
     # read in the configuration file as a dict
     with open("{}".format(config_path), 'r') as config:
         try:

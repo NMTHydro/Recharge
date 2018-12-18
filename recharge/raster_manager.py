@@ -88,7 +88,7 @@ class RasterManager(object):
             print "self tiff ", self._cfg.tiff_shape
             tiff_shp = self._cfg.tiff_shape
 
-            # TODO - 'rzsm' needs to be in daily outputs for this to work.
+            # 'rzsm' needs to be in daily outputs for this to work.
             dailys = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=tiff_shp)) for element in
                       self._cfg.daily_outputs]
             # print 'new dailys -> {}'.format(dailys)
@@ -103,11 +103,11 @@ class RasterManager(object):
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
 
-            # TODO - Subroutine -celp changed from line 96 to current position Nov 18:
+            # Subroutine -celp changed from line 96 to current position Nov 18:
             if self.uniform_taw is not None:
                 # getting the TAW value
                 taw_value = self.uniform_taw
-                # To eventually generate .npy files for each day
+                # To generate .npy files for each day
                 self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in self._cfg.daily_outputs]
@@ -127,8 +127,6 @@ class RasterManager(object):
 
     def _set_daily_outputs(self, outputs, date_object, taw_value, period):
         for element, arr in outputs:
-            # GELP TEST
-            # todo - does this mess things up?
             self._update_raster_tracker(arr, element, period=period)
             self._write_numpy_array(element, date_object, taw_value, period=period)
         # TODO - Subroutine:
