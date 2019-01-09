@@ -97,13 +97,13 @@ class RasterManager(object):
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
-            print "Heres the save dates", self._save_dates
+            print "Here are the save dates", self._save_dates
             if self._save_dates:
                 print 'Date object {}. {}'.format(date_object, date_object in self._save_dates)
                 if date_object in self._save_dates:
                     self._set_outputs(dailys, date_object, 'daily')
 
-            # Subroutine -celp changed from line 96 to current position Nov 18:
+            # Subroutine -gelp changed from line 96 to current position Nov 18:
             if self.uniform_taw is not None:
                 # getting the TAW value
                 taw_value = self.uniform_taw
@@ -111,12 +111,9 @@ class RasterManager(object):
                 self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in self._cfg.daily_outputs]
-        # print 'outputs rm {}'.format(outputs)
+        # print 'outputs for monthly/yearly raster folders {}'.format(outputs)
 
         # save monthly data
-        # etrm_processes.run._save_tabulated_results_to_csv will re-sample to annual
-
-        # TODO - I don't think these should run automatically GELP
         if date_object.day == mo_date[1]:
             print 'saving monthly data for {}'.format(date_object)
             self._set_outputs(outputs, date_object, 'monthly')
@@ -133,8 +130,6 @@ class RasterManager(object):
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
-            # TODO - issue with tiny mask here. Don't undo the mask then?
-            # TODO - Subroutine, am i getting zero arrays because I have not updated the raster tracker yet?
             self._update_raster_tracker(arr, element, period=period)
             self._write_raster(element, date_object, period=period)
 
@@ -176,7 +171,11 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        tracker[ckey][var] = vv
+        # keep track of previous month/year value, and subtract. Gives outputs as monthly change.
+        # todo: Gabe had output as  tracker[ckey][var] = vv  , but I need monthly/annual changes for most params (ETa, precip, recharge, ro) DDC 1/9/19
+        # todo: However, I would like to have simply  tracker[ckey][var] = vv  for dr, de, and drew
+        tracker[ckey][var] = vv - tracker[lkey][var]
+        tracker[lkey][var] = vv
 
     def _write_numpy_array(self, key, date, taw_value, period=None, master=None):
         """
@@ -194,8 +193,8 @@ class RasterManager(object):
         rd = self._results_dir
         tracker = self._output_tracker
 
-        # filename fontaining the name of parameter saved, the taw value and the date
-        name = 'ETRM_daily_{}_taw_{}_{}_{}_{}.npy'.format(key, taw_value, date.day, date.month, date.year)
+        # filename containing the name of parameter saved, the taw value and the date
+        name = 'ETRM_daily_{}_taw_{}_{}_{}_{}.npy'.format(key, taw_value, date.year, date.month, date.day)
         filename = os.path.join(rd['numpy_arrays'], name)
 
         array_to_save = tracker[CURRENT_DAY][key]
@@ -225,7 +224,7 @@ class RasterManager(object):
 
         """
 
-        print 'Saving {}_{}_{}_{}'.format(key, date.day, date.month, date.year)
+        print 'Saving {}_{}_{}_{}'.format(key, date.year, date.month, date.day)
         # print "mask path -> {}".format(mask_path)
         rd = self._results_dir
         # root = rd['root'] # results directory doesn't have a root; all
@@ -236,12 +235,12 @@ class RasterManager(object):
             array_to_save = tracker[CURRENT_YEAR][key]
 
         elif period == 'monthly':
-            name = '{}_{}_{}.tif'.format(key, date.month, date.year)
+            name = '{}_{}_{}.tif'.format(key, date.year, date.month)
             filename = os.path.join(rd['monthly_rasters'], name)
             array_to_save = tracker[CURRENT_MONTH][key]
 
         elif period == 'daily':
-            name = '{}_{}_{}_{}.tif'.format(key, date.day, date.month, date.year)
+            name = '{}_{}_{}_{}.tif'.format(key, date.year, date.month, date.day)
             filename = os.path.join(rd['daily_rasters'], name)
             array_to_save = tracker[CURRENT_DAY][key]
 

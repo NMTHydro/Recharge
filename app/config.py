@@ -127,8 +127,9 @@ class RunSpec:
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                  'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent',
                  'tiff_shape',
-                 'xplot', 'yplot','plot_output') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
+                 'xplot', 'yplot', 'plot_output') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
 
+        # print 'the attributes', attrs
         for attr in attrs:
             # print "last attr out", attr
             setattr(self, attr, self._obj.get(attr))
@@ -193,13 +194,14 @@ class Config:
             path = paths.config
 
         if isinstance(path, (str, unicode)):
+            print 'does the file get opened as read only?'
             check_config(path)
             rfile = open(path, 'r')
         else:
             rfile = path
         # print paths.config
         # print rfile
-        #rfile = path
+        # rfile = path
 
         # for doc in yaml.load_all(rfile):
         #     if doc != None:

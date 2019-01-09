@@ -352,14 +352,17 @@ class Processes(object):
 
         self._info('Initialize initial model state')
         m = self._master
-        # JIR
+
+        # option to force dry TAW start conditions
+        initial_state = 'wet'  # 'dry'
+        if initial_state is 'wet':
+            m['pdr'] = m['dr'] = initial['dr']
+        elif initial_state is 'dry':
+            m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
         print 'initial dr {}'.format(initial['dr'])
-        # m['pdr'] = m['dr'] = self._initial['dr'] # TODO - major change here 6/2/2017
-        m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
 
         # JIR
         m['pde'] = m['de'] = initial['de']
-        # JIR
         m['pdrew'] = m['drew'] = initial['drew']
 
         s = self._static

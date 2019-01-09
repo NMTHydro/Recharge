@@ -125,12 +125,12 @@ def run(cfg_path=None):
 
 
 if __name__ == '__main__':
-    print('Sys.argv {}'.format(sys.argv))
-    if len(sys.argv) == 1:
-        run()
-    else:
-        print 'the path should be {}'.format(sys.argv[1])
-        run(cfg_path=sys.argv[1])
-    # run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
+    # print('Sys.argv {}'.format(sys.argv))
+    # if len(sys.argv) == 1:
+    #     run()
+    # else:
+    #     print 'the path should be {}'.format(sys.argv[1])
+    #     run(cfg_path=sys.argv[1])
+    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
 
 # ============= EOF =============================================

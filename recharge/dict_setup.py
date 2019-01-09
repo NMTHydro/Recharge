@@ -97,7 +97,7 @@ def initialize_static_dict(pairs=None):
     """
 
     def initial_plant_height(r):
-        # I think plant height is recorded in ft, when it should be m. Not sure if *= works on rasters.
+        # It seems that plant height is recorded in ft, when it should be m.
         return r * 0.3048
 
     def initial_root_z(r):
