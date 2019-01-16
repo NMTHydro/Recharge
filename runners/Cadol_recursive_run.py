@@ -38,7 +38,7 @@ sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
 
 def run_iterate():
-    runs = 30  # user sets the number of repeated runs to be performed
+    runs = 1  # user sets the number of repeated runs to be performed
     # Set the cfg path to the  CONFIG file
     cfg_path = os.path.join("C:\Users\Mike\PyRANA", 'PYRANA_CONFIG.yml')
     cfg = Config(cfg_path)
@@ -47,6 +47,7 @@ def run_iterate():
         print 'doing iteration {}'.format(i)
         run(cfg_path=cfg_path)
         output_root = paths.results_root
+        # output_root = 'C:\Users\Mike\PyRANA\PyRANA_results000\\190114_10_07'
 
         # Rename the monthly precip and ETa files for use with cumulative depletion script
             # This is no longer necessary: _write_raster was changed to output in year_month order
@@ -63,18 +64,18 @@ def run_iterate():
             os.mkdir(output_folder)
 
         run_W_E(cfg.runspecs[0], eta_path=eta_path, pris_path=pris_path,
-                output_folder=output_folder, is_ssebop=False, shape=(1002, 602))
+                output_folder=output_folder, is_ssebop=False, shape=(2525, 2272))
         # Save the max depletion raster as the new TAW raster and
         # replace the old TAW raster in the static inputs folder with the new TAW raster
         start_date, end_date = cfg.runspecs[0].date_range
         max_dep_file = 'max_depletion_{}_{}.tif'.format(start_date.year, end_date.year)
         max_dep_path = os.path.join(output_root, 'depletion_{:02n}'.format(i), max_dep_file)
-        taw_store_path = 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI\TAWs\\taw_{:02n}.tif'.format(i)
+        taw_store_root = 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI'
+        taw_store_path = os.path.join(taw_store_root, 'TAWs', 'taw_{:02n}.tif'.format(i))
         shutil.copyfile(max_dep_path, taw_store_path)
 
-        taw_path = 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI\statics\\taw_reduced.tif'
+        taw_path = os.path.join(taw_store_root, 'statics', 'taw_reduced.tif')
         shutil.copyfile(taw_store_path, taw_path)
-
 
 
 if __name__ == '__main__':
