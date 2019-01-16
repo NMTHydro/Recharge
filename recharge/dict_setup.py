@@ -148,9 +148,10 @@ def initialize_static_dict(pairs=None):
     land_cover = d['land_cover']
     print 'original Ksat = {}, REW = {}, TAW = {}, land cover = {}'.format(d['soil_ksat'],d['rew'],d['taw'],d['land_cover'])
 
-    # apply high TAW to unconsolidated Quaternary deposits
-    min_val = 250
-    taw = where(q > 0.0, maximum(min_val, taw), taw)
+    # apply high TAW to unconsolidated Quaternary deposits.
+    # Todo: This option needs to be changeable with a flag.
+    # min_val = 250
+    # taw = where(q > 0.0, maximum(min_val, taw), taw)
 
     # apply bounds to TAW
     # min_val = 50.0

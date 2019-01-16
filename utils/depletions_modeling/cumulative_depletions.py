@@ -137,8 +137,9 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
     # start_date = datetime.strptime("2000-2", "%Y-%m")
     # end_date = datetime.strptime("2013-12", "%Y-%m")
     start_date, end_date = cfg.date_range
-    months_in_series = ((end_date.year - start_date.year) * 12) + (end_date.month - start_date.month)
     print 'start and end dates: {}, {}'.format(start_date, end_date)
+    months_in_series = ((end_date.year - start_date.year) * 12) + (end_date.month - start_date.month)
+    print 'months in analysis series: {}'.format(months_in_series)
     precip_name = "tot_precip_{}_{}.tif"
     if is_ssebop:
         eta_name = "ssebop_{}_{}_warped.tif"
@@ -151,6 +152,8 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
     depletion_ledger = np.zeros(shape, dtype=float)
     # keep track of the maximum depletion map
     max_depletion = np.zeros(shape, dtype=float)
+    # keep track of the minimum depletion map
+    min_depletion = np.zeros(shape, dtype=float)
     # depletion_list = []
     total_eta = np.zeros(shape, dtype=float)
     for i in range(months_in_series + 1):
@@ -186,6 +189,11 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
         # newmax = depletion_ledger[newmax_bool == True]
         max_depletion = np.maximum(depletion_ledger, max_depletion)
 
+        # reset minimum two years into the analysis
+        if i is 24:
+            min_depletion = depletion_ledger
+        min_depletion = np.minimum(depletion_ledger, min_depletion)
+
         # print "is this messed up?", oldmax == newmax
 
         # for each monthly timestep, take the cumulative depletion condition and output it as a raster
@@ -197,6 +205,10 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
     # output the maximum depletion
     max_depletion_name = 'max_depletion_{}_{}.tif'.format(start_date.year, end_date.year)
     write_raster(max_depletion, transform, output_folder, max_depletion_name, dim, proj, dt)
+
+    # output the minimum depletion
+    min_depletion_name = 'min_depletion_{}_{}.tif'.format(start_date.year+2, end_date.year)
+    write_raster(min_depletion, transform, output_folder, min_depletion_name, dim, proj, dt)
 
     # output total ETa (i.e., SSEBop) to test wheter it looks like the netcdf file
     total_eta_name = "total_ssebop_{}_{}.tif".format(start_date.year, end_date.year)

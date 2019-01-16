@@ -105,7 +105,7 @@ class RasterManager(object):
 
             # Subroutine -gelp changed from line 96 to current position Nov 18:
             if self.uniform_taw is not None:
-                # getting the TAW value
+                 # getting the TAW value
                 taw_value = self.uniform_taw
                 # To generate .npy files for each day
                 self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
