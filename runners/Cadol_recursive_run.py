@@ -38,7 +38,7 @@ sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
 
 def run_iterate():
-    runs = 1  # user sets the number of repeated runs to be performed
+    runs = 5  # user sets the number of repeated runs to be performed
     # Set the cfg path to the  CONFIG file
     cfg_path = os.path.join("C:\Users\Mike\PyRANA", 'PYRANA_CONFIG.yml')
     cfg = Config(cfg_path)
@@ -68,7 +68,8 @@ def run_iterate():
         # Save the max depletion raster as the new TAW raster and
         # replace the old TAW raster in the static inputs folder with the new TAW raster
         start_date, end_date = cfg.runspecs[0].date_range
-        max_dep_file = 'max_depletion_{}_{}.tif'.format(start_date.year, end_date.year)
+        # changed to look at depletion range (range_depletion_{}_{}.tif), not max depletion (max_depletion_{}_{}.tif)
+        max_dep_file = 'range_depletion_{}_{}.tif'.format(start_date.year, end_date.year)
         max_dep_path = os.path.join(output_root, 'depletion_{:02n}'.format(i), max_dep_file)
         taw_store_root = 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI'
         taw_store_path = os.path.join(taw_store_root, 'TAWs', 'taw_{:02n}.tif'.format(i))

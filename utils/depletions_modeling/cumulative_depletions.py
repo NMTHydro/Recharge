@@ -48,7 +48,7 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     # we don't need to do an offset
     output_band.WriteArray(array, 0, 0)
 
-    print 'done writing, Master.'
+    print 'done writing {}'.format(filename)
 
     # set the geotransform in order to georefference the image
     output_dataset.SetGeoTransform(geotransform)
@@ -198,7 +198,6 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
 
         # for each monthly timestep, take the cumulative depletion condition and output it as a raster
         depletion_name = "cumulative_depletion_{}_{}.tif".format(date.year, date.month)
-        print 'trying to write cumulative dep'
         write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
 
     print 'iterations finished'
@@ -210,14 +209,20 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
     min_depletion_name = 'min_depletion_{}_{}.tif'.format(start_date.year+2, end_date.year)
     write_raster(min_depletion, transform, output_folder, min_depletion_name, dim, proj, dt)
 
+    # output the depletion range
+    range_depletion = np.zeros(shape, dtype=float)
+    range_depletion = max_depletion - min_depletion
+    range_depletion_name = 'range_depletion_{}_{}.tif'.format(start_date.year + 2, end_date.year)
+    write_raster(range_depletion, transform, output_folder, range_depletion_name, dim, proj, dt)
+
     # output total ETa (i.e., SSEBop) to test wheter it looks like the netcdf file
     total_eta_name = "total_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
     write_raster(total_eta, transform, output_folder, total_eta_name, dim, proj, dt)
 
-    # output the average ETa (i.e., SSEBop) to test whether it looks like the netcdf file
-    average_eta = total_eta/float(months_in_series)
-    average_eta_name = "average_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
-    write_raster(average_eta, transform, output_folder, average_eta_name, dim, proj, dt)
+    # # output the average ETa (i.e., SSEBop) to test whether it looks like the netcdf file
+    # average_eta = total_eta/float(months_in_series)
+    # average_eta_name = "average_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
+    # write_raster(average_eta, transform, output_folder, average_eta_name, dim, proj, dt)
 
 
 def run_rename(param_path=None, param='precip'):
