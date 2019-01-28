@@ -55,8 +55,8 @@ def plotter1(x, y, daily_average=False):
     :return:
     """
 
-    if not daily_average:
-        x = x.values
+    if daily_average:
+        # x = x.values
         y = y.values
 
         fig, ax = plt.subplots()
@@ -69,7 +69,7 @@ def plotter1(x, y, daily_average=False):
         plt.show()
     else:
         y = y.values
-
+        print 'This is happening'
         fig, ax = plt.subplots()
         ax.plot_date(x, y, fillstyle='none')
         ax.set_title('Closure Error for 30 minute EC')
@@ -84,20 +84,19 @@ def closure_check(ec_dataset, Rn, LE, H, timeseries, daily_average=False):
         try:
             G = ec_dataset['FG']
         # TODO - If there is no ground heat flux, average over 24 hours to negate impact of G. Ask Dan the proper way.
-        except:
-            KeyError
+        except KeyError:
             print 'No ground heat flux at this station. Consider averaging over a daily period.'
             G = 0
         try:
             stored_H = ec_dataset['SH']
             stored_LE = ec_dataset['SLE']
-        except:
-            KeyError
+        except KeyError:
             print 'No sensible or latent heat storage terms'
             stored_H = 0
             stored_LE = 0
 
-        closure_error = abs((((Rn-G) - (LE + H)) - (stored_H + stored_LE))/Rn) * 100
+        # closure_error = abs((((Rn-G) - (LE + H)) - (stored_H + stored_LE))/Rn) * 100
+        closure_error = (((LE + H) - (stored_H + stored_LE)) / (Rn - G)) * 100
 
         print 'median closure error: {}, average closure error {}'.format(
             np.median(closure_error.values), np.mean(closure_error.values))
@@ -106,7 +105,9 @@ def closure_check(ec_dataset, Rn, LE, H, timeseries, daily_average=False):
 
     else:
         print 'IGNORE G as we are averaging over a daily time period. We wont bother with stored H or stored LE either'
-        closure_error = abs(((Rn) - (LE + H)) / Rn) * 100
+        # closure_error = abs(((Rn) - (LE + H)) / Rn) * 100
+        # # after Sung-Ho's thesis Twine et al. 2000
+        closure_error = ((LE + H)/Rn) * 100
 
         print 'median closure error: {}, average closure error {}'.format(
             np.median(closure_error.values), np.mean(closure_error.values))
@@ -145,8 +146,6 @@ def check_energybal(ec_dataset, timeseries=None, dailyaverage=False):
         # Get the values of the datetime index as an array
         timeseries_daily = daily_time.index.values
 
-        # todo - get rid of possible null values and blank values to test energy closure...
-
         # Net Radiation
         Rn_av = daily_time['Rn']
 
@@ -168,8 +167,15 @@ def analyze(path, x, y):
     ec_dataset = pd.read_csv(path, header=2)
 
     # print ec_dataset.head()
+    print ec_dataset['LE'].head()
     print ec_dataset[ec_dataset[y] != -9999].head()
+    # get rid of no data values in any category of the energy balance
     ec_dataset = ec_dataset[ec_dataset[y] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
+    # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
+    # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
 
     if x.startswith("TIMESTAMP"):
         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
@@ -264,9 +270,9 @@ def main(ec_path, sseb_directory, point_shape, ending):
     ax.plot(monthly_list, monthly_cumulative.mmh20)
     ax.scatter(monthly_list, monthly_cumulative.mmh20)
     ax.plot(ordered_sseb_dict['0']['date'], ordered_sseb_dict['0']['value'], color='red')
-    ax.set_title('Comparison of Monthly total ET (mm) from SSEB vs EC Clux Tower')
+    ax.set_title('Comparison of Monthly total ET from SSEB (red) vs EC Flux Tower (Wjs-blue)')
     ax.set_xlabel('Date')
-    ax.set_ylabel('Mon Cumulative ET in mm')
+    ax.set_ylabel('Monthly Cumulative ET in mm')
     plt.show()
 
     # todo - now plot a new pixel time series to compare to the pixel that contains the EC tower
@@ -282,11 +288,16 @@ if __name__ == "__main__":
     # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
 
     # Valles Caldera Mixed
-    ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcm_BASE-BADM_9-5/AMF_US-Vcm_BASE_HH_9-5.csv'
+    # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcm_BASE-BADM_9-5/AMF_US-Vcm_BASE_HH_9-5.csv'
+    # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcp_BASE-BADM_6-5/AMF_US-Vcp_BASE_HH_6-5.csv'
+    # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Vcs_BASE-BADM_3-5/AMF_US-Vcs_BASE_HH_3-5.csv'
+    # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Seg_BASE-BADM_8-5/AMF_US-Seg_BASE_HH_8-5.csv'
+    # ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Mpj_BASE-BADM_8-5/AMF_US-Mpj_BASE_HH_8-5.csv'
+    ec_path = '/Users/Gabe/Desktop/thesiscomposition/fluxnet_EC/AMF_US-Wjs_BASE-BADM_7-5/AMF_US-Wjs_BASE_HH_7-5.csv'
 
     # SSEB directory
     sseb_dir = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/SSEBOP_Geotiff'
-    ssebn_dir = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/'
+    # ssebn_dir = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/'
 
     # SSEB shape dir
     vcm_shape = '/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/vcm_point_shape/vcm_point.shp'
