@@ -23,7 +23,7 @@ import sys
 from gdalconst import *
 import gdal
 # ============= local library imports ===========================
-def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, datatype):
+def write_raster(array, geotransform, output_path, output_filename, dimensions, projection, datatype=GDT_Float32):
     """
     :param array:
     :param geotransform:
@@ -40,7 +40,7 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     driver = gdal.GetDriverByName('GTiff')
     # path, cols, rows, bandnumber, data type (if not specified, as below, the default is GDT_Byte)
 
-    output_dataset = driver.Create(filename, dimensions[0], dimensions[1], 1, GDT_Float32)
+    output_dataset = driver.Create(filename, dimensions[0], dimensions[1], 1, datatype)
 
     # we write TO the output band
     output_band = output_dataset.GetRasterBand(1)
