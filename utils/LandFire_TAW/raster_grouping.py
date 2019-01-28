@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # ...File produced by Landfire_Eco_Stringparse.py
     eco_path = '/Users/Gabe/Desktop/academic_docs/LandFire/raster_report/raster_report_processed.csv'
 
-    # path to new mexican landfire data
+    # path to new mexican landfire data.
     lf_path = '/Users/Gabe/Desktop/academic_docs/LandFire/CO_NM_Landfire_1_0_0_EVT/NM_Landfire_1.0.0_EVT_clip.tif'
 
     # ====== User-Defined Ecosystem Groupings ======
