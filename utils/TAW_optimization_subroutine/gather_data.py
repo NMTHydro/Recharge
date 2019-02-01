@@ -167,8 +167,10 @@ def run_synthetic(synpath, results_path, n, config, rzsm=False):
 
 
 
-def run():
+def run_real_obs(model_results_path, observations_path, config_file):
     """"""
+
+    # TODO - FINISH this out....
     pass
 
 
@@ -190,14 +192,14 @@ if __name__ =="__main__":
     n = 10
 
     if synthetic_mode:
-        synthetic_obs, pyrana_results = run_synthetic(synpath, results_path, n, config, rzsm)
+        obs, pyrana_results = run_synthetic(synpath, results_path, n, config, rzsm)
 
     else:
-        # todo - make run once we have real results.
-        run()
+        # todo - make run once we have real results. Collapsed functions you will likely not need.
+        obs, pyrana_results = run_real_obs()
 
     # put the observations in the results dictionary
-    pyrana_results['obs'] = synthetic_obs
+    pyrana_results['obs'] = obs
 
     # output the dictionary to a .yml file
     gather_data_output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output.yml"
