@@ -30,13 +30,13 @@ def add_year(datetime_date, years):
         return datetime_date + (date(d.year + years, 1, 1) - date(datetime_date.year, 1, 1))
 
 
-def all_time_ndvi_avg(ndvi_root, start_date, end_date, array_shape, representative_ndvi_file, output_folder):
+def all_time_ndvi_avg(ndvi_root, start_date, end_date, a_shape, representative_ndvi_file, output_folder):
     """"""
 
     # get the info needed to write the raster from the representative_ndvi_file
     ndvi_geo_attributes = get_raster_geo_attributes(representative_ndvi_file)
 
-    array_shape = (ndvi_geo_attributes['rows'], ndvi_geo_attributes['cols'])
+    array_shape = (ndvi_geo_attributes['cols'], ndvi_geo_attributes['rows'])
 
     print 'ndvi_geo \n', ndvi_geo_attributes
 
@@ -44,7 +44,7 @@ def all_time_ndvi_avg(ndvi_root, start_date, end_date, array_shape, representati
 
     period_delta = end_date - start_date
 
-    cumulative_ndvi = np.zeros(array_shape, dtype=float)
+    cumulative_ndvi = np.zeros(a_shape, dtype=float)
     count = 0
     for i in range(num_years+1):
 
@@ -63,6 +63,7 @@ def all_time_ndvi_avg(ndvi_root, start_date, end_date, array_shape, representati
             ndvi_path = os.path.join(year_folder_path, ndvi_name)
 
             ndvi_arr = convert_raster_to_array(ndvi_path)
+            # print ndvi_arr.shape
 
             cumulative_ndvi += ndvi_arr
             count += 1
@@ -88,10 +89,10 @@ if __name__ == "__main__":
     end_date = date(2013, 12, 31)
 
     # shape of ETRM array
-    array_shape = (2525, 2272)
+    a_shape = (2525, 2272)
 
     representative_ndvi_file = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI/2000'
 
     output_folder = '/Users/Gabe/Desktop/academic_docs/LandFire/NDVI_parameters'
 
-    all_time_ndvi_avg(ndvi_root, start_date, end_date, array_shape, representative_ndvi_file, output_folder)
+    all_time_ndvi_avg(ndvi_root, start_date, end_date, a_shape, representative_ndvi_file, output_folder)

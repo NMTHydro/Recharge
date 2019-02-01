@@ -21,7 +21,11 @@ def warpfunc(files, path, geo_info, proc_out):
 
     out_raster = os.path.join(proc_out, f_name)
 
-    projection = geo_dict['projection']
+    # todo - dont hardcode
+    orig_projection = '32613'
+    projection = '26913'
+
+    # projection = geo_dict['projection']
 
     cols = dim[0]
     rows = dim[1]
@@ -37,12 +41,15 @@ def warpfunc(files, path, geo_info, proc_out):
 
     # print x_min, x_max, y_min, y_max
 
-    warp = 'gdalwarp -overwrite -s_srs EPSG:{a} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g} -r {h} -multi' \
-           ' -srcnodata "-3.40282346639e+038" -dstnodata -999 {j} {k}'.format(a=projection, b=x_min, c=y_min, d=x_max,
+    warp = 'gdalwarp -overwrite -s_srs EPSG:{aa} -t_srs EPSG:{a} -te {b} {c} {d} {e} -ts {f} {g} -r {h} -multi' \
+           ' -srcnodata "-3.40282346639e+038" -dstnodata -999 {j} {k}'.format(aa=orig_projection, a=projection, b=x_min, c=y_min, d=x_max,
                                                                               e=y_max, f=cols, g=rows,
                                                                               h=resample_method, j=in_raster,
                                                                               k=out_raster)
-    print "WARP ({})".format(warp)
+    warp = 'gdalwarp -overwrite -s_srs EPSG:32613 -t_srs EPSG:26913 -r near ' \
+           '-te 568257.0000000000000000 3942663.0000000000000000 573507.0000000000000000 3945913.0000000000000000 ' \
+           '-ts 21 13 -of GTiff {} {}'.format(in_raster, out_raster)
+    print "WARP {}".format(warp)
     call(warp, shell=True)
 
 def geowarp_to_aoi(eeflux_root, cal_var, geo_info, proc_out):
