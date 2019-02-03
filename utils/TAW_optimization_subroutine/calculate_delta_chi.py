@@ -22,13 +22,14 @@ import numpy as np
 
 # ============= local library imports ===========================
 from utils.depletions_modeling.net_cdf_extract_to_tiff import write_raster
+from recharge.raster_tools import convert_raster_to_array
 
 def pull_series(data_dict):
 
     observation_files = data_dict['obs']
     print 'observation files\n ', observation_files
 
-    # get the dates when we have observations
+    # get the dates when we have observations for synthetic data
     obs_dates = []
     for obs in observation_files:
         filename = obs.split('/')[-1]
@@ -53,6 +54,35 @@ def pull_series(data_dict):
 
     return obs_dates, taw_vals
 
+def pull_series_eeflux(data_dict):
+    """"""
+
+    observation_files = data_dict['obs']
+    print 'observation files\n ', observation_files
+
+    # get dates when we have observations for eeflux
+    obs_dates = []
+    for obs in observation_files:
+        filename = obs.split('/')[-1]
+        name = filename.split('_')[0]
+        year = name[9:13]
+        j_date = name[13:16]
+
+        eeflux_date = datetime.datetime.strptime('{}{}'.format(year, j_date), '%Y%j').date()
+        # print 'date: ', eeflux_date
+        obs_dates.append(eeflux_date)
+
+    taw_vals = []
+    for k in data_dict.iterkeys():
+        if k != 'obs':
+            taw_vals.append(int(k))
+
+    # sort both of them
+    taw_vals = sorted(taw_vals)
+    obs_dates = sorted(obs_dates)
+
+    return obs_dates, taw_vals
+
 
 def get_obs_arr(obs, date):
     """"""
@@ -62,6 +92,29 @@ def get_obs_arr(obs, date):
         if observation.endswith(ending):
             arr = np.load(observation)
             return arr
+def get_obs_arr_eeflux(obs, date):
+    """"""
+
+    for observation in obs:
+        # print 'I observe: ', observation
+
+        obsfile = observation.split('/')[-1]
+        obsname = obsfile.split('_')[0]
+        # print 'obsname: ', obsname
+        year = obsname[9:13]
+        j_date = obsname[13:16]
+
+        eeflux_date = datetime.datetime.strptime('{}{}'.format(year, j_date), '%Y%j').date()
+
+        if '{}_{}_{}'.format(eeflux_date.year, eeflux_date.month, eeflux_date.day) == '{}_{}_{}'.format(date.year,
+                                                                                                        date.month,
+                                                                                                        date.day):
+            arr = convert_raster_to_array(observation)
+            # print 'shape', arr.shape
+
+            return arr
+
+
 
 def get_model_arr(model_results, date):
 
@@ -69,18 +122,21 @@ def get_model_arr(model_results, date):
         ending = '{}_{}_{}.npy'.format(date.day, date.month, date.year)
         if result.endswith(ending):
             arr = np.load(result)
+            # print 'model shape', arr.shape
             return arr
 
-def get_sse(data_dict, obs_dates, taw_vals):
+def get_sse(data_dict, obs_dates, taw_vals, read_tiff=False):
     """"""
 
     obs = data_dict['obs']
 
     # a dictionary to store the residuals indexed by date and sorted by taw
     residual_dict = {}
+
+    # we should store the squared residuals in the chi dict
     chi_dict = {}
 
-    # # FOR TESTING
+    # # FOR TESTING (Wait... what does this test?!?!?)
     # taw_vals = [225, 250]
 
     for taw in taw_vals:
@@ -88,25 +144,40 @@ def get_sse(data_dict, obs_dates, taw_vals):
         print 'taw', taw
         model_results = data_dict['{}'.format(taw)]
 
+        # we store tuples of dates and residuals in this
         residual_datelist = []
+        # store tuples of dates and squared residuals here
+        squared_residual_datelist = []
         for date in obs_dates:
 
             # for a given taw, we have the observed array and the model array here
-            obs_arr = get_obs_arr(obs, date)
+            # TODO - UPDATE for reading EEFLUX geotiff information
+            if not read_tiff:
+                obs_arr = get_obs_arr(obs, date)
+            if read_tiff:
+                obs_arr = get_obs_arr_eeflux(obs, date)
+
+            # get the ETRM modeled array that matches the observation.
             model_arr = get_model_arr(model_results, date)
 
+            # the residueals are the observed values minus modeled values
             residual_arr = obs_arr - model_arr
 
             # store the date and the residual array in a tuple and append to a list.
             store_residual = (date, residual_arr)
+
+            # todo - An issue here.
             residual_datelist.append(store_residual)
 
             # get chi (square error)
+            # todo - an issue here
             chi = residual_arr ** 2
             store_chi = (date, chi)
+            # this should be correct
+            squared_residual_datelist.append(store_chi)
 
         # get the date/value in dictionaries
-        chi_dict['{}'.format(taw)] = residual_datelist
+        chi_dict['{}'.format(taw)] = squared_residual_datelist
         residual_dict['{}'.format(taw)] = residual_datelist
 
 
@@ -119,8 +190,11 @@ def get_sse(data_dict, obs_dates, taw_vals):
         # make a zeros array from the shape of the array in the second place of the first tuple of chi_dict.
         rss = np.zeros(chi_dict['{}'.format(taw)][0][1].shape)
         print 'len chi dict', len(chi_dict["{}".format(taw)])
+        # the rss list is getting the squared value of the residual
         for tup in chi_dict['{}'.format(taw)]:
+            # add up all the squared residuals and that's the sum of squared residuals
             rss += tup[1]
+            # degrees of freedom accumulate
             n += 1
 
         # append the sum of each taw's squared errors to
@@ -178,7 +252,7 @@ def csv_output(taw_vals, rss_arrs, outpath, geo_info=None):
     print 'about to open file'
 
     # open a csv file and save the header and lines
-    with open('/Users/Gabe/Desktop/rss_array_output.csv', mode='w') as wfile:
+    with open('{}/rss_array_output.csv'.format(output_path), mode='w') as wfile:
         print 'file opened'
 
         # header
@@ -204,7 +278,7 @@ def net_cdf_output(taw_vals, rss_arrs, geo_info, outpath):
     """"""
     pass
 
-def numpy_to_geotiff(array, geo_info, output_path):
+def numpy_to_geotiff(array, geo_info, output_path, output_name):
     """"""
 
     trans = geo_info['geotransform']
@@ -218,7 +292,7 @@ def numpy_to_geotiff(array, geo_info, output_path):
     print 'dimensions', dim
     print 'projections', proj
 
-    write_raster(array, geotransform=trans, output_path=output_path, output_filename='optimized_taw.tif',
+    write_raster(array, geotransform=trans, output_path=output_path, output_filename=output_name,
                  dimensions=dim, projection=proj)
 
 def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
@@ -230,6 +304,8 @@ def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
     rss_arrs = rss['rss']
     dof_vals = rss['dof']
 
+    # degrees of freedom (m-n) where n=1 in this case ... (n - parameters, m - observations)
+    df = [(dof - 1) for dof in dof_vals]
     # square root of the degrees of freedom
     nu = [(dof - 1) ** 0.5 for dof in dof_vals]
     # square root of the sum of squares
@@ -238,20 +314,25 @@ def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
     # get the standard deviation from the residuals (I'm not sure what Juliet was using it for)
     s = [norm_val / nu_val for norm_val, nu_val in zip(norm, nu)]
 
-    # before you optimize TAW, store the values in ways that are easy to visualize # todo - write these
+    # before you optimize TAW, store the values in ways that are easy to visualize
     if not big_arr:
         print '\n outputting to csv since file is not so big \n'
         # output each pixel as a separate .csv
         csv_output(taw_vals, rss_arrs, outpath=output_path, geo_info=geo_info)
-    # stack into a geo-referrenced net_cdf
+
+    # stack into a geo-referrenced net_cdf TODO - Write this function (currently will 'pass')
     net_cdf_output(taw_vals, rss_arrs, geo_info, output_path)
+
+    # ====== FIND the TAW vals that correspond to min root sum squared error ======
 
     # for storing the minimum rss
     rss_tab = np.empty(rss_arrs[0].shape)
     # for storing the minimum taw
     taw_tab = np.empty(rss_arrs[0].shape)
-    count = 0
+    # to store the passing 95% confidence array (0/1)
+    threshold_95_tab = np.zeros(rss_arrs[0].shape)
 
+    count = 0
     for taw, rss_array in zip(taw_vals, rss_arrs):
 
         print 'checking rss for taw: {}'.format(taw)
@@ -277,15 +358,52 @@ def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
         # keep the counter going
         count += 1
 
+    print 'the minimum rss tab at the end of the loop \n', rss_tab
+
+    # ====== CALCULATE the Minimum CHI SQUARE and 95% confidence ======
+
+    # calculate the smallest residual sum of squares (I don't understand how this is different from the RSS)
+    smin = (rss_tab ** (0.5)) / (df[0] ** (0.5))
+    # I feel like the only reason we calculate smin is to get chimin and c...
+    sq = smin ** 2
+
+    # calculate the smallest Chi square in order to display it later
+    chimin = rss_tab / sq
+
+    print 'this is the chimin array \n', chimin
+
+    # calculate the 95% confidence interval from chi-square table with degrees of freedom of 1
+    c = chimin + 3.841459
+
+    # normalize the (minimum) sum of squares by dividing the sum by the sq. of the smin(for direct comparison w chimin?)
+    # if this array exceeds the 95% conf int raster, we pass the chi squared test
+    t = rss_tab / sq
+
+    # give the empty array a value of 1 if the normalized min sum of squares exceeds the chi square confidence interval
+    threshold_bool = t > c
+    threshold_95_tab[threshold_bool] = 1
+
     print 'taw tab at the end \n', taw_tab
+
+
+    # ====== OUTPUT arrays as rasters for optimized TAW and confidence interval ======
     # save the optimized_taw as a numpy array and as a geotiff
 
-    numpy_to_geotiff(taw_tab, geo_info, output_path)
-
+    # SAVE the optimized TAWs to a tiff file
+    numpy_to_geotiff(taw_tab, geo_info, output_path, output_name='optimized_taw.tif')
     np.save(os.path.join(output_path, 'optimized_taw.npy'), taw_tab)
 
+    # output the 95% confidence interval as a raster
+    numpy_to_geotiff(c, geo_info, output_path, output_name='95_confidence_lvl.tif')
 
-def main(data_dir, output_path, geo_info):
+    #if this raster exceeds the 95% conf int raster, we pass the chi squared test
+    numpy_to_geotiff(t, geo_info, output_path, output_name='norm_min_rss.tif')
+
+    # output the binary array as a raster indicating where the parametrized TAW would be passing the Chi2 95% C.I.
+    numpy_to_geotiff(threshold_95_tab, geo_info, output_path, output_name='95_pass.tif')
+
+
+def main(data_dir, output_path, geo_info, eeflux=False):
     """"""
 
     # open the data
@@ -293,10 +411,17 @@ def main(data_dir, output_path, geo_info):
         # load() returns a dict. load_all() returns a yaml object. Usefull if many subfiles are embedded.
         data_dict = yaml.load(yam)
     # pull
-    obs_dates, taw_vals = pull_series(data_dict)
+    if eeflux:
+        obs_dates, taw_vals = pull_series_eeflux(data_dict)
+    else:
+        obs_dates, taw_vals = pull_series(data_dict)
 
     # proceed by date and taw to read each image. Probably won't need chi and residuals but we get them in case we do.
-    rss, chi, residuals = get_sse(data_dict, obs_dates, taw_vals)
+    if eeflux:
+        read_tiff = True
+    else:
+        read_tiff = False
+    rss, chi, residuals = get_sse(data_dict, obs_dates, taw_vals, read_tiff=read_tiff)
 
     # pull out the geo info
     with open(geo_info, mode='r') as geofile:
@@ -308,16 +433,23 @@ def main(data_dir, output_path, geo_info):
     # get the square root of the sum of squares
     optimize_taw(rss, output_path, geo_info=geo_dict, big_arr=False)
 
-
+# eeflux = True
 if __name__ == "__main__":
 
+    # FOR SYNTHETIC DATA
     # path to the .yml_file
     data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output.yml'
     output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results'
-
-    # for turning arrays into geotiffs
     geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
-
-    # todo - should be a place to get the geotransform here.
-
     main(data_locations_dir, output_path, geo_info_path)
+
+    # # EEFLUX paths
+    # data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_eeflux.yml'
+    # output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_eeflux'
+    #
+    # # for turning arrays into geotiffs
+    # geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
+    #
+    # # todo - should be a place to get the geotransform here.
+    #
+    # main(data_locations_dir, output_path, geo_info_path, eeflux=True)
