@@ -26,10 +26,13 @@ dancadol 03 February 2019
 # ============= standard library imports ========================
 import os
 import fnmatch
+import math
 import rasterio
 import fiona
 import ogr, gdal, osr
 import numpy as np
+from rasterio import mask
+from matplotlib import pyplot as plt
 
 # ============= local library imports ===========================
 
@@ -39,6 +42,27 @@ def find_format(path, filter_):
     for root, dirs, files in os.walk(path):
         for file_ in fnmatch.filter(files, filter_):
             yield file_
+
+def zone_stats(zone_arr, v_id, nodata_val=-9999):
+    """"""
+
+    # print 'zone arr shape', zone_arr.shape
+    zone_lst = zone_arr.flatten().tolist()
+    # print 'len of zone list', len(zone_lst)
+
+    good_vals = []
+    for i in zone_lst:
+        if i != nodata_val:
+            good_vals.append(i)
+    # print 'length of good vals', len(good_vals)
+
+    # do the stats
+
+    v_sum = np.sum(good_vals)
+    v_mean = np.mean(good_vals)
+    v_count = len(good_vals)
+
+    return (v_id, v_sum, v_mean, v_count)
 
 
 def shapefile_extract(shapefile, raster_image):
@@ -51,46 +75,100 @@ def shapefile_extract(shapefile, raster_image):
 
     with fiona.open(shapefile) as shp:
         geometry = [feature['geometry'] for feature in shp]
-
+        # print 'geometry {}'.format(geometry)
     with rasterio.open(raster_image) as rast:
-        print 'raster image', raster_image
-        zone, transform = rasterio.mask.mask(rast, geometry, crop=True)
-    return zone[0]
+        # print 'raster image', raster_image
+        image, transform = rasterio.mask.mask(rast, geometry, crop=True, nodata=-9999)
 
+    # print 'transform', transform
+    # print 'shape', image.shape
+    # plt.imshow(image[0])
+    # plt.show()
+    return image[0]
 
 def run(in_path, shp, out_path):
 
     # Need to create a way to store the tabular data. Try a list of lists.
     # For each month in the big list, there will be a list of tuples containing the area name and the sum recharge.
 
+
+    # todo - output a list of tuples
+
+    raster_alldat = []
+    raster_sums = []
+    raster_means = []
+    raster_counts = []
+
     for raster in find_format(in_path, 'tot_infil*.tif'):
-        # folder, rast_name = os.path.split(raster)
-        # raster_name, extention = os.path.splitext(rast_name)
+        print '##### raster name: ', raster
+        raster_path = os.path.join(in_path, raster)
+        month_alldat = []
+        month_sums = []
+        month_means = []
+        month_counts = []
+
+        for shape in os.listdir(shp):
+
+            # shape_data  is in format (v_id, v_sum, v_mean, v_count)
+
+            if shape.endswith('.shp'):
+                shape_name = shape.split('.')[0]
+                v_id = shape_name[-4:]
+                print '## shape id', v_id
+                shp_path = os.path.join(shp, shape)
+                zone = shapefile_extract(shp_path, raster_path)
+                shape_data = zone_stats(zone, v_id)
+
+                month_alldat.append(shape_data)
+                month_sums.append(shape_data[1])
+                month_means.append([shape_data[2]])
+                month_counts.append([shape_data[3]])
+
+        print 'month sums', month_sums
+        print 'month means', month_means
+        print 'month counts', month_counts
+        raster_alldat.append(month_alldat)
+        raster_sums.append(month_sums)
+        raster_means.append(month_means)
+        raster_counts.append(month_counts)
+        print 'interim raster sum table', raster_sums
+        print 'interim raster mean table', raster_means
+        print 'interim raster count table', raster_counts
+
+    print 'final raster sum table', raster_sums
+
+
+
+
+
+# =====================================================================================================================
 
         # the raster
-        ras_datasource = gdal.Open(raster)
-
-        # the vector
-        shape_datasource = ogr.Open(shp)
-        layer_obj = shape_datasource.GetLayer()
-
-        # get number of features in the layer
-        num_features = layer_obj.GetFeatureCount()
-
-        # ====== iterate through features =========
-
-        for i in range(num_features):
-            feature = layer_obj.GetFeature(i)
-            print "feature id {}".format(feature.GetField('id'))
-
-            # this name is used for the naming convention of the output tables...
-            feature_name = 'polygonid{}'.format(feature.GetField('id'))
+        # ras_datasource = gdal.Open(raster)
+    #
+    #     # the vector
+    #     shape_datasource = ogr.Open(shp)
+    #     layer_obj = shape_datasource.GetLayer()
+    #
+    #     # get number of features in the layer
+    #     num_features = layer_obj.GetFeatureCount()
+    #
+    #     # ====== iterate through features =========
+    #
+    #     for i in range(num_features):
+    #         feature = layer_obj.GetFeature(i)
+    #         print "feature id {}".format(feature.GetField('id'))
+    #
+    #         # this name is used for the naming convention of the output tables...
+    #         feature_name = 'polygonid{}'.format(feature.GetField('id'))
+    #
+    #         print 'feature name: ', feature_name
 
 
 if __name__ == "__main__":
-    pyrana_results_raster_path = 'C:/Users/Mike/PyRANA/PyRANA_results000/'
-    shapfile_to_split = 'C:/Users/Mike/PyRANA/shapefiles/mainbasins.shp'
-    table_output_path = 'C:/Users/Mike/PyRANA/PyRANA_results000/'
-    run(pyrana_results_raster_path, shapfile_to_split, table_output_path)
+    pyrana_results_raster_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56\\monthly_rasters'
+    shapfile_split_path = 'C:\Users\Mike\PyRANA\NMDSWB_Zones\Planning_regions'
+    table_output_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56'
+    run(pyrana_results_raster_path, shapfile_split_path, table_output_path)
 
     # ======== EOF ==============\n
