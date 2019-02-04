@@ -31,8 +31,29 @@ from subprocess import call
 
 
 
-def make_mask():
+def make_mask(shape_path, raster_out_path):
     rasterize = 'gdal_rasterize -a Mask -ts 2272 2525 -tr 250 250 -te 114757 3471163 682757 4102413 -ot "Byte" ' \
                 '-l Sevilleta_Shrub_point F:/ETRM_Inputs/NDVI_oldPts/Sevilleta_Shrub_point.shp ' \
                 'F:/ETRM_Inputs/Masks/Sevilleta_Shrub_point.tif'
     call(rasterize)
+
+    in_shp = shape_path # e.g. F:/ETRM_Inputs/NDVI_oldPts/Sevilleta_Shrub_point.shp
+    out_ras = raster_out_path # e.g. F:/ETRM_Inputs/Masks/Sevilleta_Shrub_point.tif
+    raster_name = 'arb_mask' # e.g., Sevilleta_Shrub_point
+    x_min = 114757
+    y_min = 3471163
+    x_max = 682757
+    y_max = 4102413
+    cols = 2272
+    rows = 2525
+    cell_size = 250
+    resample_method = 'near'
+    raster = 'gdal_rasterize  -a Mask -te {b} {c} {d} {e} ' \
+             '-ts {f} {g} -tr {h} {h} -l {i} {j} {k}'.format(b=x_min, c=y_min, d=x_max, e=y_max, f=cols, g=rows,
+                                                             h=cell_size, i=raster_name, j=in_shp, k=out_ras)
+    call(raster)
+    # warp
+    # warp = 'gdalwarp -overwrite  -s_srs EPSG:{a} -te {b} {c} {d} {e} ' \
+    #        '-tr {f} {f} -r {g} -of GTiff {h} {i}'.format(a=projection, b=x_min, c=y_min, d=x_max, e=y_max,
+    #                                                      f=rcell_size, g=resample_method, h=temp, i=out_raster)
+    # call(warp)
