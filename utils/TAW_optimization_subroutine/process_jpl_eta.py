@@ -5,16 +5,22 @@ import gdal
 def warp_jpl(jpl_filepath, etrm_geo, output_path):
     """"""
     # change
-    xmin, ymin, xmax, ymax, cols, rows, t_srs, resample_method = etrm_geo
+
+    jpl_filename = jpl_filepath.split('/')[-1]
+    jpl_name = jpl_filename[:-4]
+    # print 'jpl name', jpl_name
+    jpl_outname = '{}_etrm.tif'.format(jpl_name)
+
+    out_loc = os.path.join(output_path, jpl_outname)
+    print 'out loc', out_loc
+
+    (xmin, ymin, xmax, ymax, cols, rows, t_srs, resample_method) = etrm_geo
 
 
-    warp = 'gdalwarp -overwrite -t_srs EPSG:26913 -r near ' \
-           '-te 114757.0000000000000000 3471163.0000000000000000 682757.0000000000000000 4102413.0000000000000000' \
-           ' -ts 2272 2525 ' \
-           '-of GTiff /Users/dcadol/Desktop/academic_docs_II/JPL_Data/PT/PT-JPL/ET_daily_kg/2002.01.22.PTJPL.ET_daily_kg.MODISsin1km.tif ' \
-           '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/JPL_calibration_approach/JPL_warp_test/jpl_warp_test.tif'
+    warp = '/Users/dcadol/.conda/envs/Recharge/bin/gdalwarp -overwrite -t_srs {tsrs} -r {resample} -te {xmin} {ymin} {xmax} {ymax} -ts {cols} {rows} -of GTiff {current_file} {output_file}'.format(tsrs=t_srs, resample=resample_method, xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax, cols=cols, rows=rows, current_file=jpl_filepath, output_file=out_loc)
 
-    pass
+    call(warp, shell=True)
+
 
 def run(jpl_rootpath, etrm_geo, output_path):
     """"""
@@ -26,6 +32,7 @@ def run(jpl_rootpath, etrm_geo, output_path):
         for file in files:
             jpl_fp = os.path.join(path, file)
             if jpl_fp.endswith('.tif'):
+                print 'jpl fp', jpl_fp
                 warp_jpl(jpl_fp, etrm_geo, output_path)
 
 if __name__ == "__main__":

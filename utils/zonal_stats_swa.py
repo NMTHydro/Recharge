@@ -166,9 +166,14 @@ def run(in_path, shp, out_path):
 
 
 if __name__ == "__main__":
-    pyrana_results_raster_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56\\monthly_rasters'
-    shapfile_split_path = 'C:\Users\Mike\PyRANA\NMDSWB_Zones\Planning_regions'
-    table_output_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56'
+    # pyrana_results_raster_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56\\monthly_rasters'
+    # shapfile_split_path = 'C:\Users\Mike\PyRANA\NMDSWB_Zones\Planning_regions'
+    # table_output_path = 'C:\\Users\\Mike\\PyRANA\\PyRANA_results000\\190126_05_56'
+
+    pyrana_results_raster_path = '/Users/dcadol/Desktop/academic_docs_II/test_DAN/rasters'
+    shapfile_split_path = '/Users/dcadol/Desktop/academic_docs_II/test_DAN/shapefiles'
+    table_output_path = '/Users/dcadol/Desktop/academic_docs_II/test_DAN/table'
+
     run(pyrana_results_raster_path, shapfile_split_path, table_output_path)
 
     # ======== EOF ==============\n
