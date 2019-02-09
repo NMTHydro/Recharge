@@ -18,7 +18,7 @@ import os
 import shutil
 import time
 import numpy
-import psutil
+# import psutil
 import csv
 import pandas
 import gdal

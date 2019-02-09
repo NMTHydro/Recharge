@@ -339,8 +339,11 @@ def make_results_dir(out_root=None, shapes=None):
 
 def get_tiff_transform(tiff_path):
     with rasterio.open(tiff_path) as rfile:
-        t0 = rfile.affine  # upper-left pixel corner affine transform
-        return t0
+        try:
+            t0 = rfile.affine  # upper-left pixel corner affine transform
+        except AttributeError:
+            t0 = rfile.transform
+    return t0
 
 
 def get_tiff_transform_func(tiff_path, tx=0.5, ty=0.5):

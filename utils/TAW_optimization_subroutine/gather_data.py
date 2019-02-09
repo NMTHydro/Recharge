@@ -71,16 +71,21 @@ def get_results(list_of_taws, list_of_dates, results_path, rzsm):
                 file_path = os.path.join(dir_path, file_name)
                 results_list.append(file_path)
 
+        # TODO - did this change?!?!?
         else:
             for date in list_of_dates:
-                file_name = 'ETRM_daily_eta_taw_{}_{}_{}_{}.npy'.format(taw, date.day, date.month, date.year)
+                file_name = 'ETRM_daily_eta_taw_{}_{}_{}_{}.npy'.format(taw, date.year, date.month, date.day)
                 file_path = os.path.join(dir_path, file_name)
                 results_list.append(file_path)
+            # for date in list_of_dates:
+            #     file_name = 'ETRM_daily_eta_taw_{}_{}_{}_{}.npy'.format(taw, date.day, date.month, date.year)
+            #     file_path = os.path.join(dir_path, file_name)
+            #     results_list.append(file_path)
 
         # put the results files in a dictionary indexed by the taw
         results_dictionary[taw] = results_list
 
-    print 'this is the results dictionary \n\n', results_dictionary
+    # print 'this is the results dictionary \n\n', results_dictionary
     return results_dictionary
 
 def get_taw(config):
@@ -181,7 +186,27 @@ def get_eeflux_obs(obs_path):
 
     return dates_to_get, eeflux_obs
 
+def get_jpl_obs(obs_path):
+    """"""
 
+    dates_to_get = []
+    jpl_obs = []
+
+    for file in os.listdir(obs_path):
+        file_lst = file.split('.')
+        if file_lst[0] != '':
+            y = int(file_lst[0])
+            m = int(file_lst[1])
+            d = int(file_lst[2])
+
+            jpl_date = datetime.date(y, m, d)
+
+            # print 'eeflux_date', eeflux_date
+            dates_to_get.append(jpl_date)
+
+            jpl_obs.append(os.path.join(obs_path, file))
+
+    return dates_to_get, jpl_obs
 
 def run_eeflux_obs(model_results_path, observations_path, config_file):
     """"""
@@ -200,18 +225,43 @@ def run_eeflux_obs(model_results_path, observations_path, config_file):
 
     return eeflux_obs, etrm_results
 
+def run_jpl_obs(results_path, jpl_path, config):
+    """"""
+
+    list_of_taws = get_taw(config)
+
+    # 'dates_to_get' should be a list of datetime.date() obs and eeflux_obs should be a list of strings for the
+    #  full path to each observation of processed EEFLUX data
+    print 'obs', jpl_path
+    dates_to_get, jpl_obs = get_jpl_obs(jpl_path)
+
+    'dates to get\n', dates_to_get
+    # print 'eeflux observations \n', jpl_obs
+
+    # # TODO - MAKE this work if the ETRM output has a different main dir name
+    etrm_results = get_results(list_of_taws, dates_to_get, results_path, rzsm)
+
+    return jpl_obs, etrm_results
+
+
 
 synthetic_mode = False
 rzsm = False
+jpl = True
+eeflux_mode = False
 if __name__ =="__main__":
 
     # the path to the results dataset
-    results_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
-                   "taw_optimization_etrm_outputs_nov_28_2percent"
+    # results_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
+    #                "taw_optimization_etrm_outputs_nov_28_2percent"
+
+    results_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/' \
+                   'taw_optimization_etrm_outputs_feb_8_N_Central_NM'
 
     # the path to the config file used to run the model
     # config = '/Users/Gabe/ETRM_CONFIG.yml'
-    config = '/Users/dcadol/Desktop/ETRM_CONFIG.yml'
+    # config = '/Users/dcadol/Desktop/ETRM_CONFIG.yml'
+    config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi.yml'
 
     ### ===== These are needed if using synthetic data ======
     # the path to the synthetic dataset
@@ -223,20 +273,24 @@ if __name__ =="__main__":
 
     ### ===== Use these for calibrating to METRIC EEFLUX data ======
     eeflux_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/metric_obs_processed'
+    jpl_path = '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/JPL_calibration_approach/jpl_etrm_espanola_warp_PT'
 
 
     if synthetic_mode:
         obs, pyrana_results = run_synthetic(synpath, results_path, n, config, rzsm)
 
-    else:
-        # todo - make run once we have real results. Collapsed functions you will likely not need.
+    elif eeflux_mode:
         obs, pyrana_results = run_eeflux_obs(results_path, eeflux_path, config)
+
+    elif jpl:
+        obs, pyrana_results = run_jpl_obs(results_path, jpl_path, config)
 
     # put the observations in the results dictionary
     pyrana_results['obs'] = obs
 
-    # output the dictionary to a .yml file
-    gather_data_output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_eeflux.yml"
+    # # output the dictionary to a .yml file
+    # gather_data_output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_eeflux.yml"
+    gather_data_output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
 
     with open(gather_data_output_path, 'w') as wfile:
         yaml.dump(pyrana_results, wfile)

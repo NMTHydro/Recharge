@@ -24,10 +24,16 @@ import numpy as np
 from utils.depletions_modeling.net_cdf_extract_to_tiff import write_raster
 from recharge.raster_tools import convert_raster_to_array
 
+
+# ===== GLOBAL VARIABLES =====
+eeflux = False
+jpl = True
+
+
 def pull_series(data_dict):
 
     observation_files = data_dict['obs']
-    print 'observation files\n ', observation_files
+    # print 'observation files\n ', observation_files
 
     # get the dates when we have observations for synthetic data
     obs_dates = []
@@ -38,7 +44,7 @@ def pull_series(data_dict):
         dt = datetime.date(year=date_components[2], month=date_components[1], day=date_components[0])
         obs_dates.append(dt)
 
-    print 'the dates we observed \n{}'.format(obs_dates)
+    # print 'the dates we observed \n{}'.format(obs_dates)
     print len(obs_dates)
 
     taw_vals = []
@@ -53,12 +59,39 @@ def pull_series(data_dict):
     obs_dates = sorted(obs_dates)
 
     return obs_dates, taw_vals
+def pull_series_jpl(data_dict):
+    observation_files = data_dict['obs']
+    obs_dates = []
+
+    for obs in observation_files:
+        filename = obs.split('/')[-1]
+        file_lst = filename.split('.')
+        # print file_lst[0]
+        y = int(file_lst[0])
+        m = int(file_lst[1])
+        d = int(file_lst[2])
+
+        jpl_date = datetime.date(y, m, d)
+
+        # print 'eeflux_date', eeflux_date
+        obs_dates.append(jpl_date)
+
+    taw_vals = []
+    for k in data_dict.iterkeys():
+        if k != 'obs':
+            taw_vals.append(int(k))
+
+    # sort both of them
+    taw_vals = sorted(taw_vals)
+    obs_dates = sorted(obs_dates)
+
+    return obs_dates, taw_vals
 
 def pull_series_eeflux(data_dict):
     """"""
 
     observation_files = data_dict['obs']
-    print 'observation files\n ', observation_files
+    # print 'observation files\n ', observation_files
 
     # get dates when we have observations for eeflux
     obs_dates = []
@@ -92,6 +125,29 @@ def get_obs_arr(obs, date):
         if observation.endswith(ending):
             arr = np.load(observation)
             return arr
+
+
+def get_obs_arr_jpl(obs, date):
+    """"""
+
+    for observation in obs:
+        name = observation.split('/')[-1]
+        file_lst = name.split('.')
+        y = int(file_lst[0])
+        m = int(file_lst[1])
+        d = int(file_lst[2])
+
+        jpl_date = datetime.date(y, m, d)
+
+        if '{}_{}_{}'.format(jpl_date.year, jpl_date.month, jpl_date.day) == '{}_{}_{}'.format(date.year,
+                                                                                                        date.month,
+                                                                                                        date.day):
+            arr = convert_raster_to_array(observation)
+            # print 'shape', arr.shape
+
+            return arr
+
+
 def get_obs_arr_eeflux(obs, date):
     """"""
 
@@ -119,15 +175,17 @@ def get_obs_arr_eeflux(obs, date):
 def get_model_arr(model_results, date):
 
     for result in model_results:
+        # TODO - when did this get fucked up?
         ending = '{}_{}_{}.npy'.format(date.day, date.month, date.year)
+        ending = '{}_{}_{}.npy'.format(date.year, date.month, date.day)
         if result.endswith(ending):
             arr = np.load(result)
             # print 'model shape', arr.shape
             return arr
 
-def get_sse(data_dict, obs_dates, taw_vals, read_tiff=False):
+def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tiff=False, read_numpy=False):
     """"""
-
+    print 'true false eef {}, jpl {}, numpy, {}'.format(read_eeflux_tiff, read_jpl_tiff, read_numpy)
     obs = data_dict['obs']
 
     # a dictionary to store the residuals indexed by date and sorted by taw
@@ -138,7 +196,7 @@ def get_sse(data_dict, obs_dates, taw_vals, read_tiff=False):
 
     # # FOR TESTING (Wait... what does this test?!?!?)
     # taw_vals = [225, 250]
-
+    # TODO ==== MEMORY LEAK ====
     for taw in taw_vals:
 
         print 'taw', taw
@@ -152,18 +210,24 @@ def get_sse(data_dict, obs_dates, taw_vals, read_tiff=False):
 
             # for a given taw, we have the observed array and the model array here
             # TODO - UPDATE for reading EEFLUX geotiff information
-            if not read_tiff:
+            if read_eeflux_tiff:
                 obs_arr = get_obs_arr(obs, date)
-            if read_tiff:
+            elif read_numpy:
                 obs_arr = get_obs_arr_eeflux(obs, date)
+
+            elif read_jpl_tiff:
+                obs_arr = get_obs_arr_jpl(obs, date)
 
             # get the ETRM modeled array that matches the observation.
             model_arr = get_model_arr(model_results, date)
 
-            # the residueals are the observed values minus modeled values
+            # the residuals are the observed values - modeled values
+            # print 'obs arr\n', obs_arr
+            # print 'model arr \n', model_arr
             residual_arr = obs_arr - model_arr
 
             # store the date and the residual array in a tuple and append to a list.
+            # todo - ===== leaking memory =====
             store_residual = (date, residual_arr)
 
             # todo - An issue here.
@@ -238,8 +302,8 @@ def csv_output(taw_vals, rss_arrs, outpath, geo_info=None):
             x_coords[j, i] = x_coord
             y_coords[j, i] = y_coord
 
-    print 'x coordinate array \n', x_coords
-    print 'y coordinate array \n', y_coords
+    # print 'x coordinate array \n', x_coords
+    # print 'y coordinate array \n', y_coords
 
 
     # flatten each array
@@ -403,7 +467,7 @@ def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
     numpy_to_geotiff(threshold_95_tab, geo_info, output_path, output_name='95_pass.tif')
 
 
-def main(data_dir, output_path, geo_info, eeflux=False):
+def main(data_dir, output_path, geo_info, eeflux=False, jpl=False):
     """"""
 
     # open the data
@@ -413,35 +477,47 @@ def main(data_dir, output_path, geo_info, eeflux=False):
     # pull
     if eeflux:
         obs_dates, taw_vals = pull_series_eeflux(data_dict)
+    elif jpl:
+        obs_dates, taw_vals = pull_series_jpl(data_dict)
     else:
         obs_dates, taw_vals = pull_series(data_dict)
 
     # proceed by date and taw to read each image. Probably won't need chi and residuals but we get them in case we do.
     if eeflux:
-        read_tiff = True
+        read_ee_tiff = True
+        read_jpl_tiff = False
+        numpy = False
+    elif jpl:
+        read_jpl_tiff = True
+        read_ee_tiff = False
+        numpy = False
     else:
-        read_tiff = False
-    rss, chi, residuals = get_sse(data_dict, obs_dates, taw_vals, read_tiff=read_tiff)
+        numpy = True
+        read_jpl_tiff = False
+        read_ee_tiff = False
+
+    rss, chi, residuals = get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=read_ee_tiff,
+                                  read_jpl_tiff=read_jpl_tiff, read_numpy=numpy)
 
     # pull out the geo info
     with open(geo_info, mode='r') as geofile:
         geo_dict = yaml.load(geofile)
 
-    print 'testing the geo dict -> ', geo_dict
+    # print 'testing the geo dict -> ', geo_dict
 
 
     # get the square root of the sum of squares
     optimize_taw(rss, output_path, geo_info=geo_dict, big_arr=False)
 
-# eeflux = True
+
 if __name__ == "__main__":
 
-    # FOR SYNTHETIC DATA
-    # path to the .yml_file
-    data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output.yml'
-    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results'
-    geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
-    main(data_locations_dir, output_path, geo_info_path)
+    # # FOR SYNTHETIC DATA
+    # # path to the .yml_file
+    # data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output.yml'
+    # output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results'
+    # geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
+    # main(data_locations_dir, output_path, geo_info_path)
 
     # # EEFLUX paths
     # data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_eeflux.yml'
@@ -451,5 +527,11 @@ if __name__ == "__main__":
     # geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
     #
     # # todo - should be a place to get the geotransform here.
-    #
-    # main(data_locations_dir, output_path, geo_info_path, eeflux=True)
+
+    # JPL paths (make sure global 'eeflux' variable set to False and 'jpl' is set to True)
+    data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
+    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_jpl'
+    geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info.yml'
+
+
+    main(data_locations_dir, output_path, geo_info_path, jpl=True) #eeflux=True

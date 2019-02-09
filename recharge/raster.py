@@ -21,7 +21,8 @@ import os
 
 from numpy import array, asarray, where, zeros_like, nonzero
 from numpy.ma import masked_where, nomask
-from osgeo import gdal
+import gdal
+# from osgeo import gdal
 
 from app.paths import paths
 

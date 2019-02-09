@@ -131,6 +131,7 @@ if __name__ == '__main__':
     # else:
     #     print 'the path should be {}'.format(sys.argv[1])
     #     run(cfg_path=sys.argv[1])
-    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
+    # run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_statewide.yml')
+    run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi.yml')
 
 # ============= EOF =============================================
