@@ -28,7 +28,6 @@ import os
 import fnmatch
 import rasterio
 import fiona
-import ogr, gdal, osr
 import numpy as np
 from rasterio import mask
 import pandas as pd

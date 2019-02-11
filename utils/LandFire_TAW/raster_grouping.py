@@ -139,7 +139,7 @@ if __name__ == "__main__":
     ecos_to_group = [pj, juniper_sav, desert_grass, creosote, scrub]
 
     # START CODE -> new code level to describe new grouped units (all raster values will be 20,000 or higher).
-    startcode = 6000
+    startcode = 0# 6000
 
 
     # ====== User-Defined Output path ======
