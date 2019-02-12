@@ -67,8 +67,8 @@ def main(sample_file, output_path, filename):
 
 if __name__ == "__main__":
 
-    sample_geotiff_file_path = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs_test_tiny_AOI/statics/taw_reduced.tif'
+    sample_geotiff_file_path = '/Volumes/Seagate_Expansion_Drive/ETRM_espanola_aoi_inputs/statics/taw_reduced.tif'
     output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder'
 
 
-    main(sample_file=sample_geotiff_file_path, output_path=output_path, filename='geo_info.yml')
+    main(sample_file=sample_geotiff_file_path, output_path=output_path, filename='geo_info_espanola.yml')
