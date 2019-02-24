@@ -201,20 +201,19 @@ def save_to_temp(squared_residual_datelist, taw):
         # print 'taw tup[0', taw
         # print 'sq resid arr tup[1', sq_resid_arr
 
-        # TODO get rid of this if statement to calibrate to dates not in the growing season...
-        if resid_date > datetime.date(resid_date.year, 4, 1) and resid_date < datetime.date(resid_date.year, 10, 31):
 
-            temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
 
-            # print temp_location
-            # print temp_name
+        temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
 
-            file_address = os.path.join(temp_location, temp_name)
+        # print temp_location
+        # print temp_name
 
-            # file_address = "{}/{}".format(temp_location, temp_name)
+        file_address = os.path.join(temp_location, temp_name)
 
-            # save the locations of the temp squared residual files
-            read_list.append(file_address)
+        # file_address = "{}/{}".format(temp_location, temp_name)
+
+        # save the locations of the temp squared residual files
+        read_list.append(file_address)
 
         if not os.path.isfile(file_address):
             np.save(file_address, sq_resid_arr)
@@ -238,7 +237,7 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
     # taw_vals = [225, 250]
     # ==== MEMORY INTENSIVE  (we avoid serious memory leaks by writing to files...)====
     new_obs_dates = []
-    for taw in taw_vals[0:1]:
+    for taw in taw_vals:
 
         print 'taw', taw
         model_results = data_dict['{}'.format(taw)]
@@ -250,56 +249,60 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
 
         read_list = []
 
-        for i, date in enumerate(obs_dates):
+        for i, resid_date in enumerate(obs_dates):
 
             # for a given taw, we have the observed array and the model array here
-            if read_eeflux_tiff:
-                obs_arr = get_obs_arr(obs, date)
-            elif read_numpy:
-                obs_arr = get_obs_arr_eeflux(obs, date)
 
-            elif read_jpl_tiff:
-                obs_arr = get_obs_arr_jpl(obs, date)
+            # TODO get rid of this 'if' statement to calibrate to dates not in the growing season...
+            if resid_date > datetime.date(resid_date.year, 6, 1) and resid_date < datetime.date(resid_date.year, 9, 30):
 
-            if np.isnan(obs_arr).all():
-                print 'WARNING \n {} \n obs arr is nan for {}'.format(obs_arr, date)
+                if read_eeflux_tiff:
+                    obs_arr = get_obs_arr(obs, resid_date)
+                elif read_numpy:
+                    obs_arr = get_obs_arr_eeflux(obs, resid_date)
 
-            # get the ETRM modeled array that matches the observation.
-            model_arr = get_model_arr(model_results, date)
+                elif read_jpl_tiff:
+                    obs_arr = get_obs_arr_jpl(obs, resid_date)
 
-            if np.isnan(model_arr).all():
-                print 'WARNING \n {} \n model arr is nan for {}'.format(model_arr, date)
+                if np.isnan(obs_arr).all():
+                    print 'WARNING \n {} \n obs arr is nan for {}'.format(obs_arr, resid_date)
 
-            # the residuals are the observed values - modeled values
-            residual_arr = obs_arr - model_arr
+                # get the ETRM modeled array that matches the observation.
+                model_arr = get_model_arr(model_results, resid_date)
 
-            if np.isnan(residual_arr).all():
-                print 'WARNING \n {} \n residual arr is nan for {}'.format(residual_arr, date)
+                if np.isnan(model_arr).all():
+                    print 'WARNING \n {} \n model arr is nan for {}'.format(model_arr, resid_date)
 
-            # # store the date and the residual array in a tuple and append to a list.
-            # store_residual = (date, residual_arr)
-            # residual_datelist.append(store_residual)
+                # the residuals are the observed values - modeled values
+                residual_arr = obs_arr - model_arr
 
-            # get chi (square error)
-            chi = residual_arr ** 2
-            # store_chi = (date, chi)
+                if np.isnan(residual_arr).all():
+                    print 'WARNING \n {} \n residual arr is nan for {}'.format(residual_arr, resid_date)
 
-            # TODO - Make a NEW array to keep track of the good values from each pixel to modify the Chi SQ where NANs occur.
-            # TODO - For NAN pixels, filter them and set them to zero. Track zeros for appropriate quantification of 95% confidence.
+                # # store the date and the residual array in a tuple and append to a list.
+                # store_residual = (date, residual_arr)
+                # residual_datelist.append(store_residual)
 
-            if np.isnan(chi).all():
-                print 'WARNING \n {} \n chi arr is nan for {}'.format(chi, date)
+                # get chi (square error)
+                chi = residual_arr ** 2
+                # store_chi = (date, chi)
 
-            if not np.isnan(chi).all():
+                # TODO - Make a NEW array to keep track of the good values from each pixel to modify the Chi SQ where NANs occur.
+                # TODO - For NAN pixels, filter them and set them to zero. Track zeros for appropriate quantification of 95% confidence.
 
-                # get new observation dates
-                new_obs_dates.append(date)
+                if np.isnan(chi).all():
+                    print 'WARNING \n {} \n chi arr is nan for {}'.format(chi, resid_date)
 
-                temp_name = '{}_{}_{}_{}.npy'.format(taw, date.year, date.month, date.day)
+                if not np.isnan(chi).all():
 
-                read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
+                    # get new observation dates
+                    new_obs_dates.append(resid_date)
 
-                np.save('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name), chi)
+                    temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
+
+                    read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
+
+                    np.save('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name), chi)
 
 
         chi_dict['{}'.format(taw)] = read_list
@@ -310,7 +313,7 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
     rss_list = []
     dof_list = []
     test_list = []
-    for taw in taw_vals[0:1]:
+    for taw in taw_vals:
         print 'were on taw {}'.format(taw)
         n = 0
         # make a zeros array from the shape of one of the arrays in the chi_dict.
@@ -347,8 +350,8 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
         # # append the sum of each taw's squared errors to
         print 'final rss for taw {}'.format(taw)
         print 'rss', rss
-        plt.imshow(rss)
-        plt.show()
+        # plt.imshow(rss)
+        # plt.show()
         # print 'new final rss for taw {}'.format(taw)
         # # rss = np.load('/Users/dcadol/Desktop/desktop_taw_optimization_temp/rss_temp{}.npy'.format(
         # #     len(chi_dict['{}'.format(taw)])-1))

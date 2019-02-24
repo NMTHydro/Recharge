@@ -111,7 +111,8 @@ def depletion_calc(f_out, f_in):
     return depletion
 
 
-def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=True, shape=None):
+def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_ssebop=False, is_jpl=False, shape=None,
+            start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None):
     """
 
     :return:
@@ -134,17 +135,37 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
 
     # function to calculate the depletion at a monthly timestep
     #  within that function, output the running depletion raster that results from each month's F_in-F_out
-    # start_date = datetime.strptime("2000-2", "%Y-%m")
-    # end_date = datetime.strptime("2013-12", "%Y-%m")
-    start_date, end_date = cfg.date_range
-    print 'start and end dates: {}, {}'.format(start_date, end_date)
-    months_in_series = ((end_date.year - start_date.year) * 12) + (end_date.month - start_date.month)
-    print 'months in analysis series: {}'.format(months_in_series)
-    precip_name = "tot_precip_{}_{}.tif"
+
     if is_ssebop:
-        eta_name = "ssebop_{}_{}_warped.tif"
-    else:
-        eta_name = "tot_eta_{}_{}.tif"
+        start_date = datetime.strptime("2000-2", "%Y-%m")
+        end_date = datetime.strptime("2013-12", "%Y-%m")
+
+    if cfg != None:
+        start_date, end_date = cfg.date_range
+
+    print 'start and end dates: {}, {}'.format(start_date, end_date)
+
+    if time_step == 'monthly':
+        values_in_timeseries = ((end_date.year - start_date.year) * 12) + (end_date.month - start_date.month)
+        print 'months in analysis series: {}'.format(values_in_timeseries)
+        precip_name = "tot_precip_{}_{}.tif"
+        if is_ssebop:
+            eta_name = "ssebop_{}_{}_warped.tif"
+        else:
+            eta_name = "tot_eta_{}_{}.tif"
+
+    elif time_step == 'daily':
+        date_delta = end_date - start_date
+        values_in_timeseries = date_delta.days
+        # year and julian date all together no spaces
+        precip_name = "PRISMD2_NMHW2mi_{}{:02d}{:02d}.tif"
+        if is_ssebop:
+            eta_name = "ssebop_{}_{}_warped.tif"
+        elif is_jpl:
+            # year.zeropadmonth.zeropadday.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif
+            eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
+        else:
+            eta_name = "tot_eta_{}_{}.tif"
 
 # at each timestep, keep track of how negative the depletion has gotten; initialize at zero
     if shape is None:
@@ -154,17 +175,40 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
     max_depletion = np.zeros(shape, dtype=float)
     # keep track of the minimum depletion map
     min_depletion = np.zeros(shape, dtype=float)
-    # depletion_list = []
+    # track total ETa
     total_eta = np.zeros(shape, dtype=float)
-    for i in range(months_in_series + 1):
-        print 'run we iteration {}'.format(i)
-        # count up from the start date by months...
-        date = start_date + relativedelta(months=+i)
+    # track cumulative prism precip
+    total_precip = np.zeros(shape, dtype=float)
 
-        precip = os.path.join(pris_path, precip_name.format(date.year, date.month))
-        eta = os.path.join(eta_path, eta_name.format(date.year, date.month))
-        if not os.path.isfile(precip):
-            break
+    for i in range(values_in_timeseries + 1):
+
+        print 'run we iteration {}'.format(i)
+
+        if time_step == 'monthly':
+            # count up from the start date by months...
+            date = start_date + relativedelta(months=+i)
+            precip = os.path.join(pris_path, precip_name.format(date.year, date.month))
+            eta = os.path.join(eta_path, eta_name.format(date.year, date.month))
+
+        elif time_step == 'daily':
+            date = start_date + relativedelta(days=+i)
+            # # convert datetime.date to a timetuple to be able to get the day of the year directly
+            # timetup = date.timetuple()
+            precip = os.path.join(pris_path, precip_name.format(date.year, date.month, date.day))
+            if is_jpl:
+                eta = os.path.join(eta_path, eta_name.format(date.year, date.month, date.day))
+            else:
+                print 'you need to set the script up to run jpl data or specify another daily dataset' \
+                      ' and fix the script'
+
+        if not os.path.isfile(eta):
+            print 'cannot find eta file: \n {}'.format(eta)
+            print 'we will skip this day and continue accumulating'
+            continue
+        # if not os.path.isfile(precip):
+        #     print 'that is not a file {} '.format(precip)
+        #     # TODO - why do you do this, Dan?
+        #     break
 
         # print 'precip', precip
         # print 'ETa (ssebop)', eta
@@ -175,7 +219,25 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
 
         total_eta += eta_arr
 
-        # depletion for the current monthly timestep
+        total_precip += precip_arr
+
+        if time_step == 'daily' and eta_output != None:
+            # output the current timestep cumulative eta and precip
+            eta_outname = 'cumulative_eta_{}_{}_{}.tif'.format(date.year, date.month, date.day)
+            if os.path.isfile(os.path.join(eta_output, eta_outname)):
+                pass
+            else:
+                write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
+
+        if time_step == 'daily' and precip_output != None:
+            # output the current timestep cumulative eta and precip
+            precip_outname = 'cumulative_prism_{}_{}_{}.tif'.format(date.year, date.month, date.day)
+            if os.path.isfile(os.path.join(precip_output, precip_outname)):
+                pass
+            else:
+                write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
+
+        # depletion for the current timestep
         depletion_delta = depletion_calc(eta_arr, precip_arr)
 
         # add to the running depletion tally
@@ -189,35 +251,56 @@ def run_W_E(cfg, eta_path=None, pris_path=None, output_folder=None, is_ssebop=Tr
         # newmax = depletion_ledger[newmax_bool == True]
         max_depletion = np.maximum(depletion_ledger, max_depletion)
 
-        # reset minimum two years into the analysis
-        if i is 24:
-            min_depletion = depletion_ledger
-        min_depletion = np.minimum(depletion_ledger, min_depletion)
+        if cfg != None:
+            # reset minimum two years into the analysis
+            if i is 24:
+                min_depletion = depletion_ledger
+            min_depletion = np.minimum(depletion_ledger, min_depletion)
 
         # print "is this messed up?", oldmax == newmax
 
-        # for each monthly timestep, take the cumulative depletion condition and output it as a raster
-        depletion_name = "cumulative_depletion_{}_{}.tif".format(date.year, date.month)
-        write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
+        if time_step == 'monthly':
+            # for each monthly timestep, take the cumulative depletion condition and output it as a raster
+            depletion_name = "cumulative_depletion_{}_{}.tif".format(date.year, date.month)
+            write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
+
+        elif time_step == 'daily':
+            depletion_name = "cumulative_depletion_{}_{}_{}.tif".format(date.year, date.month, date.day)
+            if os.path.isfile(os.path.join(output_folder, depletion_name)):
+                pass
+            else:
+                write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
+            # todo - pack stuff into a netcdf instead of a tiff
 
     print 'iterations finished'
     # output the maximum depletion
     max_depletion_name = 'max_depletion_{}_{}.tif'.format(start_date.year, end_date.year)
     write_raster(max_depletion, transform, output_folder, max_depletion_name, dim, proj, dt)
 
-    # output the minimum depletion
-    min_depletion_name = 'min_depletion_{}_{}.tif'.format(start_date.year+2, end_date.year)
-    write_raster(min_depletion, transform, output_folder, min_depletion_name, dim, proj, dt)
+    if cfg != None:
+        # output the minimum depletion
+        min_depletion_name = 'min_depletion_{}_{}.tif'.format(start_date.year+2, end_date.year)
+        write_raster(min_depletion, transform, output_folder, min_depletion_name, dim, proj, dt)
 
-    # output the depletion range
-    range_depletion = np.zeros(shape, dtype=float)
-    range_depletion = max_depletion - min_depletion
-    range_depletion_name = 'range_depletion_{}_{}.tif'.format(start_date.year + 2, end_date.year)
-    write_raster(range_depletion, transform, output_folder, range_depletion_name, dim, proj, dt)
+        # output the depletion range
+        range_depletion = np.zeros(shape, dtype=float)
+        range_depletion = max_depletion - min_depletion
+        range_depletion_name = 'range_depletion_{}_{}.tif'.format(start_date.year + 2, end_date.year)
+        write_raster(range_depletion, transform, output_folder, range_depletion_name, dim, proj, dt)
 
     # output total ETa (i.e., SSEBop) to test wheter it looks like the netcdf file
-    total_eta_name = "total_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
+    if is_ssebop:
+        total_eta_name = "cum_total_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
+    elif is_jpl:
+        total_eta_name = "cum_total_jpl_eta_{}_{}.tif".format(start_date.year, end_date.year)
+    else:
+        total_eta_name = 'cum_total_generic_eta_{}_{}.tif'.format(start_date.year, end_date.year)
+
     write_raster(total_eta, transform, output_folder, total_eta_name, dim, proj, dt)
+
+    # output the total PRISM precip
+    total_precip_name = 'cum_total_prism_precip_{}_{}.tif'.format(start_date.year, end_date.year)
+    write_raster(total_precip, transform, output_folder, total_precip_name, dim, proj, dt)
 
     # # output the average ETa (i.e., SSEBop) to test whether it looks like the netcdf file
     # average_eta = total_eta/float(months_in_series)
