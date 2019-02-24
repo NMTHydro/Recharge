@@ -35,12 +35,17 @@ def get_raster_geo(filepath):
     return raster_geo_dict
 
 
-def read_codes(path):
-    """"""
+def read_codes(path, first_col_string):
+    """
+
+    :param path: path to the reclass csv
+    :param first_col_string: The string of the first column of the reclass .csv
+    :return:
+    """
     eco_dict = {}
     with open(path, 'r') as rfile:
         for line in rfile:
-            if not line.split(',')[0] == 'Groups(Dan)':
+            if not line.split(',')[0] == first_col_string:
                 vals = line.split(',')
                 vals = [i for i in vals if len(i) > 0 and not i.startswith('\r')]
                 # print 'vals', vals
@@ -71,11 +76,11 @@ def arr_overprint(arr, val, newval):
     arr[arr == int(val)] = int(newval)
 
 
-def main(eco_path, lf_path, outinfo):
+def main(eco_path, lf_path, outinfo, firstcol_string):
     """"""
 
     # need a dictionary relating names to codes
-    eco_dict = read_codes(eco_path)
+    eco_dict = read_codes(eco_path, first_col_string)
     print eco_dict
 
     # get the raster array
@@ -114,4 +119,7 @@ if __name__ == "__main__":
     # outfile = os.path.join(outpath, outname)
     outinfo = [outpath, outname]
 
-    main(eco_path, lf_path, outinfo)
+    # the exact string of the first column of the spreadsheet
+    first_col_string = 'Groups(Dan)'
+
+    main(eco_path, lf_path, outinfo, first_col_string)
