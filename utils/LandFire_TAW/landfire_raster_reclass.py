@@ -107,19 +107,19 @@ if __name__ == "__main__":
 
     # path to the codes, counts and ecosystem names for the Landfire Dataset.
     # ...File produced by Landfire_Eco_Stringparse.py
-    eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine.csv'
+    eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig.csv'
 
     # path to new mexican landfire data.
     lf_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/CO_NM_Landfire_1_0_0_EVT/NM_Landfire_1.0.0_EVT_clip.tif'
 
     # ====== User-Defined Output path ======
     outpath = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters'
-    outname = 'dan_reclass_feb_23.tif'
+    outname = 'gabe_reclass_march_2.tif'
 
     # outfile = os.path.join(outpath, outname)
     outinfo = [outpath, outname]
 
     # the exact string of the first column of the spreadsheet
-    first_col_string = 'Groups(Dan)'
+    first_col_string = '\xef\xbb\xbfGroups(Gabe)'
 
     main(eco_path, lf_path, outinfo, first_col_string)

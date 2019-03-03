@@ -110,8 +110,8 @@ def depletion_calc(f_out, f_in):
 
     return depletion
 
-
-def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_ssebop=False, is_jpl=False, shape=None,
+# TODO - GENERATE ETRM DATASET to GAPFILL (etrm_daily_path)
+def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, output_folder=None, is_ssebop=False, is_jpl=False, shape=None,
             start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None):
     """
 
@@ -164,6 +164,8 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
         elif is_jpl:
             # year.zeropadmonth.zeropadday.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif
             eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
+            # TODO - GENERATE ETRM DATASET to GAPFILL
+            ETRM_eta_name = ""
         else:
             eta_name = "tot_eta_{}_{}.tif"
 
@@ -179,6 +181,10 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
     total_eta = np.zeros(shape, dtype=float)
     # track cumulative prism precip
     total_precip = np.zeros(shape, dtype=float)
+    # track NANs
+    nan_counter = np.zeros(shape, dtype=float)
+    # instantiate a yesterday array for gapfilling
+    yesterday_eta_arr = np.zeros(shape, dtype=float)
 
     for i in range(values_in_timeseries + 1):
 
@@ -192,11 +198,15 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
 
         elif time_step == 'daily':
             date = start_date + relativedelta(days=+i)
-            # # convert datetime.date to a timetuple to be able to get the day of the year directly
-            # timetup = date.timetuple()
+            if i > 0:
+                yesterday = start_date + relativedelta(days=(+i-1))
+
             precip = os.path.join(pris_path, precip_name.format(date.year, date.month, date.day))
             if is_jpl:
                 eta = os.path.join(eta_path, eta_name.format(date.year, date.month, date.day))
+                # if i > 0:
+                #     yesterday_eta = os.path.join(eta_path, eta_name.format(yesterday.year, yesterday.month, yesterday.day))
+                #     print 'yesterday eta', yesterday_eta
             else:
                 print 'you need to set the script up to run jpl data or specify another daily dataset' \
                       ' and fix the script'
@@ -205,17 +215,41 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
             print 'cannot find eta file: \n {}'.format(eta)
             print 'we will skip this day and continue accumulating'
             continue
+
+
         # if not os.path.isfile(precip):
         #     print 'that is not a file {} '.format(precip)
         #     # TODO - why do you do this, Dan?
         #     break
 
-        # print 'precip', precip
-        # print 'ETa (ssebop)', eta
+        # if i > 0:
+        #     yesterday_eta_arr = raster_extract(yesterday_eta)
+
 
         # array, transform, dimensions, projection, data type
         precip_arr, transform, dim, proj, dt = raster_extract(precip)
         eta_arr, transform, dim, proj, dt = raster_extract(eta)
+
+        # where the eta values ar nan, so too are the prism values. Todo - if it's worth it find a better way to gapfill the eta dataset with a 2day prior average
+        # you could have an array that tracks the average of the two previous days and if zero then that's the value we gapfill with to not overly bias things
+        # OR just gapfill with ETRM ETa, but hold off for now.
+
+        # # todo - uncomment to backfill with ETa from yesterday (cannot figure out how to do this...)
+        # if i > 0:
+        #     condition = np.isnan(eta_arr)
+        #     # eta_arr[condition] = yesterday_eta_arr[condition]
+        #     print yesterday_eta_arr.shape
+        #     eta_arr = np.where(condition, eta_arr, yesterday_eta_arr)
+
+        # ACCOUNT for NaN values common in jpl datasets (YOU COULD get NaN values on back to back days, so ETRM is more attractive as a gapfiller in that case)
+        eta_nan_bool = np.isnan(eta_arr)
+
+        precip_arr[eta_nan_bool] = 0
+        eta_arr[eta_nan_bool] = 0
+
+        # count how many NAN's occur for every pixel
+        nan_counter[eta_nan_bool] += 1
+
 
         total_eta += eta_arr
 
@@ -224,18 +258,20 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
         if time_step == 'daily' and eta_output != None:
             # output the current timestep cumulative eta and precip
             eta_outname = 'cumulative_eta_{}_{}_{}.tif'.format(date.year, date.month, date.day)
-            if os.path.isfile(os.path.join(eta_output, eta_outname)):
-                pass
-            else:
-                write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
+            write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
+            # if os.path.isfile(os.path.join(eta_output, eta_outname)):
+            #     pass
+            # else:
+            #     write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
 
         if time_step == 'daily' and precip_output != None:
             # output the current timestep cumulative eta and precip
             precip_outname = 'cumulative_prism_{}_{}_{}.tif'.format(date.year, date.month, date.day)
-            if os.path.isfile(os.path.join(precip_output, precip_outname)):
-                pass
-            else:
-                write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
+            write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
+            # if os.path.isfile(os.path.join(precip_output, precip_outname)):
+            #     pass
+            # else:
+            #     write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
 
         # depletion for the current timestep
         depletion_delta = depletion_calc(eta_arr, precip_arr)
@@ -266,10 +302,11 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
 
         elif time_step == 'daily':
             depletion_name = "cumulative_depletion_{}_{}_{}.tif".format(date.year, date.month, date.day)
-            if os.path.isfile(os.path.join(output_folder, depletion_name)):
-                pass
-            else:
-                write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
+            write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
+            # if os.path.isfile(os.path.join(output_folder, depletion_name)):
+            #     pass
+            # else:
+            #     write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
             # todo - pack stuff into a netcdf instead of a tiff
 
     print 'iterations finished'
@@ -288,7 +325,7 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
         range_depletion_name = 'range_depletion_{}_{}.tif'.format(start_date.year + 2, end_date.year)
         write_raster(range_depletion, transform, output_folder, range_depletion_name, dim, proj, dt)
 
-    # output total ETa (i.e., SSEBop) to test wheter it looks like the netcdf file
+    # output total ETa (i.e., SSEBop) to test whether it looks like the netcdf file
     if is_ssebop:
         total_eta_name = "cum_total_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
     elif is_jpl:
@@ -301,6 +338,10 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, output_folder=None, is_sseb
     # output the total PRISM precip
     total_precip_name = 'cum_total_prism_precip_{}_{}.tif'.format(start_date.year, end_date.year)
     write_raster(total_precip, transform, output_folder, total_precip_name, dim, proj, dt)
+
+    # output the nan raster
+    nan_name = 'cumulative_nan_occurences_{}_{}.tif'.format(start_date.year, end_date.year)
+    write_raster(nan_counter, transform, output_folder, nan_name, dim, proj, dt)
 
     # # output the average ETa (i.e., SSEBop) to test whether it looks like the netcdf file
     # average_eta = total_eta/float(months_in_series)

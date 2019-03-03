@@ -253,56 +253,56 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
 
             # for a given taw, we have the observed array and the model array here
 
-            # TODO get rid of this 'if' statement to calibrate to dates not in the growing season...
-            if resid_date > datetime.date(resid_date.year, 6, 1) and resid_date < datetime.date(resid_date.year, 9, 30):
+            # # TODO get rid of this 'if' statement to calibrate to dates not in the growing season...
+            # if resid_date > datetime.date(resid_date.year, 6, 1) and resid_date < datetime.date(resid_date.year, 9, 30):
 
-                if read_eeflux_tiff:
-                    obs_arr = get_obs_arr(obs, resid_date)
-                elif read_numpy:
-                    obs_arr = get_obs_arr_eeflux(obs, resid_date)
+            if read_eeflux_tiff:
+                obs_arr = get_obs_arr(obs, resid_date)
+            elif read_numpy:
+                obs_arr = get_obs_arr_eeflux(obs, resid_date)
 
-                elif read_jpl_tiff:
-                    obs_arr = get_obs_arr_jpl(obs, resid_date)
+            elif read_jpl_tiff:
+                obs_arr = get_obs_arr_jpl(obs, resid_date)
 
-                if np.isnan(obs_arr).all():
-                    print 'WARNING \n {} \n obs arr is nan for {}'.format(obs_arr, resid_date)
+            if np.isnan(obs_arr).all():
+                print 'WARNING \n {} \n obs arr is nan for {}'.format(obs_arr, resid_date)
 
-                # get the ETRM modeled array that matches the observation.
-                model_arr = get_model_arr(model_results, resid_date)
+            # get the ETRM modeled array that matches the observation.
+            model_arr = get_model_arr(model_results, resid_date)
 
-                if np.isnan(model_arr).all():
-                    print 'WARNING \n {} \n model arr is nan for {}'.format(model_arr, resid_date)
+            if np.isnan(model_arr).all():
+                print 'WARNING \n {} \n model arr is nan for {}'.format(model_arr, resid_date)
 
-                # the residuals are the observed values - modeled values
-                residual_arr = obs_arr - model_arr
+            # the residuals are the observed values - modeled values
+            residual_arr = obs_arr - model_arr
 
-                if np.isnan(residual_arr).all():
-                    print 'WARNING \n {} \n residual arr is nan for {}'.format(residual_arr, resid_date)
+            if np.isnan(residual_arr).all():
+                print 'WARNING \n {} \n residual arr is nan for {}'.format(residual_arr, resid_date)
 
-                # # store the date and the residual array in a tuple and append to a list.
-                # store_residual = (date, residual_arr)
-                # residual_datelist.append(store_residual)
+            # # store the date and the residual array in a tuple and append to a list.
+            # store_residual = (date, residual_arr)
+            # residual_datelist.append(store_residual)
 
-                # get chi (square error)
-                chi = residual_arr ** 2
-                # store_chi = (date, chi)
+            # get chi (square error)
+            chi = residual_arr ** 2
+            # store_chi = (date, chi)
 
-                # TODO - Make a NEW array to keep track of the good values from each pixel to modify the Chi SQ where NANs occur.
-                # TODO - For NAN pixels, filter them and set them to zero. Track zeros for appropriate quantification of 95% confidence.
+            # TODO - Make a NEW array to keep track of the good values from each pixel to modify the Chi SQ where NANs occur.
+            # TODO - For NAN pixels, filter them and set them to zero. Track zeros for appropriate quantification of 95% confidence.
 
-                if np.isnan(chi).all():
-                    print 'WARNING \n {} \n chi arr is nan for {}'.format(chi, resid_date)
+            if np.isnan(chi).all():
+                print 'WARNING \n {} \n chi arr is nan for {}'.format(chi, resid_date)
 
-                if not np.isnan(chi).all():
+            if not np.isnan(chi).all():
 
-                    # get new observation dates
-                    new_obs_dates.append(resid_date)
+                # get new observation dates
+                new_obs_dates.append(resid_date)
 
-                    temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
+                temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
 
-                    read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
+                read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
 
-                    np.save('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name), chi)
+                np.save('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name), chi)
 
 
         chi_dict['{}'.format(taw)] = read_list
@@ -439,16 +439,16 @@ def csv_output(taw_vals, rss_arrs, outpath, geo_info=None):
     print 'done writing to csv'
 
 
-def net_cdf_output(taw_vals, rss_arrs, geo_info, outpath):
+def geotiff_output(taw_vals, rss_arrs, geo_info, outpath):
     """"""
-    pass
+    for arr, taw_val in zip(rss_arrs, taw_vals):
+        outname = 'rss_image_taw_{}.tif'.format(taw_val)
+        numpy_to_geotiff(arr, geo_info, outpath, outname)
 
 def numpy_to_geotiff(array, geo_info, output_path, output_name):
     """"""
 
     trans = geo_info['geotransform']
-
-
 
     dim = geo_info['dimensions']
     proj = geo_info['projection']
@@ -485,8 +485,8 @@ def optimize_taw(rss, output_path, geo_info=None, big_arr=False):
         # output each pixel as a separate .csv
         csv_output(taw_vals, rss_arrs, outpath=output_path, geo_info=geo_info)
 
-    # stack into a geo-referrenced net_cdf TODO - Write this function (currently will 'pass')
-    net_cdf_output(taw_vals, rss_arrs, geo_info, output_path)
+    # output this into a group of GeoTiffs
+    geotiff_output(taw_vals, rss_arrs, geo_info, output_path)
 
     # ====== FIND the TAW vals that correspond to min root sum squared error ======
 
@@ -635,7 +635,7 @@ if __name__ == "__main__":
 
     # JPL paths (make sure global 'eeflux' variable set to False and 'jpl' is set to True)
     data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
-    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_jpl'
+    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_jpl_test'
     geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info_espanola.yml'
 
 
