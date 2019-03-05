@@ -135,7 +135,8 @@ def get_ndvi_stats(codes, landfire_arr, ndvi_arr, csv=False):
         higher_vals = ndvi_vals[ndvi_vals > lower_limit]
         lower_95 = find_nearest(higher_vals, lower_limit)
 
-        stats = (lower_95, upper_95, np.average(ndvi_vals), eco_name)
+        # stats = (lower_95, upper_95, np.average(ndvi_vals), eco_name)
+        stats = (lower_95, upper_95, np.percentile(ndvi_vals, 50), eco_name)
         ndvi_stats_dict['{}'.format(raster_val)] = stats
 
     return ndvi_stats_dict
@@ -175,14 +176,41 @@ def ndvi_histogramer(eco_path, ndvi_path, lf_path, outinfo):
 def rootzone_interpolation(avg_rooting_depth, rd_ecotone_1, rd_ecotone2, avg_ndvi, ndvi_high, ndvi_low, ndvi_arr, root_depth_array, landfire_array, ecosystem_code):
     """"""
 
-    m1 = (rd_ecotone_1 - avg_rooting_depth)/(avg_ndvi - ndvi_low)
-    m2 = (rd_ecotone2 - avg_rooting_depth)/(ndvi_high - avg_ndvi)
+    print 'Interpolation info for ecosystem {}'.format(ecosystem_code)
+    # Set the slope for the linear adjustment for NDVI < avg NDVI AKA m1
+    if avg_rooting_depth < rd_ecotone_1:
+        print 'slope is negative for rd1 and m1 should be negative'
+        m1 = (avg_rooting_depth - rd_ecotone_1)/(avg_ndvi - ndvi_low)
+    elif avg_rooting_depth > rd_ecotone_1:
+        print 'slope is positive for rd1 and m1 should be positive'
+        m1 = (avg_rooting_depth - rd_ecotone_1)/(avg_ndvi - ndvi_low)
+    # Set the slope for the linear adjustment for NDVI > avg NDVI AKA m2
+    if avg_rooting_depth < rd_ecotone2:
+        print 'slope is positive for rd2 and m2 should be positive'
+        m2 = (rd_ecotone2 - avg_rooting_depth)/(ndvi_high - avg_ndvi)
+    elif avg_rooting_depth > rd_ecotone2:
+        print 'slope is negative for rd2 and m2 should be negative'
+        m2 = (rd_ecotone2 - avg_rooting_depth) / (ndvi_high - avg_ndvi)
 
-    rd1 = np.zeros(ndvi_arr.shape)
-    rd2 = np.zeros(ndvi_arr.shape)
 
-    rd1[landfire_array == ecosystem_code] = (m1* ndvi_arr[landfire_array == ecosystem_code]) + avg_ndvi
-    rd2[landfire_array == ecosystem_code] = (m2 * ndvi_arr[landfire_array == ecosystem_code]) + avg_ndvi
+    print 'm1 is {}'.format(m1)
+    print 'm2 is {}'.format(m2)
+
+    # initialize rd1 and rd2 to be the changing root_depth array
+    # we do this in order to preserve the changes you made in the previous interpolation runs
+    # rd1 = root_depth_array
+    # rd2 = root_depth_array
+    rd1 = np.empty(ndvi_arr.shape)
+    rd2 = np.empty(ndvi_arr.shape)
+    # rd1 = np.ones(ndvi_arr.shape)
+    # rd2 = np.ones(ndvi_arr.shape)
+
+    # rd1[landfire_array == ecosystem_code] = (m1* ndvi_arr[landfire_array == ecosystem_code]) + avg_ndvi
+    # rd2[landfire_array == ecosystem_code] = (m2 * ndvi_arr[landfire_array == ecosystem_code]) + avg_ndvi
+    print 'rd1 intercept is {}'.format(rd_ecotone_1)
+    print 'rd2 intercept is {}'.format(avg_rooting_depth)
+    rd1[landfire_array == ecosystem_code] = (m1 * (ndvi_arr[landfire_array == ecosystem_code] - ndvi_low)) + rd_ecotone_1
+    rd2[landfire_array == ecosystem_code] = (m2 * (ndvi_arr[landfire_array == ecosystem_code] - avg_ndvi)) + avg_rooting_depth
 
     root_depth_array[ndvi_arr < avg_ndvi] = rd1[ndvi_arr < avg_ndvi]
     root_depth_array[ndvi_arr > avg_ndvi] = rd2[ndvi_arr > avg_ndvi]
@@ -190,9 +218,10 @@ def rootzone_interpolation(avg_rooting_depth, rd_ecotone_1, rd_ecotone2, avg_ndv
     return root_depth_array
 
 
+
+
 def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=None):
     """"""
-
     # read in the ndvi and landfire_images
     landfire_arr = convert_raster_to_array(lf_path)
     ndvi_arr = convert_raster_to_array(ndvi_path)
@@ -232,8 +261,9 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     root_zone_arr = rootzone_interpolation(avg_rooting_depth=creosote_rd, rd_ecotone_1=bare_rd, rd_ecotone2=grass_rd,
                                            avg_ndvi=creosote_ndvi_avg, ndvi_high=creosote_ndvi_high,
                                            ndvi_low=creosote_ndvi_low, ndvi_arr=ndvi_arr,
-                                           root_depth_array=root_zone_arr,landfire_array=landfire_arr,
-                                           ecosystem_code = 2)
+                                           root_depth_array=root_zone_arr, landfire_array=landfire_arr,
+                                           ecosystem_code=2)
+
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(creosote_shrubs_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
 
@@ -245,6 +275,9 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     grass_ndvi_low = grass_stats[0]
     grass_ndvi_high = grass_stats[1]
     grass_ndvi_avg = grass_stats[2]
+
+    print 'grass low {}, grass high {}, grass average {}'.format(grass_ndvi_low, grass_ndvi_high,
+                                                                          grass_ndvi_avg)
 
     root_zone_arr = rootzone_interpolation(avg_rooting_depth=grass_rd, rd_ecotone_1=creosote_rd, rd_ecotone2=pj_rd,
                                            avg_ndvi=grass_ndvi_avg, ndvi_high=grass_ndvi_high,
