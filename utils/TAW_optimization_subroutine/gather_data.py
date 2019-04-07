@@ -255,13 +255,15 @@ if __name__ =="__main__":
     # results_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/" \
     #                "taw_optimization_etrm_outputs_nov_28_2percent"
 
-    results_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/' \
-                   'taw_optimization_etrm_outputs_feb_8_N_Central_NM'
+    # results_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/' \
+    #                'taw_optimization_etrm_outputs_feb_8_N_Central_NM'
+    results_path = '/Volumes/Seagate_Blue/taw_optimization_etrm_outputs_march28_N_Central_nm'
 
     # the path to the config file used to run the model
     # config = '/Users/Gabe/ETRM_CONFIG.yml'
     # config = '/Users/dcadol/Desktop/ETRM_CONFIG.yml'
-    config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi.yml'
+    # config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi.yml'
+    config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml'
 
     ### ===== These are needed if using synthetic data ======
     # the path to the synthetic dataset

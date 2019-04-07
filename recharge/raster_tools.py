@@ -196,6 +196,8 @@ def apply_mask(mask_path, arr):
     out = None
     idxs = get_mask(mask_path)
     if idxs is not None:
+        print 'array shape', arr.shape
+        print 'indices shape', idxs.shape
         out = arr[idxs].flatten()
     return out
 
@@ -204,7 +206,7 @@ def apply_mask_pixel_tracker(pix_mask, arr):
     idxs = get_mask(pix_mask)
     if idxs is not None:
         print "array shape", arr.shape
-        print 'indices', idxs.shape
+        print 'indices shape', idxs.shape
         out = arr[idxs].flatten()
     return out
 

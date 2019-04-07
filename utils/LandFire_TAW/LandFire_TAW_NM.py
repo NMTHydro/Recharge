@@ -257,7 +257,7 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
 
     print 'creosote low {}, creosote high {}, creosote average {}'.format(creosote_ndvi_low, creosote_ndvi_high,
                                                                           creosote_ndvi_avg)
-    # The root zone interpolation is jacked up. TODO - FIX interpolation
+
     root_zone_arr = rootzone_interpolation(avg_rooting_depth=creosote_rd, rd_ecotone_1=bare_rd, rd_ecotone2=grass_rd,
                                            avg_ndvi=creosote_ndvi_avg, ndvi_high=creosote_ndvi_high,
                                            ndvi_low=creosote_ndvi_low, ndvi_arr=ndvi_arr,

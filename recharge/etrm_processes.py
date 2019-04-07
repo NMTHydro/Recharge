@@ -1013,10 +1013,12 @@ class Processes(object):
         try:
             if os.path.isfile(paths.mask):
                 point_arr = apply_mask(paths.mask, point_arr)
+                print 'ran apply mask'
         except TypeError:
             pass
 
-        point_arr = apply_mask_pixel_tracker(paths.point_shape, point_arr)
+        # # GELP March 8 I don't think this function needs to be called since apply_mask does the same thing.
+        # point_arr = apply_mask_pixel_tracker(paths.point_shape, point_arr)
 
         # print 'new point arr', point_arr
         # print 'new point arr shape', point_arr.shape

@@ -149,7 +149,7 @@ def taw_grid_search(config_path, output_path, begin_taw, end_taw, taw_step):
         print 'param list', param_list
         configuration_container.append(param_list)
 
-    file_path = os.path.join(output_path, 'ETRM_CONFIG_taw_grid_search_espanola_aoi.yml')
+    file_path = os.path.join(output_path, 'ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml')
     print file_path
     # Re-Write the config file old-school
     with open(file_path, 'w') as writefile:

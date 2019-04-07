@@ -233,7 +233,7 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
     # we should store the squared residuals in the chi dict
     chi_dict = {}
 
-    # # FOR TESTING (Wait... what does this test?!?!?)
+    # # FOR TESTING
     # taw_vals = [225, 250]
     # ==== MEMORY INTENSIVE  (we avoid serious memory leaks by writing to files...)====
     new_obs_dates = []
@@ -274,7 +274,11 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
                 print 'WARNING \n {} \n model arr is nan for {}'.format(model_arr, resid_date)
 
             # the residuals are the observed values - modeled values
-            residual_arr = obs_arr - model_arr
+            # GET RID of NaN values for both obs and modeled [by turning them both to zero] (GELP March 2, 2019)
+            obs_arr = np.nan_to_num(obs_arr)
+            model_arr = np.nan_to_num(model_arr)
+            # calculate the residual array
+            residual_arr = obs_arr - model_arr # todo - divide by uncertainty to normalize
 
             if np.isnan(residual_arr).all():
                 print 'WARNING \n {} \n residual arr is nan for {}'.format(residual_arr, resid_date)
@@ -287,9 +291,6 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
             chi = residual_arr ** 2
             # store_chi = (date, chi)
 
-            # TODO - Make a NEW array to keep track of the good values from each pixel to modify the Chi SQ where NANs occur.
-            # TODO - For NAN pixels, filter them and set them to zero. Track zeros for appropriate quantification of 95% confidence.
-
             if np.isnan(chi).all():
                 print 'WARNING \n {} \n chi arr is nan for {}'.format(chi, resid_date)
 
@@ -298,6 +299,7 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
                 # get new observation dates
                 new_obs_dates.append(resid_date)
 
+                # these you can use to generate a time series analysis of the root squared error.
                 temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
 
                 read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
@@ -340,32 +342,14 @@ def get_sse(data_dict, obs_dates, taw_vals, read_eeflux_tiff=False, read_jpl_tif
 
             rss += squared_resid_arr
 
-            # # TODO - Make an animation of the RSS accumulating for every TAW image. MIGHT be pretty cool.
-            # plt.imshow(rss)
-            # plt.show()
-
-            # degrees of freedom accumulate
             n += 1
 
         # # append the sum of each taw's squared errors to
         print 'final rss for taw {}'.format(taw)
         print 'rss', rss
-        # plt.imshow(rss)
-        # plt.show()
-        # print 'new final rss for taw {}'.format(taw)
-        # # rss = np.load('/Users/dcadol/Desktop/desktop_taw_optimization_temp/rss_temp{}.npy'.format(
-        # #     len(chi_dict['{}'.format(taw)])-1))
-        # plt.imshow(rss)
-        # plt.show()
         rss_list.append(rss)
         dof_list.append(n)
 
-    # ===============``````````````````````===================
-    # for rss, test in zip(rss_list, test_list):
-    #     print 'this is the rss loop', rss
-    #     print test
-    #     plt.imshow(rss)
-    #     plt.show()
     residual_sum_squares_dict = {'taw': taw_vals, 'rss': rss_list, 'dof': dof_list}
 
 
@@ -614,6 +598,231 @@ def main(data_dir, output_path, geo_info, eeflux=False, jpl=False):
     # get the square root of the sum of squares
     optimize_taw(rss, output_path, geo_info=geo_dict, big_arr=False)
 
+    # alternate TAW optimization routine.
+    optimize_taw_disaggregate(rss, output_path, geo_info=geo_dict, big_arr=False)
+
+def optimize_taw_disaggregate(rss, output_path, geo_info, big_arr=False, test_mode=False):
+    """
+
+    :param rss:
+    :param output_path:
+    :param geo_info:
+    :param big_arr:
+    :param test_mode:
+    :return:
+    """
+
+
+    if test_mode:
+
+        test_path = '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/taw_calibration_disaggregated/grassland_test.csv'
+
+        with open(test_path, 'r') as rfile:
+
+            taw_vals = []
+            rss_vals = []
+
+            for line in rfile:
+                taw_rss = line.split(',')
+                taw = int(taw_rss[0])
+                rss = float(taw_rss[1])
+
+                taw_vals.append(taw)
+                rss_vals.append(rss)
+
+        # get the average daily rss in mm
+        rss_vals_avg_daily = [((rss / 11.0) / 365.0) for rss in rss_vals]
+
+        print 'the rss avg daily error \n', rss_vals_avg_daily
+
+        error_reduced_lst = []
+        for i in range(len(rss_vals_avg_daily)):
+            # print 'i', i
+            if i == 0:
+                error_reduced_lst.append('')
+
+            elif i > 0:
+                # calculate the error reduced by each taw step
+                error_reduced = rss_vals_avg_daily[i] - rss_vals_avg_daily[i-1]
+                error_reduced_lst.append(error_reduced)
+
+            # elif i == len(rss_vals_avg_daily)
+        print 'the error reduced list \n', error_reduced_lst
+
+        # set the first value of the list to the second value
+        error_reduced_lst[0] = error_reduced_lst[1]
+        print 'the error reduced list \n', error_reduced_lst
+
+        # round the values to the 2nd decimal place
+        error_reduced_lst= [round(i, 2) for i in error_reduced_lst]
+
+        # # select the TAW after which error reduced is no longer greater than 0.01
+        # for taw, reduced_error in zip(taw_vals, error_reduced_lst):
+        #     print 'taw {}, re {}'.format(taw, reduced_error)
+        indx_lst = []
+        for i, re in enumerate(error_reduced_lst):
+            if abs(re) <= 0.01:
+                indx_lst.append(i)
+
+        print 'the index list\n', indx_lst
+        consecutives = []
+        for i in range(len(indx_lst)+1):
+
+            if i > 0 and i < (len(indx_lst)-1):
+                print i
+                if indx_lst[i + 1] == indx_lst[i] + 1:
+                    consecutives.append(indx_lst[i])
+            elif i == len(indx_lst)-1:
+                if indx_lst[i] -1 == indx_lst[i-1]:
+                    consecutives.append(indx_lst[i-1])
+                    consecutives.append(indx_lst[i])
+
+        print 'consecutives \n', consecutives
+
+        # take the first index after which the reduced error is consistently less than or equal to 0.01
+
+        target_index = consecutives[0]
+
+        # taw at the target index is the optimum taw
+
+        optimum_taw = taw_vals[target_index]
+
+        print 'optimum taw', optimum_taw
+
+    else:
+
+        # # Save the rss dict as a .yml to be tested with disagg_tester.py
+        # test_path = '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/taw_calibration_disaggregated/rss.yml'
+        # with open(test_path, 'w') as wfile:
+        #     yaml.dump(rss, wfile)
+
+        print 'optimizing taw'
+        # get taw, rss arrays out.
+        taw_vals = rss['taw']
+        rss_arrs = rss['rss']
+
+
+
+
+        print 'len of rss arrs', len(rss_arrs)
+
+        # get the average daily rss in mm
+        rss_vals_avg_daily = [((rss / 11.0) / 365.0) for rss in rss_arrs]
+
+        print 'the rss avg daily error \n', len(rss_vals_avg_daily)
+
+        error_reduced_lst = []
+        for i in range(len(rss_vals_avg_daily)):
+            print 'i', i
+            if i == 0:
+                error_reduced_lst.append('')
+
+            elif i > 0:
+                # calculate the error reduced by each taw step
+                error_reduced = rss_vals_avg_daily[i] - rss_vals_avg_daily[i - 1]
+                error_reduced_lst.append(error_reduced)
+
+            # elif i == len(rss_vals_avg_daily)
+        print 'the error reduced list \n', error_reduced_lst
+
+        # set the first value of the list to the second value
+        error_reduced_lst[0] = error_reduced_lst[1]
+        print 'the error reduced list \n', error_reduced_lst
+
+        # make all errors positive by taking the absolute value
+        error_reduced_lst = [np.absolute(i) for i in error_reduced_lst]
+
+        # round the values to the 2nd decimal place FOR AN ARRAY
+        error_reduced_lst = [np.round(i, 2) for i in error_reduced_lst]
+
+        # # select the TAW after which error reduced is no longer greater than 0.01
+
+        # prepare to store three dimensional arrays with dstack
+        value_shape = rss_arrs[0].shape
+        three_d_shape = (value_shape[0], value_shape[1], 0)
+        # for storing the rss value < 0.01
+
+        # todo - should this be np.zeros or is np.empty better?
+        # reduced_error_tab = np.zeros(three_d_shape, dtype=bool)
+        reduced_error_tab = np.empty(three_d_shape)
+
+        # for storing the minimum taw
+        taw_tab = np.empty(three_d_shape)
+
+        for taw, error_array in zip(taw_vals, error_reduced_lst):
+
+            print 'checking rss for taw: {}'.format(taw)
+
+            # make each taw into an array so we can index it
+            taw_arr = np.full(error_array.shape, taw, dtype='float64')
+
+            # we only want to store values that are less than or equal to 0.01 when rounded (rounding handled earlier)
+
+            # get the boolean where error array is less than 0.01
+            smaller_than = error_array <= 0.01
+            print'smaller than array \n', smaller_than
+
+            # append the smaller than array to reduced error tab with dstack
+            reduced_error_tab = np.dstack((reduced_error_tab, smaller_than))
+
+            # append the taw array to a 3d array
+            taw_tab = np.dstack((taw_tab, taw_arr))
+
+        print '3d array True for error values less than or equal to 0.01 otherwise, False \n', reduced_error_tab
+
+        # 1) go through the 3d array of true false from start to finish, extract true/false as list along 3rd dimension
+        # 2) go through that list and get the indices of the true values
+        # 3) get the indices that are consecutive
+        # 4) take the first of the consecutive indices and grab the corresponding TAW.
+        # 5) put the TAW back in a 2d array where it belongs.
+
+        # This will hold the optimized TAW (2d array)
+        optimum_taw_disagg = np.empty(rss_arrs[0].shape)
+
+        # iterate through the 3d array
+        cols, rows, vals = reduced_error_tab.shape
+        for i in range(cols):
+            for j in range(rows):
+
+                true_indices = []
+                taw_lst = []
+
+                for k in range(vals):
+                    taw = taw_tab[i, j, k]
+                    taw_lst.append(taw)
+                    if reduced_error_tab[i, j, k]:
+                        true_indices.append(k)
+
+                consecutives = []
+                for i in range(len(true_indices) + 1):
+
+                    if i > 0 and i < (len(true_indices) - 1):
+                        if true_indices[i + 1] == true_indices[i] + 1:
+                            consecutives.append(true_indices[i])
+                    elif i == len(true_indices) - 1:
+                        if true_indices[i] - 1 == true_indices[i - 1]:
+                            consecutives.append(true_indices[i - 1])
+                            consecutives.append(true_indices[i])
+
+                print 'consecutives \n', consecutives
+
+                # take the first index after which the reduced error is consistently less than or equal to 0.01
+
+                try:
+                    target_index = consecutives[0]
+                except IndexError:
+                    target_index = 0
+
+                # taw at the target index is the optimum taw
+
+                optimum_taw = taw_lst[target_index]
+                # when we have the taw value put it back in the 2d array
+                optimum_taw_disagg[i, j] = optimum_taw
+
+    # # # todo - output the rasters
+    numpy_to_geotiff(optimum_taw_disagg, geo_info, output_path, output_name='optimized_taw_disagg.tif')
+
+
 
 if __name__ == "__main__":
 
@@ -635,8 +844,11 @@ if __name__ == "__main__":
 
     # JPL paths (make sure global 'eeflux' variable set to False and 'jpl' is set to True)
     data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
-    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_jpl_test'
+    output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/optimization_results_jpl_03_28_19'
     geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info_espanola.yml'
 
 
     main(data_locations_dir, output_path, geo_info_path, jpl=True) #eeflux=True
+
+    # # for testing
+    # optimize_taw_disaggregate(rss=None, output_path=None, geo_info=None, big_arr=False, test_mode=True)

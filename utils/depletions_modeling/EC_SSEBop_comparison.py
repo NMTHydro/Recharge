@@ -69,7 +69,6 @@ def plotter1(x, y, daily_average=False):
         plt.show()
     else:
         y = y.values
-        print 'This is happening'
         fig, ax = plt.subplots()
         ax.plot_date(x, y, fillstyle='none')
         ax.set_title('Closure Error for 30 minute EC')
