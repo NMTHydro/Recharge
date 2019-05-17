@@ -31,40 +31,47 @@ def add_year(datetime_date, years):
 
 
 def all_time_ndvi_avg(ndvi_root, start_date, end_date, a_shape, representative_ndvi_file, output_folder):
-    """"""
+    """
+    Get the NDVI average statistic
+
+    :param ndvi_root:
+    :param start_date:
+    :param end_date:
+    :param a_shape:
+    :param representative_ndvi_file:
+    :param output_folder:
+    :return:
+    """
 
     # get the info needed to write the raster from the representative_ndvi_file
     ndvi_geo_attributes = get_raster_geo_attributes(representative_ndvi_file)
-
     array_shape = (ndvi_geo_attributes['cols'], ndvi_geo_attributes['rows'])
 
     print 'ndvi_geo \n', ndvi_geo_attributes
 
     num_years = end_date.year - start_date.year
-
     period_delta = end_date - start_date
 
     cumulative_ndvi = np.zeros(a_shape, dtype=float)
     count = 0
+
+    # Retrieve the appropriate NDVI files for every day in each year of the specified time interval
     for i in range(num_years+1):
 
         start_current_year = date(start_date.year + i, 01, 01)
         print 'accumulating for year starting: {}'.format(start_current_year)
         start_next_year = date(start_current_year.year + 1, 01, 01)
         year_folder_path = os.path.join(ndvi_root, '20{:02}'.format(i))
-
         year_delta = start_next_year - start_current_year
 
         for d in range(year_delta.days):
 
             ndvi_date = start_current_year + timedelta(days=d)
-
             ndvi_name = 'NDVI{}_{:02}_{:02}.tif'.format(ndvi_date.year, ndvi_date.month, ndvi_date.day)
             ndvi_path = os.path.join(year_folder_path, ndvi_name)
-
+            # Once you have the appropriate file, read the geotiff as a numpy array
             ndvi_arr = convert_raster_to_array(ndvi_path)
-            # print ndvi_arr.shape
-
+            # print ndvi_arr.shape # troubleshoot if array shape specified by user is wrong
             cumulative_ndvi += ndvi_arr
             count += 1
 
@@ -75,7 +82,6 @@ def all_time_ndvi_avg(ndvi_root, start_date, end_date, a_shape, representative_n
     average_ndvi = cumulative_ndvi/count
 
     print 'outputting NDVI to output folder {}'.format(output_folder)
-
     write_raster(average_ndvi, ndvi_geo_attributes['geotransform'], output_folder, 'all_time_avg_ndvi.tif',
                  array_shape, ndvi_geo_attributes['projection'])
 
@@ -88,7 +94,7 @@ if __name__ == "__main__":
 
     end_date = date(2013, 12, 31)
 
-    # shape of ETRM array
+    # shape of ETRM (NDVI geotiff) array
     a_shape = (2525, 2272)
 
     representative_ndvi_file = '/Volumes/Seagate_Expansion_Drive/ETRM_inputs/NDVI/NDVI/2000'

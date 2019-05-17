@@ -45,7 +45,7 @@ def set_constants(ze=40, p=0.4,
     """
 
     :param ze:
-    :param p:
+    :param p: the fraction of TAW that a crop can extract from the root zone without suffering water stress; ASCE pg 226
     :param kc_min:
     :param kc_max:
     :param snow_alpha:

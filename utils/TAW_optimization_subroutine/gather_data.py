@@ -23,6 +23,8 @@ import yaml
 
 # ============= local library imports ===========================
 
+
+
 def get_synthetics(list_of_taws, list_of_dates, synpath):
     """"""
 
@@ -46,7 +48,7 @@ def get_synthetics(list_of_taws, list_of_dates, synpath):
 
     return synthetic_file_list
 
-def get_results(list_of_taws, list_of_dates, results_path, rzsm):
+def get_etrm_results(list_of_taws, list_of_dates, results_path, rzsm):
     """"""
 
     # go through the admittedyl weird data structure of the output files and append things to a dictionary based on the
@@ -164,7 +166,7 @@ def run_synthetic(synpath, results_path, n, config, rzsm=False):
 
     print "we must retreive the images from these dates: \n", dates_to_get
     synthetic_observations = get_synthetics(list_of_taws, dates_to_get, synpath)
-    etrm_results = get_results(list_of_taws, dates_to_get, results_path, rzsm)
+    etrm_results = get_etrm_results(list_of_taws, dates_to_get, results_path, rzsm)
     return synthetic_observations, etrm_results
 
 def get_eeflux_obs(obs_path):
@@ -221,11 +223,47 @@ def run_eeflux_obs(model_results_path, observations_path, config_file):
     print 'eeflux observations \n', eeflux_obs
 
     # # TODO - Make this portion flexible to get either ETa or some other parameter for calibration if necessary.
-    etrm_results = get_results(list_of_taws, dates_to_get, results_path, rzsm)
+    etrm_results = get_etrm_results(list_of_taws, dates_to_get, results_path, rzsm)
 
     return eeflux_obs, etrm_results
 
-def run_jpl_obs(results_path, jpl_path, config):
+def get_pm_ref_et(dates_to_get, refet_path):
+    """"""
+
+    ref_et = []
+    for date in dates_to_get:
+
+        # print 'date \n', date
+        pm_dir_name = 'PM{}'.format(date.year)
+        # year and julian date
+        pm_file_name = 'PM_NM_{}_{}.tif'.format(date.year, date.strftime('%j'))
+
+        # print pm_file_name
+
+        pm_et_location = os.path.join(refet_path, pm_dir_name, pm_file_name)
+        ref_et.append(pm_et_location)
+
+    return ref_et
+
+
+
+
+
+
+        # for pm_dir in os.listdir(refet_path):
+        #
+        #     print pm_dir
+        #
+        #     if pm_dir.startswith('PM'):
+        #         year_string = pm_dir.split('M')[-1]
+        #         print year_string
+        #
+        #         # year and julian date
+        #         pm_file_structure = 'PM_NM_{}_{}.tif'
+
+
+
+def run_jpl_obs(results_path, jpl_path, refet_path, config):
     """"""
 
     list_of_taws = get_taw(config)
@@ -239,9 +277,12 @@ def run_jpl_obs(results_path, jpl_path, config):
     # print 'eeflux observations \n', jpl_obs
 
     # # TODO - MAKE this work if the ETRM output has a different main dir name
-    etrm_results = get_results(list_of_taws, dates_to_get, results_path, rzsm)
+    etrm_results = get_etrm_results(list_of_taws, dates_to_get, results_path, rzsm)
 
-    return jpl_obs, etrm_results
+    # GET Peter Revelles GADGET REf ET to normalize the ETa values
+    ref_et = get_pm_ref_et(dates_to_get, refet_path)
+
+    return jpl_obs, etrm_results, ref_et
 
 
 
@@ -249,6 +290,15 @@ synthetic_mode = False
 rzsm = False
 jpl = True
 eeflux_mode = False
+
+# # testing
+# jpl_path = '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/JPL_calibration_approach/jpl_etrm_espanola_warp_PT'
+# pm_refet_path = '/Volumes/Seagate_Expansion_Drive/ETRM_espanola_aoi_inputs/PM_RAD'
+#
+# dates_to_get, jpl_obs = get_jpl_obs(jpl_path)
+#
+# get_pm_ref_et(dates_to_get, pm_refet_path)
+
 if __name__ =="__main__":
 
     # the path to the results dataset
@@ -257,13 +307,14 @@ if __name__ =="__main__":
 
     # results_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/' \
     #                'taw_optimization_etrm_outputs_feb_8_N_Central_NM'
-    results_path = '/Volumes/Seagate_Blue/taw_optimization_etrm_outputs_march28_N_Central_nm'
+    results_path = '/Volumes/Seagate_Blue/taw_optimization_etrm_outputs_april_8_N_Central_nm_2m/etrm_results'
 
     # the path to the config file used to run the model
     # config = '/Users/Gabe/ETRM_CONFIG.yml'
     # config = '/Users/dcadol/Desktop/ETRM_CONFIG.yml'
     # config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi.yml'
-    config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml'
+    # config = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml'
+    config = '/Volumes/Seagate_Blue/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi_2meter.yml'
 
     ### ===== These are needed if using synthetic data ======
     # the path to the synthetic dataset
@@ -275,7 +326,12 @@ if __name__ =="__main__":
 
     ### ===== Use these for calibrating to METRIC EEFLUX data ======
     eeflux_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/metric_obs_processed'
+
+    ####===== FOR JPL DATA ========
     jpl_path = '/Users/dcadol/Desktop/academic_docs_II/JPL_Data/JPL_calibration_approach/jpl_etrm_espanola_warp_PT'
+
+    # ====== GADGET-Generated Reference ET ========
+    pm_refet_path = '/Volumes/Seagate_Expansion_Drive/ETRM_espanola_aoi_inputs/PM_RAD'
 
 
     if synthetic_mode:
@@ -285,14 +341,18 @@ if __name__ =="__main__":
         obs, pyrana_results = run_eeflux_obs(results_path, eeflux_path, config)
 
     elif jpl:
-        obs, pyrana_results = run_jpl_obs(results_path, jpl_path, config)
+        obs, pyrana_results, ref_et = run_jpl_obs(results_path, jpl_path, pm_refet_path, config)
 
     # put the observations in the results dictionary
     pyrana_results['obs'] = obs
 
+    # put the ref_et in the dictionary
+    pyrana_results['ref_et'] = ref_et
+
     # # output the dictionary to a .yml file
     # gather_data_output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_eeflux.yml"
-    gather_data_output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
+    # gather_data_output_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
+    gather_data_output_path = '/Volumes/Seagate_Blue/taw_optimization_etrm_outputs_april_8_N_Central_nm_2m/get_data_output_jpl.yml'
 
     with open(gather_data_output_path, 'w') as wfile:
         yaml.dump(pyrana_results, wfile)

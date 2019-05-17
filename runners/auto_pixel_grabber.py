@@ -291,8 +291,6 @@ def run():
 
     """
 
-    print 'my hairy butt'
-
     # get pixel shapefile
     pixel_file = "/Users/Gabe/Desktop/pixel_masks/pixel_shapefile.shp"
 

@@ -41,6 +41,7 @@ def run_dataset():
     print 'Generating Reduced Dataset'
 
     cfg = Config()
+    print 'this is the config {}'.format(cfg.path)
     for runspec in cfg.runspecs:
         paths.build(runspec.input_root, runspec.output_root)
         paths.set_mask_path(runspec.mask)
@@ -106,6 +107,8 @@ def run(cfg_path=None):
             'help': run_help, 'commands': run_commands,
             'dataset': run_dataset}
 
+    # # Commented out when running model. Uncomment to reduce data based on mask in config file.
+    # # NOTE: run_dataset() will use the Config File in the ~ folder, not the config_path you specify in the run command
     # run_dataset()
     # return
 
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     #     print 'the path should be {}'.format(sys.argv[1])
     #     run(cfg_path=sys.argv[1])
     # run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_statewide.yml')
-    run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml')
+    # run(cfg_path='/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi.yml')
+    run(cfg_path='/Volumes/Seagate_Blue/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_ameriflux_aoi.yml')
 
 # ============= EOF =============================================

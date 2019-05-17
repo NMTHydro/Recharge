@@ -74,35 +74,18 @@ def main(data_dir, temp_rss_path, geo_info, x_y):
 
     obs = data_dict['obs']
 
-
-
-
     # pull out the geo info and save it in a dictionary (we can use numpy_to_geotiff function to convert these values to geotiffs,
     with open(geo_info, mode='r') as geofile:
         geo_dict = yaml.load(geofile)
 
-    # etrm_daily_values = []
-    jpl_daily_values = []
-    # obs_time_series = [] #obs_dates
     rss_daily_values = []
     rss_time_series = []
     print 'extracting values'
     for resid_date in obs_dates:
 
-        # obs_arr = get_obs_arr_jpl(obs, resid_date)
-        #
-        # obs_value = geospatial_array_extract(geo_dict, obs_arr, x_y)
-        # jpl_daily_values.append(obs_value)
-        #
-        # obs_time_series.append(resid_date)
 
-        taw = 325
-        # for taw in taw_vals:
 
-        # # get ETRM data
-        # model_results = data_dict['{}'.format(taw)]
-
-        # Todo - keep the smallest value from the series somehow and just plot that.
+        taw = 1925
 
         # these you can use to generate a time series analysis of the root squared error.
         temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
@@ -113,10 +96,7 @@ def main(data_dir, temp_rss_path, geo_info, x_y):
         # extract the value you want from the raster
         temp_value = geospatial_array_extract(geo_dict, temp_arr, x_y)
 
-        # get the root of the temp_value since what we are reading in is the squared residual
-        daily_residual = temp_value ** 0.5
-
-        rss_daily_values.append(daily_residual)
+        rss_daily_values.append(temp_value)
 
         # # get the ETRM modeled array that matches the observation.
         # model_arr = get_model_arr(model_results, resid_date)
@@ -126,24 +106,43 @@ def main(data_dir, temp_rss_path, geo_info, x_y):
 
         rss_time_series.append(resid_date)
 
+    # # deal with Nan values and convert to numpy arr
+    # rss_daily_values = np.asarray(rss_daily_values)
+    #
+    # rss_daily_values = np.nan_to_num(rss_daily_values)
+    #
+    # rss_daily_values = rss_daily_values.tolist()
+
+    rss_daily_values_cleaned = []
+    rss_time_series_cleaned = []
+    for resid, date in zip(rss_daily_values, rss_time_series):
+        if resid > -50:
+            rss_daily_values_cleaned.append(resid)
+            rss_time_series_cleaned.append(date)
 
     print 'plotting'
     fig, ax = plt.subplots()
-    ax.plot_date(rss_time_series, rss_daily_values, fillstyle='none', color='blue')
-    # ax.plot_date(rss_time_series, etrm_daily_values, fillstyle='none', color='green')
-    # ax.plot_date(obs_time_series, jpl_daily_values, fillstyle='none', color='red')
+    ax.plot_date(rss_time_series_cleaned, rss_daily_values_cleaned, fillstyle='none', color='blue')
     ax.set_title('Daily Residuals between ETRM and JPL')
-    ax.set_ylabel('(positive normalized residual / 0.15) of ETa')
+    ax.set_ylabel('(non-normalized residual / 0.15*obs) of ETa 1925')
     ax.set_xlabel('Time')
 
     plt.show()
+
+    # Now Make a histogram of all of the values...
+    print 'plotting Histogram'
+    fig1, ax1 = plt.subplots()
+    ax1.hist(rss_daily_values_cleaned, bins=30, color='green')
+    ax1.set_title('ETRM and JPL non_normalized residual / 0.15*obs of eta 1925 taw')
+    plt.show()
+
 
 if __name__ == '__main__':
 
     data_locations_dir = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/get_data_output_jpl.yml'
 
-    temp_rss_path = '/Users/dcadol/Desktop/desktop_taw_optimization_temp'
-    temp_rss_path = '/Volumes/Seagate_Blue/non_normalized_residuals'
+    # temp_rss_path = '/Users/dcadol/Desktop/desktop_taw_optimization_temp'
+    temp_rss_path = '/Volumes/Seagate_Blue/normalized_residuals'
 
     geo_info_path = '/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/geo_info_espanola.yml'
 
@@ -155,14 +154,14 @@ if __name__ == '__main__':
 
     # x = 484933.768
     # y = 3946983.0
+    #
+    # # pixel 1 (the second pixel in the Sangre de Cristo Range)
+    # x = 438375.118
+    # y = 3990305.028
 
-    # pixel 1 (the second pixel in the Sangre de Cristo Range)
-    x = 438375.118
-    y = 3990305.028
-
-    # # Northern most pixel on flat grassland
-    # x = 480622.768
-    # y = 3949786.084
+    # Northern most pixel on flat grassland
+    x = 480622.768
+    y = 3949786.084
 
     # # near the northern most pixel
     # x= 481082.524
@@ -172,13 +171,3 @@ if __name__ == '__main__':
     x_y = (x, y)
 
     main(data_locations_dir, temp_rss_path, geo_info_path, x_y)
-
-
-
-
-# # these you can use to generate a time series analysis of the root squared error.
-#                 temp_name = '{}_{}_{}_{}.npy'.format(taw, resid_date.year, resid_date.month, resid_date.day)
-#
-#                 read_list.append('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name))
-#
-#                 np.save('/Users/dcadol/Desktop/desktop_taw_optimization_temp/{}'.format(temp_name), chi)

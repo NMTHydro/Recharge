@@ -42,20 +42,31 @@ def read_codes(path, first_col_string):
     :param first_col_string: The string of the first column of the reclass .csv
     :return:
     """
+
+    #instantiate the dictionary
     eco_dict = {}
     with open(path, 'r') as rfile:
         for line in rfile:
+            # check to make sure the line is not the header.
             if not line.split(',')[0] == first_col_string:
+                # a list of all the values in the line of the .csv
                 vals = line.split(',')
+                # if a cell is not empty and doesn't start with '\r' then keep it in the list
                 vals = [i for i in vals if len(i) > 0 and not i.startswith('\r')]
-                # print 'vals', vals
+
+                # store the ecosystem name as the key to the dictionary with a value of (newcode, oldcode)
                 eco_dict['{}'.format(vals[-1])] = (vals[0], vals[1])
 
     return eco_dict
 
 
 def arr_modify(arr, dict):
-    """"""
+    """
+
+    :param arr: any 2d numpy array
+    :param dict: has format key:(newval, oldval)
+    :return: modified array
+    """
 
     for key, val in dict.items():
         # print 'key', key
@@ -76,27 +87,28 @@ def arr_overprint(arr, val, newval):
     arr[arr == int(val)] = int(newval)
 
 
-def main(eco_path, lf_path, outinfo, firstcol_string):
+def main(eco_path, lf_path, outinfo, first_col_string):
     """"""
 
     # need a dictionary relating names to codes
     eco_dict = read_codes(eco_path, first_col_string)
-    print eco_dict
+    print 'eco dictionary-> \n', eco_dict
 
     # get the raster array
     landfire_arr = convert_raster_to_array(lf_path)
 
     # get the geo information for the raster
     landfire_geo = get_raster_geo(lf_path)
-    print landfire_geo
+    print 'geo info \n', landfire_geo
 
     grouped_arr = arr_modify(landfire_arr, eco_dict)
 
-    print grouped_arr
-    print landfire_geo['geotransform']
-    print outinfo[0], outinfo[1]
-    print (landfire_geo['rows'], landfire_geo['cols'])
-    print landfire_geo['projection']
+    ## troubleshooting
+    # print 'grouped array', grouped_arr
+    # print landfire_geo['geotransform']
+    # print outinfo[0], outinfo[1]
+    # print (landfire_geo['rows'], landfire_geo['cols'])
+    # print landfire_geo['projection']
 
     write_raster(grouped_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1],
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])

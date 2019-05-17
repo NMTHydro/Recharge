@@ -149,7 +149,7 @@ def taw_grid_search(config_path, output_path, begin_taw, end_taw, taw_step):
         print 'param list', param_list
         configuration_container.append(param_list)
 
-    file_path = os.path.join(output_path, 'ETRM_CONFIG_taw_grid_search_espanola_aoi_binary.yml')
+    file_path = os.path.join(output_path, 'ETRM_CONFIG_taw_grid_search_ameriflux_aoi.yml')
     print file_path
     # Re-Write the config file old-school
     with open(file_path, 'w') as writefile:
@@ -202,16 +202,18 @@ def run():
     """Here we basically take an ETRM_CONFIG file and edit it to our specifications."""
 
     # path to the file
-    config_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_statewide.yml"
+    # config_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_statewide.yml"
+    # config_path = "/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi.yml"
+    config_path = '/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi_ceff_06.yml'
 
     # path to directory where output config will go:
-    output_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder"
+    output_path = "/Volumes/Seagate_Blue/taw_optimization_work_folder"
     # starting TAW value
     begin_taw = 25
     # ending TAW value
-    end_taw = 1075
+    end_taw = 2125
     # grid search step size. Each ETRM run will increase the uniform TAW of the RZSW holding capacity by this many mm.
-    taw_step = 50
+    taw_step = 100
 
     # format and output a config file to generate ETRM outputs based on a changing TAW value.
     taw_grid_search(config_path, output_path, begin_taw, end_taw, taw_step)

@@ -31,6 +31,7 @@ from recharge import STATIC_KEYS, INITIAL_KEYS
 
 
 def generate_dataset(daterange, out):
+    print 'the out path {}'.format(out)
     if not paths.is_set():
         raise PathsNotSetExecption
 
@@ -143,6 +144,7 @@ def extract_mask(out, geo, bounds):
 
 
 def make_blank_geo_folder(out):
+    print 'makeing blank geo for {}'.format(out)
     p = os.path.join(out,'Blank_Geo')
     if not os.path.isdir(p):
         os.makedirs(p)

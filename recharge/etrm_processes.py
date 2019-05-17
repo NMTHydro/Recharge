@@ -188,11 +188,12 @@ class Processes(object):
             self._info('DAY:     {}({})'.format(day, tm_yday))
 
             time_it(self._do_daily_raster_load, day)
-            # modify the PRISM precipitation
-            if start_monsoon <= tm_yday <= end_monsoon:
-                m['precip'] = maximum((m['precip'] - 1.612722) / 0.676904, 0)
-            else:
-                m['precip'] = maximum((m['precip'] - 0.488870) / 0.993831, 0)
+
+            # # modify the PRISM precipitation - Commented out by GELP 4/27/2019
+            # if start_monsoon <= tm_yday <= end_monsoon:
+            #     m['precip'] = maximum((m['precip'] - 1.612722) / 0.676904, 0)
+            # else:
+            #     m['precip'] = maximum((m['precip'] - 0.488870) / 0.993831, 0)
 
             m['inten'] = m['precip'] * 0
 
@@ -200,6 +201,7 @@ class Processes(object):
             random_number = random.randn()
             percentile = norm.cdf(random_number)
 
+            #stochastic estimate of runoff based on field data from Walnut Gulch, AZ (see Xu thesis, 2018)
             log_precip = log(m['precip'][m['precip'] > 0])
             log_inten = zeros_like(log_precip)
             if start_monsoon <= tm_yday <= end_monsoon:

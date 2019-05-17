@@ -32,7 +32,7 @@ def write_raster(array, geotransform, output_path, output_filename, dimensions, 
     :param dimensions:
     :param projection:
     :param datatype:
-    :return:
+    :return: None
     """
 
     filename = os.path.join(output_path, output_filename)

@@ -130,8 +130,10 @@ if __name__ == "__main__":
 
     root = "/Users/Gabe/Desktop/academic_docs/LandFire/raster_report"
 
+    # created by hand at first based on information
     eco_name = 'landfire_econames.txt'
 
+    # produced from QGIS using ...
     count_report = 'nm_landfire_report.txt'
 
     output_csv = 'raster_report_processed.csv'

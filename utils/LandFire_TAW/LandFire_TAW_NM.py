@@ -33,7 +33,7 @@ def get_codes(eco_path):
 
             line_lst = line.split(',')
             if line_lst[0].isdigit():
-                codes_lst.append((line_lst[0], line_lst[1]))
+                codes_lst.append((line_lst[0], line_lst[1], float(line_lst[6])))
 
     codes = set(codes_lst)
     return codes
@@ -106,13 +106,17 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
-def get_ndvi_stats(codes, landfire_arr, ndvi_arr, csv=False):
+def get_ndvi_stats(codes, landfire_arr, ndvi_arr, csv=False, threshold_95=False):
     """"""
     ndvi_stats_dict = {}
+    # the codes are a list of tuples of ('codestring', 'econame')
     for code in codes:
+        print code
 
         raster_val = int(code[0])
+        # print 'raster val', raster_val
         eco_name = code[1]
+        # print 'econame', eco_name
 
         ndvi_vals = ndvi_arr[landfire_arr == raster_val]
 
@@ -120,24 +124,32 @@ def get_ndvi_stats(codes, landfire_arr, ndvi_arr, csv=False):
         # ndvi_vals = ndvi_vals[ndvi_vals > 0]
         # stats = (np.min(ndvi_vals), np.max(ndvi_vals), np.average(ndvi_vals), eco_name)
 
-        # get the interquartile range
-        first_quartile = np.percentile(ndvi_vals, 25)
-        third_quartile = np.percentile(ndvi_vals, 75)
-        iqr = third_quartile - first_quartile
+        if threshold_95:
+            # The upper and lower limit of the boxplots. 95% confidence interval, values within 1.5 * iqr are the whiskers
+            upper_95 = np.percentile(ndvi_vals, 95)
+            lower_5 = np.percentile(ndvi_vals, 5)
 
-        # The upper and lower limit of the boxplots. 95% confidence interval, values within 1.5 * iqr are the whiskers
-        upper_limit = third_quartile + (1.5 * iqr)
-        lower_limit = first_quartile - (1.5 * iqr)
+            # stats = (lower_5, upper_95, np.average(ndvi_vals), eco_name)
+            stats = (lower_5, upper_95, np.percentile(ndvi_vals, 50), eco_name)
+            ndvi_stats_dict['{}'.format(raster_val)] = stats
 
-        # get the biggest value and smallest value within 1.5 * iqr
-        lower_vals = ndvi_vals[ndvi_vals < upper_limit]
-        upper_95 = find_nearest(lower_vals, upper_limit)
-        higher_vals = ndvi_vals[ndvi_vals > lower_limit]
-        lower_95 = find_nearest(higher_vals, lower_limit)
+        else:
 
-        # stats = (lower_95, upper_95, np.average(ndvi_vals), eco_name)
-        stats = (lower_95, upper_95, np.percentile(ndvi_vals, 50), eco_name)
-        ndvi_stats_dict['{}'.format(raster_val)] = stats
+            # todo - this old version allows some ecosystems to go above the max where NDVI is overall higher than third quartile at edge of high mountains
+            lower_5 = np.percentile(ndvi_vals, 5)
+            third_quartile = np.percentile(ndvi_vals, 75)
+            stats = (lower_5, third_quartile, np.percentile(ndvi_vals, 50), eco_name)
+            ndvi_stats_dict['{}'.format(raster_val)] = stats
+
+            # lower = np.min(ndvi_vals)
+            # upper = np.max(ndvi_vals)
+            # stats = (lower, upper, np.percentile(ndvi_vals, 50), eco_name)
+            # ndvi_stats_dict['{}'.format(raster_val)] = stats
+
+            # lower = np.percentile(ndvi_vals, 5)
+            # upper = np.percentile(ndvi_vals, 95)
+            # stats = (lower, upper, np.percentile(ndvi_vals, 50), eco_name)
+            # ndvi_stats_dict['{}'.format(raster_val)] = stats
 
     return ndvi_stats_dict
 
@@ -173,7 +185,7 @@ def ndvi_histogramer(eco_path, ndvi_path, lf_path, outinfo):
             wfile.write('{},{},{},{},{}\n'.format(key, val[0], val[1], val[2], val[3]))
 
 
-def rootzone_interpolation(avg_rooting_depth, rd_ecotone_1, rd_ecotone2, avg_ndvi, ndvi_high, ndvi_low, ndvi_arr, root_depth_array, landfire_array, ecosystem_code):
+def sandvig_rootzone_interpolation(avg_rooting_depth, rd_ecotone_1, rd_ecotone2, avg_ndvi, ndvi_high, ndvi_low, ndvi_arr, root_depth_array, landfire_array, ecosystem_code):
     """"""
 
     print 'Interpolation info for ecosystem {}'.format(ecosystem_code)
@@ -218,17 +230,83 @@ def rootzone_interpolation(avg_rooting_depth, rd_ecotone_1, rd_ecotone2, avg_ndv
     return root_depth_array
 
 
+def ndvi_rootzone_interpolation(taw_arr, stats_dict, codes, landfire_arr, ndvi_arr, porosity, tew_arr):
+    """
+
+    :param max_taw_arr:
+    :param stats_dict:
+    :param codes:
+    :param landfire_arr:
+    :param ndvi_arr:
+    :return:
+    """
+
+    # convert tew to meters
+    tew_arr = tew_arr/1000
+
+    for code in codes:
+        print 'code is {} for ecosystem {} and has rooting value of {}'.format(code[0], code[1], code[2])
+        stats_key = code[0]
+        econame = code[1]
+        landfire_code = int(code[0])
+
+        eco_root_depth = code[2]
+
+        # check to make sure that the maxTAW > TEW else TAW = TEW
+
+        max_taw = eco_root_depth * porosity
+        print 'max taw val', max_taw
+
+        print landfire_arr.shape
+
+        max_taw_arr = np.zeros(landfire_arr.shape)
+        max_taw_arr = max_taw_arr + max_taw
+
+        print 'average', np.median(max_taw_arr)
+
+        # We set the max_taw = tew when the TEW (lower limit) > MAX_TAW(upper limit)
+        max_taw_arr[(landfire_arr == landfire_code) & (max_taw_arr < tew_arr)] = tew_arr[(landfire_arr == landfire_code) & (max_taw_arr < tew_arr)]
+        print max_taw_arr.shape
+
+        ndvi_stats_tuple = stats_dict[stats_key]
+
+        ndvi_max_stat = ndvi_stats_tuple[1]
+        ndvi_min_stat = ndvi_stats_tuple[0]
+
+        # # testing
+        # ndvi_max_stat = 0.75
+        # ndvi_min_stat = 0.01
+
+        ## deprecated.
+        # root_depth_arr[landfire_arr == landfire_code] = ((ndvi_max_stat - ndvi_arr[landfire_arr==landfire_code])/(ndvi_max_stat - ndvi_min_stat)) * (eco_root_depth)
+
+        print ndvi_arr.shape, max_taw_arr.shape, tew_arr.shape, landfire_arr.shape, tew_arr.shape
+
+        # keep Dan's code, but subtract NDVI - NDVI min statistic in numerator instead of subtracting from the max.
+        # scale TAW based on NDVI
+        taw_arr[landfire_arr == landfire_code] = ((ndvi_arr[landfire_arr == landfire_code] - ndvi_min_stat) / (ndvi_max_stat - ndvi_min_stat))\
+                                                 * (max_taw_arr[landfire_arr == landfire_code] - tew_arr[landfire_arr == landfire_code]) \
+                                                 + tew_arr[landfire_arr == landfire_code]
+
+        # Limit TAW values to the maximum if NDVI > Max Statistic
+        taw_arr[(landfire_arr == landfire_code) & (ndvi_arr > ndvi_max_stat)] = max_taw_arr[(landfire_arr == landfire_code) & (ndvi_arr > ndvi_max_stat)]
+
+        # Limit TAW values to the minimum if NDVI < Min Statistic
+        taw_arr[(landfire_arr == landfire_code) & (ndvi_arr < ndvi_min_stat)] = tew_arr[(landfire_arr == landfire_code) & (ndvi_arr < ndvi_min_stat)]
 
 
-def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=None):
+    return taw_arr
+
+
+def sandvig_phillips_root_zone(lf_path, ndvi_path, eco_path=None, outinfo=None, landfire_geo=None):
     """"""
     # read in the ndvi and landfire_images
     landfire_arr = convert_raster_to_array(lf_path)
     ndvi_arr = convert_raster_to_array(ndvi_path)
 
-    # todo - function that determines NDVI stats (average, 3rd quartile high and 1st quartile low) for each ecosysetm
     codes = get_codes(eco_path)
-    stats_dict = get_ndvi_stats(codes, landfire_arr, ndvi_arr)
+    # function that determines NDVI stats (average, 3rd quartile high and 1st quartile low) for each ecosysetm
+    stats_dict = get_ndvi_stats(codes, landfire_arr, ndvi_arr, threshold_95=True)
 
     # root_zone_arr = np.empty(landfire_arr.shape)
     root_zone_arr = np.zeros(landfire_arr.shape)
@@ -258,11 +336,11 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     print 'creosote low {}, creosote high {}, creosote average {}'.format(creosote_ndvi_low, creosote_ndvi_high,
                                                                           creosote_ndvi_avg)
 
-    root_zone_arr = rootzone_interpolation(avg_rooting_depth=creosote_rd, rd_ecotone_1=bare_rd, rd_ecotone2=grass_rd,
-                                           avg_ndvi=creosote_ndvi_avg, ndvi_high=creosote_ndvi_high,
-                                           ndvi_low=creosote_ndvi_low, ndvi_arr=ndvi_arr,
-                                           root_depth_array=root_zone_arr, landfire_array=landfire_arr,
-                                           ecosystem_code=2)
+    root_zone_arr = sandvig_rootzone_interpolation(avg_rooting_depth=creosote_rd, rd_ecotone_1=bare_rd, rd_ecotone2=grass_rd,
+                                                   avg_ndvi=creosote_ndvi_avg, ndvi_high=creosote_ndvi_high,
+                                                   ndvi_low=creosote_ndvi_low, ndvi_arr=ndvi_arr,
+                                                   root_depth_array=root_zone_arr, landfire_array=landfire_arr,
+                                                   ecosystem_code=2)
 
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(creosote_shrubs_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
@@ -279,10 +357,10 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     print 'grass low {}, grass high {}, grass average {}'.format(grass_ndvi_low, grass_ndvi_high,
                                                                           grass_ndvi_avg)
 
-    root_zone_arr = rootzone_interpolation(avg_rooting_depth=grass_rd, rd_ecotone_1=creosote_rd, rd_ecotone2=pj_rd,
-                                           avg_ndvi=grass_ndvi_avg, ndvi_high=grass_ndvi_high,
-                                           ndvi_low=grass_ndvi_low, ndvi_arr=ndvi_arr,
-                                           root_depth_array=root_zone_arr, landfire_array=landfire_arr, ecosystem_code=3)
+    root_zone_arr = sandvig_rootzone_interpolation(avg_rooting_depth=grass_rd, rd_ecotone_1=creosote_rd, rd_ecotone2=pj_rd,
+                                                   avg_ndvi=grass_ndvi_avg, ndvi_high=grass_ndvi_high,
+                                                   ndvi_low=grass_ndvi_low, ndvi_arr=ndvi_arr,
+                                                   root_depth_array=root_zone_arr, landfire_array=landfire_arr, ecosystem_code=3)
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(grass_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
 
@@ -293,10 +371,10 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     pj_ndvi_high = pj_stats[1]
     pj_ndvi_avg = pj_stats[2]
 
-    root_zone_arr = rootzone_interpolation(avg_rooting_depth=pj_rd, rd_ecotone_1=grass_rd, rd_ecotone2=ponderosa_fir_rd,
-                                          avg_ndvi=pj_ndvi_avg, ndvi_high=pj_ndvi_high,
-                                          ndvi_low=pj_ndvi_low, ndvi_arr=ndvi_arr,
-                                          root_depth_array=root_zone_arr,landfire_array=landfire_arr, ecosystem_code=4)
+    root_zone_arr = sandvig_rootzone_interpolation(avg_rooting_depth=pj_rd, rd_ecotone_1=grass_rd, rd_ecotone2=ponderosa_fir_rd,
+                                                   avg_ndvi=pj_ndvi_avg, ndvi_high=pj_ndvi_high,
+                                                   ndvi_low=pj_ndvi_low, ndvi_arr=ndvi_arr,
+                                                   root_depth_array=root_zone_arr, landfire_array=landfire_arr, ecosystem_code=4)
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(pj_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
 
@@ -307,10 +385,10 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     ponderosa_fir_ndvi_high = ponderosa_fir_stats[1]
     ponderosa_fir_ndvi_avg = ponderosa_fir_stats[2]
 
-    root_zone_arr = rootzone_interpolation(avg_rooting_depth=ponderosa_fir_rd, rd_ecotone_1=pj_rd, rd_ecotone2=mountain_grass_rd,
-                                           avg_ndvi=ponderosa_fir_ndvi_avg, ndvi_high=ponderosa_fir_ndvi_high,
-                                           ndvi_low=ponderosa_fir_ndvi_low, ndvi_arr=ndvi_arr,
-                                           root_depth_array=root_zone_arr,landfire_array=landfire_arr, ecosystem_code=5)
+    root_zone_arr = sandvig_rootzone_interpolation(avg_rooting_depth=ponderosa_fir_rd, rd_ecotone_1=pj_rd, rd_ecotone2=mountain_grass_rd,
+                                                   avg_ndvi=ponderosa_fir_ndvi_avg, ndvi_high=ponderosa_fir_ndvi_high,
+                                                   ndvi_low=ponderosa_fir_ndvi_low, ndvi_arr=ndvi_arr,
+                                                   root_depth_array=root_zone_arr, landfire_array=landfire_arr, ecosystem_code=5)
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(ponderosa_fir_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
 
@@ -322,21 +400,95 @@ def sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=None, landfire_geo=No
     mountain_grass_ndvi_high = mountain_grass_stats[1]
     mountain_grass_ndvi_avg = mountain_grass_stats[2]
 
-    root_zone_arr = rootzone_interpolation(avg_rooting_depth=mountain_grass_rd, rd_ecotone_1=bare_rd,
-                                           rd_ecotone2=ponderosa_fir_rd,
-                                           avg_ndvi=mountain_grass_ndvi_avg, ndvi_high=mountain_grass_ndvi_high,
-                                           ndvi_low=mountain_grass_ndvi_low, ndvi_arr=ndvi_arr,
-                                           root_depth_array=root_zone_arr,landfire_array=landfire_arr, ecosystem_code=6)
+    root_zone_arr = sandvig_rootzone_interpolation(avg_rooting_depth=mountain_grass_rd, rd_ecotone_1=bare_rd,
+                                                   rd_ecotone2=ponderosa_fir_rd,
+                                                   avg_ndvi=mountain_grass_ndvi_avg, ndvi_high=mountain_grass_ndvi_high,
+                                                   ndvi_low=mountain_grass_ndvi_low, ndvi_arr=ndvi_arr,
+                                                   root_depth_array=root_zone_arr, landfire_array=landfire_arr, ecosystem_code=6)
     write_raster(root_zone_arr, landfire_geo['geotransform'], outinfo[0], outinfo[1].format(mountain_grass_code),
                  (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
 
     return root_zone_arr
 
 
+def ndvi_taw_scaling(lf_path=None, ndvi_path=None, eco_path=None, tew_path=None, outinfo=None, landfire_geo=None, porosity=0.2, output_path=None):
+    """
+
+    :param lf_path:
+    :param ndvi_path: All time 13 year average ndvi statistic starting in the year 2000 from modis
+    :param eco_path: configuration file defining ranges of values for reclassified LandFire Raster eco-parameters
+     (effective rooting depth from chloride concentration SandvigPhillips)
+    :param outinfo:
+    :param landfire_geo:
+    :return:
+    """
+
+    # read in the ndvi and landfire_images
+    landfire_arr = convert_raster_to_array(lf_path)
+    ndvi_arr = convert_raster_to_array(ndvi_path)
+
+    codes = get_codes(eco_path)
+    # function that determines NDVI stats (average, 3rd quartile high and 1st quartile low) for each ecosysetm
+    stats_dict = get_ndvi_stats(codes, landfire_arr, ndvi_arr)
+
+    print 'stats dict \n', stats_dict
+
+    taw_arr = np.zeros(landfire_arr.shape)
+
+    # read in the tew array (total EVAPORABLE water)
+    tew_arr = convert_raster_to_array(tew_path)
+
+    # do a linear interpolation of root zone based on ndvi statistics (total AVAILABLE water)
+    taw_arr = ndvi_rootzone_interpolation(taw_arr, stats_dict, codes, landfire_arr, ndvi_arr, porosity, tew_arr)
+
+    # output the array as a raster
+    output_name = 'taw_linear_ecomodel.tif'
+
+    write_raster(taw_arr, landfire_geo['geotransform'], output_path, output_name, (landfire_geo['cols'],
+                                                                                   landfire_geo['rows']),
+                 landfire_geo['projection'])
+
+
+
 if __name__ == "__main__":
+
+    # # path to the codes, counts and ecosystem names for the Landfire Dataset.
+    # # ...File produced by Landfire_Eco_Stringparse.py
+    # eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig_config.csv'
+    #
+    # # path to the 13 year average NDVI. Produced by ndvi_processing.py -> then warped using nearest neighbor to LandFire extent and resolution (30x30)
+    # ndvi_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/NDVI_parameters/all_time_avg_ndvi_warp.tif'
+    #
+    # # path to the re-classified raster produced by landfire_raster_reclass.py
+    # lf_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/grouped_landfire_rasters/gabe_reclass_march_2.tif'
+    # # get the geo information for the raster
+    # landfire_geo = get_raster_geo(lf_path)
+    #
+    # # ====== User-Defined Output path ======
+    # outpath = '/Users/dcadol/Desktop/academic_docs_II/LandFire/python_plots/histograms'
+    # # to add the ecosystem number code and name from the .csv
+    # outname = 'ndvi_hist_{}_{}'
+    #
+    # # outfile = os.path.join(outpath, outname)
+    # outinfo = [outpath, outname]
+    #
+    # # ndvi_histogramer(eco_path, ndvi_path, lf_path, outinfo)
+    # # # Todo - make box and whisker plots for the elevations of each eco-class
+    #
+    #
+    #
+    # # TODO - come up with algorithm to scale rooting depth by NDVI based on avg ndvi between adjoining ecotones
+    # # first, plot where the averages are in relation to each other, are they distinct?
+    #
+    # # Do a simpler algorithm where min, max and avg rooting depth from the literature are scaled by min, max, avg NDVI
+    #
+    # outinfo = [outpath, 'sandvig_phillips_rd_{}.tif']
+    #
+    # root_zone_array = sandvig_phillips_root_zone(lf_path, ndvi_path, eco_path=eco_path, outinfo=outinfo, landfire_geo=landfire_geo)
 
     # path to the codes, counts and ecosystem names for the Landfire Dataset.
     # ...File produced by Landfire_Eco_Stringparse.py
+
     eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig_config.csv'
 
     # path to the 13 year average NDVI. Produced by ndvi_processing.py -> then warped using nearest neighbor to LandFire extent and resolution (30x30)
@@ -347,6 +499,9 @@ if __name__ == "__main__":
     # get the geo information for the raster
     landfire_geo = get_raster_geo(lf_path)
 
+    # tew for lower evap limit layer
+    tew_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/tew_warp/tew_warp.tif'
+
     # ====== User-Defined Output path ======
     outpath = '/Users/dcadol/Desktop/academic_docs_II/LandFire/python_plots/histograms'
     # to add the ecosystem number code and name from the .csv
@@ -355,19 +510,10 @@ if __name__ == "__main__":
     # outfile = os.path.join(outpath, outname)
     outinfo = [outpath, outname]
 
-    # ndvi_histogramer(eco_path, ndvi_path, lf_path, outinfo)
-    # # Todo - make box and whisker plots for the elevations of each eco-class
+    raster_output = '/Users/dcadol/Desktop/academic_docs_II/LandFire/ndvi_linear'
 
 
-
-    # TODO - come up with algorithm to scale rooting depth by NDVI based on avg ndvi between adjoining ecotones
-    # first, plot where the averages are in relation to each other, are they distinct?
-
-    # Do a simpler algorithm where min, max and avg rooting depth from the literature are scaled by min, max, avg NDVI
-
-    outinfo = [outpath, 'sandvig_phillips_rd_{}.tif']
-
-    root_zone_array = sandvig_phillips_root_zone(lf_path, ndvi_path, outinfo=outinfo, landfire_geo=landfire_geo)
+    ndvi_taw_scaling(lf_path, ndvi_path, eco_path=eco_path, outinfo=outinfo, tew_path=tew_path, landfire_geo=landfire_geo, output_path=raster_output)
 
     # write_raster(root_zone_array, landfire_geo['geotransform'], outinfo[0], outinfo[1],
     #              (landfire_geo['cols'], landfire_geo['rows']), landfire_geo['projection'])
