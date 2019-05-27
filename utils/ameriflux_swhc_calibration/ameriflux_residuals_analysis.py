@@ -19,7 +19,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy import stats
 # ============= standard library imports ========================
-from utils.JPL_statistical_validation.eta_dataset_plotter import get_prism_results, get_jpl_results, get_etrm_results,\
+from utils.ameriflux_swhc_calibration.eta_dataset_plotter import get_prism_results, get_jpl_results, get_etrm_results,\
     ec_data_processor
 from utils.TAW_optimization_subroutine.non_normalized_hist_analysis import geospatial_array_extract
 from utils.TAW_optimization_subroutine.chisquare_timeseries_analyst import x_y_extract, raster_extract

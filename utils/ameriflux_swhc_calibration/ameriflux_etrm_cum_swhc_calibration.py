@@ -19,181 +19,15 @@ from matplotlib import pyplot as plt
 from datetime import date
 import numpy as np
 # ============= standard library imports ========================
-from utils.JPL_statistical_validation.eta_dataset_plotter import get_prism_results, get_jpl_results, get_etrm_results,\
+from utils.ameriflux_swhc_calibration.eta_dataset_plotter import get_prism_results, get_jpl_results, get_etrm_results,\
     ec_data_processor
-from utils.TAW_optimization_subroutine.non_normalized_hist_analysis import geospatial_array_extract
 from utils.TAW_optimization_subroutine.chisquare_timeseries_analyst import x_y_extract, raster_extract
-
-def daily_time_filter(date_lst, value_lst, mo_day_tpl):
-    """
-    filters a daily time series based on ((start mo, start day),(end mo, end day))
-    :param date_lst: list of date objects
-    :param value_lst: list of values corresponding to date objects in time series
-    :param mo_day_tpl: ((start mo, start day),(end mo, end day)) where tuples contain date objects
-    :return: filtered list of date objects and values
-    """
-    filtered_dates = []
-    filtered_values = []
-    for d, v in zip(date_lst, value_lst):
-
-        yr = d.year
-
-        start_d = date(yr, mo_day_tpl[0][0], mo_day_tpl[0][1])
-        end_d = date(yr, mo_day_tpl[1][0], mo_day_tpl[1][1])
-
-        if (d > start_d) and (d < end_d):
-            filtered_dates.append(d)
-            filtered_values.append(v)
-
-    return filtered_dates, filtered_values
-
-def get_taw_list(etrm_dict):
-    """
-
-    :param etrm_dict:
-    :return:
-    """
-    taw_lst = []
-    for key in etrm_dict.keys():
-        taw_lst.append(int(key))
-
-    taw_lst = sorted(taw_lst)
-    return taw_lst
-
-def taw_optimize_1d(parameter_lst, chi_dict, outpath, name, num_obs):
-    """
-    Make a detailed optimization summary and output to yml file. Save a plot of the chi square vs swhc and display plot
-    :param parameter_lst:
-    :param chi_dict:
-    :param outpath:
-    :param name:
-    :param num_obs:
-    :return:
-    """
-
-
-    print 'optimizing'
-
-
-    chimin_dict = {}
-
-    chi_list = []
-    for param in parameter_lst:
-        chi_list.append(chi_dict['{}'.format(param)])
-
-    chi_min = chi_list[0]
-    for chi, param in zip(chi_list, parameter_lst):
-
-        if chi < chi_min:
-            chi_min = chi
-
-    delta_chi = chi_min + 3.841459
-
-    print 'min chi square is', chi_min
-
-    chimin_dict['optimum_chi'] = chi_min
-    chimin_dict['param_lst'] = parameter_lst
-    chimin_dict['chi_lst'] = chi_list
-    chimin_dict['delta_chi'] = delta_chi
-    chimin_dict['number_of_observations'] = num_obs
-
-    print 'making chi min output'
-    chimin_output = os.path.join(outpath, '{}_chimin.yml'.format(name))
-    with open(chimin_output, 'w') as wfile:
-        yaml.dump(chimin_dict, wfile)
-
-    print 'plotting'
-    fig, ax = plt.subplots()
-    ax.scatter(parameter_lst, chi_list, color='blue')
-    ax.axhline(y=delta_chi, color='r', linestyle='-', label='95% ci line')
-    ax.set_title('plot of chi square against SWHC for a pixel {}'.format(name))
-    ax.set_ylabel('chi square')
-    ax.set_xlabel('Soil Water Holding Capacity (mm)')
-    ax.grid(True)
-    ax.legend(loc='upper center')
-    fig_output_path = os.path.join(outpath, '{}_chiplot.png'.format(name))
-    plt.savefig(fig_output_path)
-    plt.show()
-
-    return chimin_dict
-
-
-def get_chisquare_dict(obs_dates_lst, obs_values_lst, model_dictionary, parameter_lst, geo_info, x_y, percent_error, outpath, name):
-    """
-    Make a dict of the sum of squared normalized residuals indexed by parameter value.
-    :param obs_dates_lst:
-    :param obs_values_lst:
-    :param model_dictionary:
-    :param parameter_lst:
-    :param geo_info:
-    :param x_y:
-    :param percent_error:
-    :param outpath:
-    :param name:
-    :return:
-    """
-
-    # Unpack the coordinates
-    x, y = x_y
-
-    # for storing the chi square of each parameter value
-    chi_dict = {}
-
-    # hold on to the normalized residuals
-    resid_dict = {}
-
-    # track degrees of freedom
-    dof_dict = {}
-
-    for param in parameter_lst:
-
-        # track the degrees of freedom
-        n = 0
-
-        model_files = model_dictionary['{}'.format(param)][0]
-        model_vals = []
-        print 'extracting for param {}'.format(param)
-        for model_path in model_files:
-            # EXTRACT ETRM point value from the raster
-            model_arr = np.load(model_path)
-            val = geospatial_array_extract(geo_info, model_arr, (x, y))
-            model_vals.append(val)
-
-        # calculate the normalized residual
-        resid_lst = []
-        chisquare_resid = 0
-        print 'taking residuals for {}'.format(param)
-        for obs_val, mod_val in zip(obs_values_lst, model_vals):
-
-            residual_value = (obs_val - mod_val) / (percent_error * obs_val)
-            resid_lst.append(residual_value)
-
-            # accrete the squared normalized residual to the chi square value
-            chisquare_resid += residual_value ** 2
-
-            # for every observation there is one more degree of freedom
-            n += 1
-
-        # store a timeseries of residuals indexed by parameters
-        resid_dict['{}'.format(param)] = (obs_dates_lst, resid_lst)
-
-        # store the chi square value indexed by parameter value
-        chi_dict['{}'.format(param)] = chisquare_resid
-
-        # store the degrees of freedom for each param (should not change)
-        dof_dict['{}'.format(param)] = n
-
-    # output the resid dict to a yml
-    print 'output residuals'
-    resid_storage_path = os.path.join(outpath, '{}_resid.yml'.format(name))
-    with open(resid_storage_path, 'w') as wfile:
-        yaml.dump(resid_dict, wfile)
-
-    return chi_dict, dof_dict
 
 
 if __name__ == "__main__":
 
+    cumulative_mode = True
+    cumulative_int = 3
     # 1)
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_8-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
@@ -208,7 +42,15 @@ if __name__ == "__main__":
     # 2)
     amf_name = 'US-Vcp'
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
+
     daily_cum_ameriflux = ec_data_processor(amf)
+
+    # the date is stored in timeseries column so that column will need to be converted to date object.
+    if cumulative_mode:
+        ts = daily_cum_ameriflux.timeseries
+        ts = ts.to_list()
+        date_ts = [date(i.year, i.month, i.day) for i in ts]
+        daily_cum_ameriflux['date'] = date_ts
 
     # Get the dates from the ameriflux analysis as a list.
     ameriflux_dates = daily_cum_ameriflux.date
@@ -225,6 +67,7 @@ if __name__ == "__main__":
     end_grow_day = 15
     growing_season = ((5, 15), (9, 15))
 
+    # Note: if cumulative mode
     ameriflux_dates, ameriflux_eta_values = daily_time_filter(ameriflux_dates, ameriflux_eta_values, growing_season)
 
 
@@ -251,7 +94,9 @@ if __name__ == "__main__":
         print 'date mod is {}'.format(date_mod)
         print 'making the etrm yaml file for ameriflux date ranges'
         # returns a dictionary where key = 'taw'. Key returns a tuple (date_objs, files) in chronological order.
-        etrm_dict = get_etrm_results(etrm_path, analysis_dates=ameriflux_dates)
+        # cumulative mode will return all the dates between analysis_dates[0] and analysis_dates[-1]
+        etrm_dict = get_etrm_results(etrm_path, analysis_dates=ameriflux_dates, cumulative_mode=cumulative_mode)
+
         with open(os.path.join(etrm_dict_path, '{}.yml'.format(amf_name)), 'w') as wfile:
             yaml.dump(etrm_dict, wfile)
 
