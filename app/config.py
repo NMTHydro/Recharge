@@ -116,6 +116,11 @@ class RunSpec:
     yplot = None
     plot_output = None
     tiff_shape = None
+    use_walnut_gulch_ro = True
+    seed = 123456789
+    use_period_change = False
+    use_monsoon_precip_correction = True
+    use_mountain_precip_correction = False
 
     def __init__(self, obj):
         self._obj = obj
@@ -127,7 +132,13 @@ class RunSpec:
                  'winter_evap_limiter', 'winter_end_day', 'winter_start_day',
                  'output_units', 'is_reduced', 'uniform_taw', 'binary_shapefile', 'new_mexico_extent',
                  'tiff_shape',
-                 'xplot', 'yplot', 'plot_output') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
+                 'xplot', 'yplot', 'plot_output',
+                 'use_walnut_gulch_ro',
+                 'seed',
+                 'use_period_change',
+                 'use_monsoon_precip_correction',
+                 'use_mountain_precip_correction'
+                 ) # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
 
         # print 'the attributes', attrs
         for attr in attrs:
