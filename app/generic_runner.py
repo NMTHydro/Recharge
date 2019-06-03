@@ -32,15 +32,16 @@ from recharge.raster_tools import make_results_dir
 CLI_ENABLED = False
 
 
-def run_dataset():
+def run_dataset(cfg_path=None):
     """
     This function produces a reduced area data set of all inputs
     based on the mask identified in the Config file.
+    :param cfg_path: path to .yml config file. Otherwise, uses default config in ~
     :return:
     """
     print 'Generating Reduced Dataset'
 
-    cfg = Config()
+    cfg = Config(cfg_path)
     print 'this is the config {}'.format(cfg.path)
     for runspec in cfg.runspecs:
         paths.build(runspec.input_root, runspec.output_root)
@@ -107,10 +108,10 @@ def run(cfg_path=None):
             'help': run_help, 'commands': run_commands,
             'dataset': run_dataset}
 
-    # # Commented out when running model. Uncomment to reduce data based on mask in config file.
-    # # NOTE: run_dataset() will use the Config File in the ~ folder, not the config_path you specify in the run command
-    # run_dataset()
-    # return
+    # Commented out when running model. Uncomment to reduce data based on mask in config file.
+    # NOTE: run_dataset() will use the Config File in the ~ folder, not the config_path you specify in the run command
+    run_dataset()
+    return
 
     welcome()
 

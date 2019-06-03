@@ -32,8 +32,9 @@ def accumulator(time_df, time_unit='days', cum_int=1):
 
     if time_unit == 'days':
 
-        # res_df = time_df.resample('{}D'.format(cum_int), label='left').sum()
-        res_df = time_df.resample('{}D'.format(cum_int), label='right').sum()
+        # Note: This sums the contiguous days up to the number specified, but may be less, the time series is completed
+        #  and filled out with zeros when values are not present.
+        res_df = time_df.resample('{}D'.format(cum_int), label='left').sum()
 
         return res_df
 

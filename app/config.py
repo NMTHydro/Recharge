@@ -54,6 +54,16 @@ save_dates: [] # list in format -> 'mm/dd/YYY' such as ['mm/dd/YYY', 'mm/dd/YYY'
 write_freq: SET ME # modify to output monthly or yearly rasters. OPTIONS -> daily|monthly|yearly
 daily_outputs:[dr, de, drew] # OPTIONS -> anything that appears in the tracker
 
+#==== To track change between two consecutive time periods ===
+use_period_change = False # Set to True to work
+
+# === Settings that handle the stochastic rainfall runoff method
+seed = 123456789 # A default seed to make the stochastic behaviour of the model to be replicated
+use_walnut_gulch_ro = True # Uses Esther Xu (Xu Thesis 2018) stochastic runoff method based on Walnut Gulch watershed.
+#Otherwise RO is linearly decided based on Amy Lewis data 
+use_monsoon_precip_correction = True # Uses Xu correction to PRISM based on Walnut Gulch watershed precip vs PRISM
+use_mountain_precip_correction = False # Corrects precip based on Amy Lewis
+
 # === Misc settings ===
 is_reduced: False # (default)
 winter_evap_limiter: 0.3  # (default)
@@ -205,7 +215,6 @@ class Config:
             path = paths.config
 
         if isinstance(path, (str, unicode)):
-            print 'does the file get opened as read only?'
             check_config(path)
             rfile = open(path, 'r')
         else:
