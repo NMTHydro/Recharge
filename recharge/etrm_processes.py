@@ -67,7 +67,6 @@ class Processes(object):
     _winter_evap_limiter = None
     _winter_end_day = None
     _winter_start_day = None
-
     _is_configured = False
 
     def __init__(self, cfg, taw=None):
@@ -183,49 +182,68 @@ class Processes(object):
                 point_arr = self._pixels_of_interest_to_array(paths.point_shape)
                 self.point_tracker = initialize_point_tracker(m, point_arr)
 
+        if self._cfg.use_walnut_gulch:
+            # set random seed value in configuration file
+            random.seed(self._cfg.seed)
+
         for counter, day in enumerate(day_generator(*self._date_range)):
             tm_yday = day.timetuple().tm_yday
             self._info('DAY:     {}({})'.format(day, tm_yday))
 
             time_it(self._do_daily_raster_load, day)
 
-            # # modify the PRISM precipitation - Commented out by GELP 4/27/2019
-            # if start_monsoon <= tm_yday <= end_monsoon:
-            #     m['precip'] = maximum((m['precip'] - 1.612722) / 0.676904, 0)
-            # else:
-            #     m['precip'] = maximum((m['precip'] - 0.488870) / 0.993831, 0)
+            a,b = None, None
 
-            m['inten'] = m['precip'] * 0
+            if self._cfg.use_monsoon_precip_correction:
+                # # modify the PRISM precipitation - Commented out by GELP 4/27/2019
+                if start_monsoon <= tm_yday <= end_monsoon:
+                    a = 1.612722
+                    b = 0.676904
+                else:
+                    a = 0.488870
+                    b = 0.993831
+            elif self._cfg.use_mountain_precip_correction:
+                if start_monsoon <= tm_yday <= end_monsoon:
+                    a = 0.3276
+                    b = 0.7829
+                else:
+                    # todo: is this appropriate for the mountains non monsoon
+                    a = 0.4888870
+                    b = 0.993831
 
-            # generate random number
-            random_number = random.randn()
-            percentile = norm.cdf(random_number)
+            if a is not None:
+                m['precip'] = maximum(m['precip'] - a)/b
 
-            #stochastic estimate of runoff based on field data from Walnut Gulch, AZ (see Xu thesis, 2018)
-            log_precip = log(m['precip'][m['precip'] > 0])
-            log_inten = zeros_like(log_precip)
-            if start_monsoon <= tm_yday <= end_monsoon:
-                log_inten[log_precip < 0] = norm.ppf(percentile, -2.43, 1.21)
-                log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -2.89, 1.06)
-                log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -2.83, 0.96)
-                log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -2.57, 0.95)
-                log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -2.44, 0.90)
-                log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -2.31, 0.89)
-                log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -2.18, 0.84)
-                log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -1.85, 0.77)
-                log_inten[log_precip >= 3.5] = norm.ppf(percentile, -1.86, 0.73)
-            else:
-                log_inten[log_precip < 0] = norm.ppf(percentile, -2.77, 1.33)
-                log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -3.48, 0.91)
-                log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -3.47, 0.77)
-                log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -3.37, 0.70)
-                log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -3.38, 0.61)
-                log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -3.28, 0.65)
-                log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -3.08, 0.56)
-                log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -3.12, 0.45)
-                log_inten[log_precip >= 3.5] = norm.ppf(percentile, -3.13, 0.66)
+            m['inten'] = zeros_like(m['precip'])
+            if self._cfg.use_walnut_gulch_ro:
+                # generate random number
+                random_number = random.randn()
+                percentile = norm.cdf(random_number)
+                # stochastic estimate of runoff based on field data from Walnut Gulch, AZ (see Xu thesis, 2018)
+                log_precip = log(m['precip'][m['precip'] > 0])
+                log_inten = zeros_like(log_precip)
+                if start_monsoon <= tm_yday <= end_monsoon:
+                    log_inten[log_precip < 0] = norm.ppf(percentile, -2.43, 1.21)
+                    log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -2.89, 1.06)
+                    log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -2.83, 0.96)
+                    log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -2.57, 0.95)
+                    log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -2.44, 0.90)
+                    log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -2.31, 0.89)
+                    log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -2.18, 0.84)
+                    log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -1.85, 0.77)
+                    log_inten[log_precip >= 3.5] = norm.ppf(percentile, -1.86, 0.73)
+                else:
+                    log_inten[log_precip < 0] = norm.ppf(percentile, -2.77, 1.33)
+                    log_inten[(log_precip >= 0) & (log_precip < 0.5)] = norm.ppf(percentile, -3.48, 0.91)
+                    log_inten[(log_precip >= 0.5) & (log_precip < 1)] = norm.ppf(percentile, -3.47, 0.77)
+                    log_inten[(log_precip >= 1) & (log_precip < 1.5)] = norm.ppf(percentile, -3.37, 0.70)
+                    log_inten[(log_precip >= 1.5) & (log_precip < 2)] = norm.ppf(percentile, -3.38, 0.61)
+                    log_inten[(log_precip >= 2) & (log_precip < 2.5)] = norm.ppf(percentile, -3.28, 0.65)
+                    log_inten[(log_precip >= 2.5) & (log_precip < 3)] = norm.ppf(percentile, -3.08, 0.56)
+                    log_inten[(log_precip >= 3) & (log_precip < 3.5)] = norm.ppf(percentile, -3.12, 0.45)
+                    log_inten[log_precip >= 3.5] = norm.ppf(percentile, -3.13, 0.66)
 
-            m['inten'][m['precip'] > 0] = exp(log_inten)  # mm/min
+                m['inten'][m['precip'] > 0] = exp(log_inten)  # mm/min
 
             # Assume 2-hour storms in the monsoon season, and 6 hour storms otherwise
             # If melt is occurring (calculated in _do_snow), infiltration will be set to 24 hours
@@ -640,38 +658,44 @@ class Processes(object):
         dd = where(water < 0.1, dd + 1, 1)
         m['dry_days'] = dd
 
-        # Surface runoff (Hortonian- using storm duration modified ksat values)
-        # ro = where(water > soil_ksat, water - soil_ksat, 0)
-        # ro *= (1 - ro_local_reinfilt_frac)
-        '''Esther's Stats'''
-        num = random.uniform(0, 1)
-        start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
-        if start_monsoon <= tm_yday <= end_monsoon:
-            ro = 0.001160957 * (m['rain'] ** 2) + 0.199019984 * m['rain'] * m['inten']
-            if num > 0.01392405:
-                ro = where(m['rain'] <= 2, 0, ro)
-            if num > 0.05977011:
-                ro = where((m['rain'] <= 5) & (m['rain'] > 2), 0, ro)
-            if num > 0.06521739:
-                ro = where((m['rain'] <= 8) & (m['rain'] > 5), 0, ro)
-            if num > 0.2393617:
-                ro = where((m['rain'] <= 12) & (m['rain'] > 8), 0, ro)
-            if num > 0.4554455:
-                ro = where((m['rain'] <= 22) & (m['rain'] > 12), 0, ro)
-            if num > 0.8:
-                ro = where((m['rain'] <= 40) & (m['rain'] > 22), 0, ro)
-            if num > 0.9:
-                ro = where(m['rain'] > 40, 0, ro)
+        if self._cfg.use_walnut_gulch_ro:
+            # Surface runoff (Hortonian- using storm duration modified ksat values)
+            # ro = where(water > soil_ksat, water - soil_ksat, 0)
+            # ro *= (1 - ro_local_reinfilt_frac)
+            # Esther's Stats
+            num = random.uniform(0, 1)
+            start_monsoon, end_monsoon = c['s_mon'].timetuple().tm_yday, c['e_mon'].timetuple().tm_yday
+            if start_monsoon <= tm_yday <= end_monsoon:
+                ro = 0.001160957 * (m['rain'] ** 2) + 0.199019984 * m['rain'] * m['inten']
+                if num > 0.01392405:
+                    ro = where(m['rain'] <= 2, 0, ro)
+                if num > 0.05977011:
+                    ro = where((m['rain'] <= 5) & (m['rain'] > 2), 0, ro)
+                if num > 0.06521739:
+                    ro = where((m['rain'] <= 8) & (m['rain'] > 5), 0, ro)
+                if num > 0.2393617:
+                    ro = where((m['rain'] <= 12) & (m['rain'] > 8), 0, ro)
+                if num > 0.4554455:
+                    ro = where((m['rain'] <= 22) & (m['rain'] > 12), 0, ro)
+                if num > 0.8:
+                    ro = where((m['rain'] <= 40) & (m['rain'] > 22), 0, ro)
+                if num > 0.9:
+                    ro = where(m['rain'] > 40, 0, ro)
+            else:
+                ro = 0.0003765849 * (m['rain'] ** 2) + 0.0964337598 * m['rain'] * m['inten']
+                if num > 0.001658375:
+                    ro = where(m['rain'] <= 10, 0, ro)
+                if num > 0.05504587:
+                    ro = where((m['rain'] <= 20) & (m['rain'] > 10), 0, ro)
+                if num > 0.1111111:
+                    ro = where((m['rain'] <= 30) & (m['rain'] > 20), 0, ro)
+                if num > 0.5454545:
+                    ro = where(m['rain'] > 30, 0, ro)
         else:
-            ro = 0.0003765849 * (m['rain'] ** 2) + 0.0964337598 * m['rain'] * m['inten']
-            if num > 0.001658375:
-                ro = where(m['rain'] <= 10, 0, ro)
-            if num > 0.05504587:
-                ro = where((m['rain'] <= 20) & (m['rain'] > 10), 0, ro)
-            if num > 0.1111111:
-                ro = where((m['rain'] <= 30) & (m['rain'] > 20), 0, ro)
-            if num > 0.5454545:
-                ro = where(m['rain'] > 30, 0, ro)
+            # using runoff and rainfall collected by Amy Lewis in Santa Fe, from NMBGMR Bul. 163
+            # lower gauge
+            ro = 6e-9 * exp(0.062 * m['rain'])
+
         m['ro'] = ro
 
         # Calculate Deep Percolation (recharge or infiltration)

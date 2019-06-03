@@ -171,15 +171,16 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        # # TODO - GELP March 8 2019 I believe this is messing up the output of daily numpy arrays. We must reconcile the differences here.
-        # # keep track of previous month/year value, and subtract. Gives outputs as monthly change.
-        # # todo: Gabe had output as  tracker[ckey][var] = vv  , but I need monthly/annual changes for most params (ETa, precip, recharge, ro) DDC 1/9/19
-        # # todo: However, I would like to have simply  tracker[ckey][var] = vv  for dr, de, and drew
-        # tracker[ckey][var] = vv - tracker[lkey][var]
-        # tracker[lkey][var] = vv
-
-        # GELP March 8, 2019
-        tracker[ckey][var] = vv
+        if self._cfg.use_period_change:
+            # # TODO - GELP March 8 2019 I believe this is messing up the output of daily numpy arrays. We must reconcile the differences here.
+            # # keep track of previous month/year value, and subtract. Gives outputs as monthly change.
+            # # todo: Gabe had output as  tracker[ckey][var] = vv  , but I need monthly/annual changes for most params (ETa, precip, recharge, ro) DDC 1/9/19
+            # # todo: However, I would like to have simply  tracker[ckey][var] = vv  for dr, de, and drew
+            tracker[ckey][var] = vv - tracker[lkey][var]
+            tracker[lkey][var] = vv
+        else:
+            # GELP March 8, 2019
+            tracker[ckey][var] = vv
 
     def _write_numpy_array(self, key, date, taw_value, period=None, master=None):
         """
