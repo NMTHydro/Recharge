@@ -182,7 +182,7 @@ class Processes(object):
                 point_arr = self._pixels_of_interest_to_array(paths.point_shape)
                 self.point_tracker = initialize_point_tracker(m, point_arr)
 
-        if self._cfg.use_walnut_gulch:
+        if self._cfg.use_walnut_gulch_ro:
             # set random seed value in configuration file
             random.seed(self._cfg.seed)
 
@@ -212,7 +212,7 @@ class Processes(object):
                     b = 0.993831
 
             if a is not None:
-                m['precip'] = maximum(m['precip'] - a)/b
+                m['precip'] = maximum((m['precip'] - a)/b)
 
             m['inten'] = zeros_like(m['precip'])
             if self._cfg.use_walnut_gulch_ro:
