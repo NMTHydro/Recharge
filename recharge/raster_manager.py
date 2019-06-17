@@ -93,7 +93,6 @@ class RasterManager(object):
                       self._cfg.daily_outputs]
             # print 'new dailys -> {}'.format(dailys)
 
-
             for element, arr in dailys:
                 self._sum_raster_by_shape(element, date_object, arr)
 
@@ -105,12 +104,13 @@ class RasterManager(object):
 
             # Subroutine -gelp changed from line 96 to current position Nov 18:
             if self.uniform_taw is not None:
-                 # getting the TAW value
+                # getting the TAW value
                 taw_value = self.uniform_taw
                 # To generate .npy files for each day
                 self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
 
-        outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in self._cfg.daily_outputs]
+        outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in
+                   self._cfg.daily_outputs]
         # print 'outputs for monthly/yearly raster folders {}'.format(outputs)
 
         # save monthly data
@@ -126,7 +126,6 @@ class RasterManager(object):
         for element, arr in outputs:
             self._update_raster_tracker(arr, element, period=period)
             self._write_numpy_array(element, date_object, taw_value, period=period)
-        # TODO - Subroutine:
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
@@ -171,17 +170,17 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
-        # TODO - Tracker tracks monthly and yearly rasters different from daily i.e. it accumulates them so to get the
-        #  period total one must subtract current cumulative from cumulative as of last month. This is not currently
-        # taken into account.
-        if self._cfg.use_period_change:
-            # Dan Cadol uses this to get the change between two intervals.
-            # ...Especially for the iterative TAW estimation scheme
-            tracker[ckey][var] = vv - tracker[lkey][var]
-            tracker[lkey][var] = vv
-        else:
+        if period == 'daily':
             # GELP March 8, 2019
             tracker[ckey][var] = vv
+        else:
+            # # TODO - GELP March 8 2019 I believe this is messing up the output of daily numpy arrays. We must reconcile the differences here.
+            # # keep track of previous month/year value, and subtract. Gives outputs as monthly change.
+            # # todo: Gabe had output as  tracker[ckey][var] = vv  , but I need monthly/annual changes for most params (ETa, precip, recharge, ro) DDC 1/9/19
+            # # todo: However, I would like to have simply  tracker[ckey][var] = vv  for dr, de, and drew
+            tracker[ckey][var] = vv - tracker[lkey][var]
+            tracker[lkey][var] = vv
+
 
     def _write_numpy_array(self, key, date, taw_value, period=None, master=None):
         """

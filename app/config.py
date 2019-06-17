@@ -128,7 +128,6 @@ class RunSpec:
     tiff_shape = None
     use_walnut_gulch_ro = True
     seed = 123456789
-    use_period_change = False
     use_monsoon_precip_correction = True
     use_mountain_precip_correction = False
 
@@ -145,7 +144,6 @@ class RunSpec:
                  'xplot', 'yplot', 'plot_output',
                  'use_walnut_gulch_ro',
                  'seed',
-                 'use_period_change',
                  'use_monsoon_precip_correction',
                  'use_mountain_precip_correction'
                  ) # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
