@@ -460,7 +460,7 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
         return halfhour_data
 
 
-def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw):
+def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw, sitename=None):
     """
 
     :param shape_path: path to a shapefile where the values will be read from
@@ -548,7 +548,7 @@ def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw):
     ax.plot(etrm_dates, etrm_values, color='black')
     ax.plot_date(etrm_dates, etrm_values, fillstyle='none', color='black')
 
-    ax.set_title('Comprehensive ETa and Precip TAW:{}'.format(taw))
+    ax.set_title('Comprehensive ETa and Precip Site:{} TAW:{}'.format(sitename, taw))
     ax.set_ylabel('ETa or Precip in mm H20')
     ax.set_xlabel('Date')
     plt.grid(True)
@@ -569,7 +569,8 @@ if __name__ == '__main__':
     # shapefile
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
 
 
     # ===== Precip Time Series =====
@@ -585,8 +586,7 @@ if __name__ == '__main__':
     # ===== GADGET RefET Time Series =====
 
     # TODO - ADD in FluxTower daily RefET timeseries here
-
-    # TODO - ADD in
+    # ===== FluxTower daily PM RefET ======
 
 
     # ===== Observational ETa Time Series =====
@@ -602,10 +602,10 @@ if __name__ == '__main__':
     # Ameriflux
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
-    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
+    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
-    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
+    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
 
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
     daily_cum_ameriflux = ec_data_processor(ameriflux_path)
@@ -625,7 +625,9 @@ if __name__ == '__main__':
 
     raster_datasets = {'prism': prism_dict, 'jpl': jpl_data_dict, 'etrm': etrm_dict}
 
-    dataset_plot(shape_path, ameriflux_df=daily_cum_ameriflux, raster_datasets=raster_datasets, geo_info=geo_dict, taw='425')
+
+
+    dataset_plot(shape_path, ameriflux_df=daily_cum_ameriflux, raster_datasets=raster_datasets, geo_info=geo_dict, taw='225', sitename='Seg')
 
 
 

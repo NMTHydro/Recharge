@@ -182,6 +182,7 @@ class Processes(object):
                 point_arr = self._pixels_of_interest_to_array(paths.point_shape)
                 self.point_tracker = initialize_point_tracker(m, point_arr)
 
+        # if using Esther's RF RO set the seed here.
         if self._cfg.use_walnut_gulch:
             # set random seed value in configuration file
             random.seed(self._cfg.seed)
@@ -195,7 +196,6 @@ class Processes(object):
             a,b = None, None
 
             if self._cfg.use_monsoon_precip_correction:
-                # # modify the PRISM precipitation - Commented out by GELP 4/27/2019
                 if start_monsoon <= tm_yday <= end_monsoon:
                     a = 1.612722
                     b = 0.676904
@@ -207,7 +207,7 @@ class Processes(object):
                     a = 0.3276
                     b = 0.7829
                 else:
-                    # todo: is this appropriate for the mountains non monsoon
+                    # todo: is this appropriate for the mountains non monsoon?
                     a = 0.4888870
                     b = 0.993831
 
@@ -216,7 +216,7 @@ class Processes(object):
 
             m['inten'] = zeros_like(m['precip'])
             if self._cfg.use_walnut_gulch_ro:
-                # generate random number
+                # generate random number, seed has been set a few lines above.
                 random_number = random.randn()
                 percentile = norm.cdf(random_number)
                 # stochastic estimate of runoff based on field data from Walnut Gulch, AZ (see Xu thesis, 2018)

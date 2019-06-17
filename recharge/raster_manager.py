@@ -171,6 +171,9 @@ class RasterManager(object):
         print 'mean value output tracker today: {}'.format(tracker[ckey][var].mean())
         print 'mean value output tracker yesterday: {}'.format(tracker[lkey][var].mean())
 
+        # TODO - Tracker tracks monthly and yearly rasters different from daily i.e. it accumulates them so to get the
+        #  period total one must subtract current cumulative from cumulative as of last month. This is not currently
+        # taken into account.
         if self._cfg.use_period_change:
             # Dan Cadol uses this to get the change between two intervals.
             # ...Especially for the iterative TAW estimation scheme
