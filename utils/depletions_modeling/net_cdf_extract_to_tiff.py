@@ -1,5 +1,7 @@
 import os
+from netCDF4 import *
 from netCDF4 import Dataset
+
 import gdal
 from gdalconst import GDT_Float32
 import numpy as np

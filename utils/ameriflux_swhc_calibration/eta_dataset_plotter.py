@@ -109,6 +109,107 @@ def get_prism_results(prism_path):
     return all_data_dict
 
 
+def get_monthly_etrm_outputs(output_path, output_type):
+    """
+    For getting the paths and time series for monthly data outputs from ETRM
+    :param output_path:
+    :param output_type:
+    :return:
+    """
+    all_data_dict = {}
+
+    # for path, dirs, files in os.walk(output_path, topdown=False):
+    #     if path.endswith('numpy_arrays') and len(files) > 0:
+    #         # print 'path', path
+    #         # print 'dirs', dirs
+    #         # print 'files', files
+    #
+    #         example_file = files[0]
+    #
+    #         taw = example_file.split('_')[4]
+    #         print 'ex taw: ', taw
+
+    for path, dirs, files in os.walk(output_path, topdown=False):
+        if path.endswith('monthly_rasters') and len(files) > 0:
+
+            print 'path', path
+
+            # get the TAW value from the numpy arrays
+            results_path = os.path.split(path)[0]
+            numpy_path = os.path.join(results_path, 'numpy_arrays')
+            example_file = os.listdir(numpy_path)[0]
+            print example_file
+            taw = example_file.split('_')[4]
+            print 'ex taw: ', taw
+
+            print 'the taw of the monthly {}'.format(taw)
+
+            # if output_type == 'eta':
+
+            # NOW, get the files and timeseries for the monthlies from monthly_rasters
+            timeseries = []
+            fileseries = []
+
+            for f in files:
+                fname = f.split('.')[0]
+                flist = fname.split('_')
+
+                # to get the kind of monthly output you want i.e 'eta', or 'rzsm'
+                if flist[0] == output_type:
+
+                    yr = int(flist[-2])
+                    mnth = int(flist[-1])
+                    # set day to the first of the month automatically for monthly datasets so they can be put together with
+                    #  daily timeseries
+                    dy = 1
+
+
+                    first_of_the_month = date(yr, mnth, dy)
+
+                    first_of_next = first_of_the_month + relativedelta(months=+1)
+
+                    last_of_month = first_of_next - timedelta(days=1)
+
+
+                    timeseries.append(last_of_month)
+
+                    filepath = os.path.join(path, f)
+                    fileseries.append(filepath)
+
+            # do a nifty sort of file paths based on the dates
+            sorted_files = [f for _, f in sorted(zip(timeseries, fileseries))]
+
+            sorted_dates = sorted(timeseries)
+            print 'len sorted files {}, len sorted dates {}, taw {}'.format(len(sorted_files), len(sorted_dates), taw)
+
+            all_data_dict[taw] = (sorted_files, sorted_dates)
+
+    return all_data_dict
+
+
+# etrm_path = '/Volumes/Seagate_Blue/ameriflux_aoi_etrm_results_ceff_06'
+# etrm_taw = '425'
+#
+# geo_info_path = '/Volumes/Seagate_Blue/taw_optimization_work_folder/geo_info_ameriflux.yml'
+# with open(geo_info_path, mode='r') as geofile:
+#     geo_dict = yaml.load(geofile)
+#
+# shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+#
+# # get the x and y from the shapefile in order to extract
+# # ... from rasters raster_extract() and geospatial arrays geospatial_array_extract()
+# feature_dictionary = x_y_extract(shape_path)
+# # Use the feature dictionary to extract data from the rasters.
+# for feature, tup in feature_dictionary.iteritems():
+#     # Get the X and Y coords from the dictionary and unpack them
+#     x, y = tup
+#     print x, y
+#
+#
+# monthly_etrm_outputs = get_monthly_etrm_outputs(etrm_path, output_type='eta')
+
+# print 'outputs \n', monthly_etrm_outputs[etrm_taw]
+
 def get_etrm_results(etrm_results_path, rzsm=False, observation_dates=None):
     """
 
@@ -441,7 +542,8 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
 
         daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
 
-        # todo - what is done here?
+        # get each day in the timeseries. there are duplicates from the groupby function, so use set() to get rid of
+        #  duplicates
         daily_cum_time = daily_time_parse(timeseries)
 
         # # testing

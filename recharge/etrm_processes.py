@@ -212,7 +212,7 @@ class Processes(object):
                     b = 0.993831
 
             if a is not None:
-                m['precip'] = maximum((m['precip'] - a)/b)
+                m['precip'] = maximum(m['precip'] - a)/b
 
             m['inten'] = zeros_like(m['precip'])
             if self._cfg.use_walnut_gulch_ro:

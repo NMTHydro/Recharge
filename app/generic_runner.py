@@ -108,10 +108,10 @@ def run(cfg_path=None):
             'help': run_help, 'commands': run_commands,
             'dataset': run_dataset}
 
-    # Commented out when running model. Uncomment to reduce data based on mask in config file.
-    # NOTE: run_dataset() will use the Config File in the ~ folder, not the config_path you specify in the run command
-    run_dataset()
-    return
+    # # Commented out when running model. Uncomment to reduce data based on mask in config file.
+    # # NOTE: run_dataset() will use the Config File in the ~ folder, not the config_path you specify in the run command
+    # run_dataset()
+    # return
 
     welcome()
 
@@ -137,6 +137,6 @@ if __name__ == '__main__':
     #     run(cfg_path=sys.argv[1])
     # run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_statewide.yml')
     # run(cfg_path='/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi.yml')
-    run(cfg_path='/Volumes/Seagate_Blue/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_ameriflux_aoi.yml')
+    run(cfg_path='/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_configs/Wjs_stochastic_6runs.yml')
 
 # ============= EOF =============================================

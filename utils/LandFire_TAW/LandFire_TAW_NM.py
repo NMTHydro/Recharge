@@ -16,7 +16,6 @@
 
 # ============= standard library imports ========================
 import os
-import gdal
 import numpy as np
 from matplotlib import pyplot as plt
 # ============= local library imports ===========================

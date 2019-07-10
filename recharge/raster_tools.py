@@ -293,7 +293,7 @@ def save_daily_pts_old(filename, day, ndvi, temp, precip, etr, petr, nlcd, dem, 
 #             wfile.write('{},{},{},{],{},{},{},{},{},{},{},{}'.format(year,this_month,month_day,*datum))
 
 
-def make_results_dir(out_root=None, shapes=None):
+def make_results_dir(out_root=None, shapes=None, seed=None):
     """
     Creates a directory tree of empty folders that will recieve ETRM model output rasters.
 
@@ -314,16 +314,29 @@ def make_results_dir(out_root=None, shapes=None):
     results_directories = {'root': out_root}
 
     if not os.path.isdir(out_root):
+        print 'were gonna make the directory here {}'.format(out_root)
         os.makedirs(out_root)
-        for item in empties:
-            empty = os.path.join(out_root, item)
-            os.makedirs(empty)
-            results_directories[item] = empty
+
+        # # TODO - GELP disable June 18th. Redundant folders
+        # for item in empties:
+        #     empty = os.path.join(out_root, item)
+        #     os.makedirs(empty)
+        #     results_directories[item] = empty
 
     else:
+        print 'we make them all ahead of time'
         results_directories = {item: os.path.join(out_root, item) for item in empties}
 
+    print 'shapes is {}'.format(shapes)
     if shapes and os.path.isdir(shapes):
+        # # TODO - GELP copy paste from above on June 18th. to correct reduntant folders issue.
+        for item in empties:
+            # item = '{}_{}'.format(item, seed)
+            empty = os.path.join(out_root, item)
+            print 'making the dir {}'.format(empty)
+            os.makedirs(empty)
+            print 'made the dir'
+            results_directories[item] = empty
         region_types = os.listdir(shapes)
         for tab_folder in ('annual_tabulated', 'monthly_tabulated', 'daily_tabulated'):
             d = {}

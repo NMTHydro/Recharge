@@ -22,8 +22,8 @@ import datetime
 
 if __name__ == "__main__":
 
-    sitename = 'Wjs'
-    taw = '525'
+    sitename = 'vcm'
+    taw = '125'
     root = '/Users/dcadol/Desktop/academic_docs_II/'
 
     #combined_timeseries_{}_taw{}
