@@ -19,6 +19,7 @@ from datetime import date, datetime
 import yaml
 import scandir
 import time
+
 # ============= standard library imports ========================
 
 """
@@ -45,43 +46,60 @@ def list_output(taw_list, taw_sorted, output_root, outname):
         save_start = time.time()
         with open(os.path.join(output_root, outname.format(t)), 'w') as wfile:
 
-            firstseed = tlist[0]
-            secondseed = tlist[1]
-            thirdseed = tlist[2]
-            fourthseed = tlist[3]
-            fifthseed = tlist[4]
-            sixthseed = tlist[5]
+            # firstseed = tlist[0]
+            # secondseed = tlist[1]
+            # thirdseed = tlist[2]
+            # fourthseed = tlist[3]
+            # fifthseed = tlist[4]
+            # sixthseed = tlist[5]
 
-            wfile.write('seed0file,seed0val,seed0date,seed1file,seed1val,seed1date,seed2file,seed2val,seed2date,'
-                        'seed3file,seed3val,seed3date,seed4file,seed4val,seed4date,seed5file,seed5val,seed5date\n')
+            header = ','.join(['seed{}file,seed{}val,seed{}date'.format(i, i, i) for i in range(6)])
+            wfile.write('{}\n'.format(header))
 
-            for one, two, three, four, five, six in zip(firstseed, secondseed, thirdseed, fourthseed, fifthseed,
-                                                        sixthseed):
+            # wfile.write('seed0file,seed0val,seed0date,seed1file,seed1val,seed1date,seed2file,seed2val,seed2date,'
+            #             'seed3file,seed3val,seed3date,seed4file,seed4val,seed4date,seed5file,seed5val,seed5date\n')
 
-                one_arr = np.load(one[0])
-                one_val = one_arr[1, 1]
-                two_arr = np.load(two[0])
-                two_val = two_arr[1, 1]
-                three_arr = np.load(three[0])
-                three_val = three_arr[1, 1]
-                four_arr = np.load(four[0])
-                four_val = four_arr[1, 1]
-                five_arr = np.load(five[0])
-                five_val = five_arr[1, 1]
-                six_arr = np.load(six[0])
-                six_val = six_arr[1, 1]
+            for paths in tlist:
+                # for one, two, three, four, five, six in zip(firstseed, secondseed, thirdseed, fourthseed, fifthseed,
+                #                                             sixthseed):
 
-                wfile.write('{},{},{},'.format(one[0], one_val, one[1]))
+                # one_arr = np.load(one[0])
+                # one_val = one_arr[1, 1]
+                # two_arr = np.load(two[0])
+                # two_val = two_arr[1, 1]
+                # three_arr = np.load(three[0])
+                # three_val = three_arr[1, 1]
+                # four_arr = np.load(four[0])
+                # four_val = four_arr[1, 1]
+                # five_arr = np.load(five[0])
+                # five_val = five_arr[1, 1]
+                # six_arr = np.load(six[0])
+                # six_val = six_arr[1, 1]
 
-                wfile.write('{},{},{},'.format(two[0], two_val, two[1]))
+                # row = []
+                # for path, date_val in paths:
+                #     arr = np.load(path)
+                #     row.extend((path, arr[1, 1], date_val))
 
-                wfile.write('{},{},{},'.format(three[0], three_val, three[1]))
+                def factory(path, date_val):
+                    arr = np.load(path)
+                    return path, arr[1,1], date_val
 
-                wfile.write('{},{},{},'.format(four[0], four_val, four[1]))
+                row = [i for pi in paths for i in factory(pi)]
+                row = ','.join(row)
+                wfile.write('{}\n'.format(row))
 
-                wfile.write('{},{},{},'.format(five[0], five_val, five[1]))
-
-                wfile.write('{},{},{}\n'.format(six[0], six_val, six[1]))
+                # wfile.write('{},{},{},'.format(one[0], one_val, one[1]))
+                #
+                # wfile.write('{},{},{},'.format(two[0], two_val, two[1]))
+                #
+                # wfile.write('{},{},{},'.format(three[0], three_val, three[1]))
+                #
+                # wfile.write('{},{},{},'.format(four[0], four_val, four[1]))
+                #
+                # wfile.write('{},{},{},'.format(five[0], five_val, five[1]))
+                #
+                # wfile.write('{},{},{}\n'.format(six[0], six_val, six[1]))
 
                 # wfile.write('{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(one[0], one[1], two[0], two[1], three[0],
                 #                                                            three[1], four[0], four[1], five[0], five[1],
@@ -91,7 +109,6 @@ def list_output(taw_list, taw_sorted, output_root, outname):
 
 
 def taw_sort(file_date_list, runs, taw_list):
-
     taw_run_list = []
 
     for taw in taw_list:
@@ -111,7 +128,6 @@ def taw_sort(file_date_list, runs, taw_list):
                 numpy_taw = numpy_filename.split('_')[4]
 
                 if int(numpy_seed) == int(run) and int(numpy_taw) == int(taw):
-
                     runlist.append(f)
 
             taw_lst.append(runlist)
@@ -121,6 +137,7 @@ def taw_sort(file_date_list, runs, taw_list):
         print 'taw elapsed {}'.format(taw_elapsed)
 
     return taw_run_list
+
 
 def make_taw_list(taw_tup):
     """
@@ -180,8 +197,6 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
             elif 'infil' in numpy_filename:
                 infil_lst.append((numpy_path, numpy_date))
 
-
-
         line_end = (time.time() - line_start)
         print 'line time elapsed {}'.format(line_end)
     elapsed = (time.time() - open_read)
@@ -190,10 +205,13 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
     # TODO now use sorted(list5, key=lambda vertex: (degree(vertex), vertex)) (firstkey, secondkey) tuple to sort by seed then TAW
 
     # sorting by a tuple of first, second and third criteria (seed, taw, date)
-    rzsm_lst.sort(key=lambda x: (os.path.split(x[0])[1].split('_')[6], os.path.split(x[0])[1].split('_')[4], x[1]))
-    ro_lst.sort(key=lambda x: (os.path.split(x[0])[1].split('_')[6], os.path.split(x[0])[1].split('_')[4], x[1]))
-    eta_lst.sort(key=lambda x: (os.path.split(x[0])[1].split('_')[6], os.path.split(x[0])[1].split('_')[4], x[1]))
-    infil_lst.sort(key=lambda x: (os.path.split(x[0])[1].split('_')[6], os.path.split(x[0])[1].split('_')[4], x[1]))
+    def keyfunc(x):
+        return os.path.split(x[0])[1].split('_')[6], os.path.split(x[0])[1].split('_')[4], x[1]
+
+    rzsm_lst.sort(key=keyfunc)
+    ro_lst.sort(key=keyfunc)
+    eta_lst.sort(key=keyfunc)
+    infil_lst.sort(key=keyfunc)
 
     print 'starting the taw sort'
     sort_start = time.time()
@@ -220,12 +238,8 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
     list_output(taw_list, infil_taw_sorted, output_root, outname='infil_taw_{}.csv')
     list_output(taw_list, rzsm_taw_sorted, output_root, outname='rzsm_taw_{}.csv')
 
-
-
-
-
-
     # todo - finish out this so you can extract the value by loading the array and multiplying through each seed by each taw.
+
 
 def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr_shape, output_vars):
     """
@@ -245,7 +259,6 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 
     taw_list = []
     for i in range(0, ((end_taw - begin_taw) / taw_step)):
-
         taw = begin_taw + (i * taw_step)
         taw_list.append(taw)
 
@@ -324,8 +337,6 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
     #
     # return yaml_path
 
-
-
     for path, dirs, files in scandir.walk(base_dir, topdown=False):
         walk_start = time.time()
         print 'walking {}'.format(time.localtime(walk_start))
@@ -352,7 +363,6 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
                 all_dates.append(date(yr, mnth, dy))
 
             print 'the length', len(all_files)
-
 
             if os.path.isfile(os.path.join(output_dir, '{}_appended.csv'.format(output_name))):
                 start = time.time()
@@ -459,7 +469,6 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 
 
 if __name__ == '__main__':
-
     ## ================================= File Sorter ========================================
 
     stochastic_csv_file = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses/ses_appended.csv'
@@ -528,6 +537,3 @@ if __name__ == '__main__':
     # output_vars = ['eta', 'rzsm', 'ro', 'infil']
     #
     # yaml_path = stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr_shape, output_vars)
-
-
-
