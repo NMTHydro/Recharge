@@ -53,13 +53,20 @@ def list_output(taw_list, taw_sorted, output_root, outname):
             # fifthseed = tlist[4]
             # sixthseed = tlist[5]
 
+            seeds = tlist[:6]
+
             header = ','.join(['seed{}file,seed{}val,seed{}date'.format(i, i, i) for i in range(6)])
             wfile.write('{}\n'.format(header))
 
             # wfile.write('seed0file,seed0val,seed0date,seed1file,seed1val,seed1date,seed2file,seed2val,seed2date,'
             #             'seed3file,seed3val,seed3date,seed4file,seed4val,seed4date,seed5file,seed5val,seed5date\n')
+            ost = time.time()
+            nseed = len(seeds[0])
+            adur = 0
+            for j, paths in enumerate(zip(*seeds)):
+                # print(j, len(paths))
 
-            for paths in tlist:
+            # for j, paths in enumerate(tlist):
                 # for one, two, three, four, five, six in zip(firstseed, secondseed, thirdseed, fourthseed, fifthseed,
                 #                                             sixthseed):
 
@@ -80,15 +87,19 @@ def list_output(taw_list, taw_sorted, output_root, outname):
                 # for path, date_val in paths:
                 #     arr = np.load(path)
                 #     row.extend((path, arr[1, 1], date_val))
+                st = time.time()
 
-                def factory(path, date_val):
-                    arr = np.load(path)
-                    return path, arr[1,1], date_val
-
-                row = [i for pi in paths for i in factory(pi)]
+                row = [i for p,d in paths for i in (os.path.basename(p), str(np.load(p)[1,1]), d.isoformat())]
                 row = ','.join(row)
-                wfile.write('{}\n'.format(row))
 
+                wfile.write('{}\n'.format(row))
+                dur = time.time()-st
+                # # print('writing row {}, et={}, adur={},'
+                #       'timeleft={} t2={}'.format(j, dur, adur,
+                #                                  adur*nseed-(time.time()-ost),
+                #                                  adur*(nseed -j)
+                #                                  ))
+                adur = (dur+adur)/2.
                 # wfile.write('{},{},{},'.format(one[0], one_val, one[1]))
                 #
                 # wfile.write('{},{},{},'.format(two[0], two_val, two[1]))
@@ -178,7 +189,8 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
     with open(stochastic_file_csv, 'r') as rfile:
         print 'iterating on lines'
         line_start = time.time()
-        for line in rfile:
+
+        for j, line in enumerate(rfile):
             line_item = line.split(',')
 
             numpy_path = line_item[0]
@@ -187,7 +199,7 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
 
             numpy_filename = os.path.split(numpy_path)[1]
             # print numpy_filename
-
+            # print j, line
             if 'rzsm' in numpy_filename:
                 rzsm_lst.append((numpy_path, numpy_date))
             elif 'ro' in numpy_filename:
@@ -197,6 +209,11 @@ def stochastic_filesort(stochastic_file_csv, taw_tup, var_list, model_dates, run
             elif 'infil' in numpy_filename:
                 infil_lst.append((numpy_path, numpy_date))
 
+            # if j > 1000000:
+            #     break
+            if not j%10000:
+                print j
+        print('file line count {}'.format(j))
         line_end = (time.time() - line_start)
         print 'line time elapsed {}'.format(line_end)
     elapsed = (time.time() - open_read)
@@ -339,7 +356,7 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 
     for path, dirs, files in scandir.walk(base_dir, topdown=False):
         walk_start = time.time()
-        print 'walking {}'.format(time.localtime(walk_start))
+        # print 'walking {}'.format(time.localtime(walk_start))
         if path.endswith('numpy_arrays') and len(files) > 0:
             print 'path \n {}'.format(path)
 
@@ -362,31 +379,31 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
                 all_files.append(os.path.join(path, f))
                 all_dates.append(date(yr, mnth, dy))
 
-            print 'the length', len(all_files)
+            # print 'the length', len(all_files)
 
             if os.path.isfile(os.path.join(output_dir, '{}_appended.csv'.format(output_name))):
                 start = time.time()
-                print 'start writing {}'.format(start)
+                # print 'start writing {}'.format(start)
                 with open(os.path.join(output_dir, '{}_appended.csv'.format(output_name)), 'a') as wfile:
                     for f, d in zip(all_files, all_dates):
                         wfile.write('{},{}\n'.format(f, d))
                 elapsed = (time.time() - start)
-                print 'write time: {}'.format(elapsed)
+                # print 'write time: {}'.format(elapsed)
             else:
                 start = time.time()
-                print 'start writing {}'.format(start)
+                # print 'start writing {}'.format(start)
                 with open(os.path.join(output_dir, '{}_appended.csv'.format(output_name)), 'w') as wfile:
                     for f, d in zip(all_files, all_dates):
                         wfile.write('{},{}\n'.format(f, d))
                 elapsed = (time.time() - start)
-                print 'write time: {}'.format(elapsed)
+                # print 'write time: {}'.format(elapsed)
 
             elapsed_path = (time.time() - start_path)
-            print 'search time: {}'.format(elapsed_path)
-            print 'done searching at {}'.format(time.localtime(time.time()))
+            # print 'search time: {}'.format(elapsed_path)
+            # print 'done searching at {}'.format(time.localtime(time.time()))
 
         walk_elapsed = time.time() - walk_start
-        print 'walktime {}'.format(walk_elapsed)
+        # print 'walktime {}'.format(walk_elapsed)
     print 'done {}'.format(datetime.now())
     # print 'file read now making dict'
     # swhc_dict = {}
@@ -469,9 +486,9 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 
 
 if __name__ == '__main__':
-    ## ================================= File Sorter ========================================
+    # ================================= File Sorter ========================================
 
-    stochastic_csv_file = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses/ses_appended.csv'
+    stochastic_csv_file = '/Users/dcadol/Desktop/mini_model_rsync/ses/ses_appended.csv'
 
     # starting TAW value
     begin_taw = 25
@@ -480,7 +497,7 @@ if __name__ == '__main__':
     # grid search step size. Each ETRM run will increase the uniform TAW of the RZSW holding capacity by this many mm.
     taw_step = 25
     taw_tup = (begin_taw, end_taw, taw_step)
-
+    # taw_tup = (25, 50, 25)
     start_date = date(2000, 1, 1)
 
     end_date = date(2013, 12, 31)
@@ -492,13 +509,13 @@ if __name__ == '__main__':
 
     runs = 6
 
-    output = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses/'
+    output = '/Users/dcadol/Desktop/mini_model_rsync/ses/'
 
     stochastic_filesort(stochastic_csv_file, taw_tup, var_list, model_dates, runs, output)
 
     # ###### ========================== File Finder ===========================================
     # print datetime.now()
-    # output_name = 'vcp'
+    # output_name = 'ses'
     #
     # print 'DOING {}'.format(output_name)
     #
@@ -512,8 +529,10 @@ if __name__ == '__main__':
     # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses'
     # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcm'
     # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcm'
-    # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
-    # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
+    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
+    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
+    # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
+    # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
     #
     # print base_dir
     # print output_dir

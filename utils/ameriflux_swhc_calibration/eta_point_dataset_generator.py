@@ -16,8 +16,9 @@
 import yaml
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 # ============= standard library imports ========================
-from utils.ameriflux_swhc_calibration.eta_dataset_plotter import get_etrm_results, get_jpl_results, get_prism_results, ec_data_processor
+from utils.ameriflux_swhc_calibration.eta_dataset_plotter import get_etrm_results, get_jpl_results, get_prism_results, ec_data_processor_precip
 from utils.ameriflux_swhc_calibration.ameriflux_etrm_cum_swhc_calibration import get_taw_list
 from utils.TAW_optimization_subroutine.non_normalized_hist_analysis import geospatial_array_extract
 from utils.TAW_optimization_subroutine.chisquare_timeseries_analyst import raster_extract, x_y_extract
@@ -59,15 +60,15 @@ if __name__ == '__main__':
 
     # ===== Point Info - UTM Shapefile) =====
 
-    sitename = 'Vcm'
+    sitename = 'Mpj'
 
     # shapefile
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcm_point_extract.shp'
-    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcm_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
 
     # get the x and y from the shapefile in order to extract
     # ... from rasters raster_extract() and geospatial arrays geospatial_array_extract()
@@ -96,27 +97,32 @@ if __name__ == '__main__':
     jpl_data_dict = get_jpl_results(jpl_path)
 
     # Ameriflux
-    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
-    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
+    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
+    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
 
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
-    daily_cum_ameriflux = ec_data_processor(ameriflux_path)
+    # daily_cum_ameriflux = ec_data_processor(ameriflux_path)
+    daily_cum_ameriflux, daily_cum_site_precip = ec_data_processor_precip(ameriflux_path)
 
     ameriflux_eta_values = daily_cum_ameriflux.mmh20
-    ###ameriflux_precip_values = ameriflux_df.P
+    ameriflux_precip_values = daily_cum_site_precip.P
     ameriflux_dates = daily_cum_ameriflux.date
+    ameriflux_precip_dates = daily_cum_site_precip.date
 
-    amf_df = pd.DataFrame({'amf_eta_values': ameriflux_eta_values, 'amf_dates': ameriflux_dates})
+
+    amf_df = pd.DataFrame({'amf_eta_values': ameriflux_eta_values, 'amf_precip_values': ameriflux_precip_values,
+                           'amf_dates': ameriflux_dates, 'amf_precip_dates': ameriflux_precip_dates})
+    # TODO - will this cause issues for the precip values?
     amf_df.set_index('amf_dates', inplace=True)
 
     # ETRM - get it from the original output files
     # etrm_path = '/Volumes/Seagate_Blue/ameriflux_aoi_etrm_results'
     etrm_path = '/Volumes/Seagate_Blue/ameriflux_aoi_etrm_results_ceff_06'
-    taw = '125'
+    taw = '425'
 
     # returns a dictionary where key = 'taw'. Key returns a tuple (date_objs, files) in chronological order.
     etrm_dict = get_etrm_results(etrm_path)

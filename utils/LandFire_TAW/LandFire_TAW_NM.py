@@ -474,8 +474,6 @@ if __name__ == "__main__":
     # # ndvi_histogramer(eco_path, ndvi_path, lf_path, outinfo)
     # # # Todo - make box and whisker plots for the elevations of each eco-class
     #
-    #
-    #
     # # TODO - come up with algorithm to scale rooting depth by NDVI based on avg ndvi between adjoining ecotones
     # # first, plot where the averages are in relation to each other, are they distinct?
     #

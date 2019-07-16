@@ -272,16 +272,16 @@ if __name__ == "__main__":
     # 1)
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_8-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
-    # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
+    amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
-    amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
+    # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
 
     # Vcs does not have growing season overlap with ETRM
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcs_BASE_HH_3-5.csv'
 
     # 2)
-    amf_name = 'US-Vcp'
+    amf_name = 'US-Mpj'
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
 
     daily_cum_ameriflux = ec_data_processor(amf)
@@ -308,7 +308,7 @@ if __name__ == "__main__":
     print 'len ameriflux dates', len(ameriflux_dates)
 
     # 2.5) Did you modify the date range of the ameriflux files from the last time you ran the script?
-    date_mod = False
+    date_mod = True
 
 
     # ETRM
@@ -354,10 +354,10 @@ if __name__ == "__main__":
 
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcm_point_extract.shp'
-    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcs_point_extract.shp'
 
     feature_dictionary = x_y_extract(shape_path)

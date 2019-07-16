@@ -397,6 +397,89 @@ def daily_time_parse(timeseries):
 #     else:
 #         return halfhour_data
 
+
+def ec_data_processor_precip(path, x='TIMESTAMP_START', y='LE', daily=True):
+    """
+    Version of ec_data processor that returns a separate dataframe of precip values.
+    NANs totally cancel out precip for some reason if you try to use one dataframe.
+    :param path: path to a csv containing Ameriflux Dataset
+    :param x: default is the header string for the timestamps
+    :param y: default is Latent Heat LE
+    :param daily: if true, we convert the Eddy Covariance to a daily total
+    :param cumulative_days: an interger number of days to be accumulated based on the daily total
+    :return: a timeseries of
+    """
+
+
+    # Get the data from the path and turn the path into a data frame
+    # ec_dataset = pd.read_csv(path, header=2)
+
+    ec_dataset = pd.read_csv(path, header=2, engine='python')
+
+    # print ec_dataset.head()
+    print ec_dataset['LE'].head()
+    print ec_dataset[ec_dataset[y] != -9999].head()
+    # === get rid of no data values in any category of the energy balance ===
+    precip_dataset = ec_dataset[ec_dataset['P'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset[y] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
+    # # You probably won't need these because Marcy Doesn't think they are valid for her towers
+    # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
+    # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
+
+    if x.startswith("TIMESTAMP"):
+        a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
+        aa = precip_dataset[x].apply(lambda d: dt.strptime(str(d), '%Y%m%d%H%M'))
+    else:
+        a = ec_dataset[x]
+
+    # ===== Time Series Processing =====
+
+    timeseries = a.tolist()
+    p_timeseries = aa.tolist()
+    # print 'timeseries\n', timeseries
+    Rn = ec_dataset['NETRAD'].values
+    H = ec_dataset['H'].values
+    LE = ec_dataset['LE'].values
+    P = precip_dataset['P']
+    print 'P \n', P
+    # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
+
+    # # testing
+    # plt.plot(timeseries, P, color='black')
+    # plt.show()
+
+    # recreate a dataframe of the variables you want to time average on a monthly timestep
+    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
+
+    halfhour_precip = pd.DataFrame({'timeseries': p_timeseries, 'P': P})
+    # set the timeseries column to the index so groupby function can group by year and month of the index.
+    halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
+    halfhour_precip = halfhour_precip.set_index(pd.DatetimeIndex(halfhour_precip['timeseries']))
+    # convert latent heat to mmH2O by dividing by latent heat of vaporization.
+    halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
+
+    if daily:
+
+        daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
+        daily_cum_precip = halfhour_precip.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
+
+        # get each day in the timeseries. there are duplicates from the groupby function, so use set() to get rid of
+        #  duplicates
+        daily_cum_time = daily_time_parse(timeseries)
+        daily_cum_precip_time = daily_time_parse(p_timeseries)
+
+        # # testing
+        # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
+
+        # format daily_cum_data to have datetimes
+        daily_cum_data['date'] = daily_cum_time
+        daily_cum_precip['date'] = daily_cum_precip_time
+
+        return daily_cum_data, daily_cum_precip
+
 # new version of ec_data_processor
 def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
     """
@@ -504,7 +587,7 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
     ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
     ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
     ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
-    # ec_dataset = ec_dataset[ec_dataset['P'] != -9999]
+    precip_dataset = ec_dataset[ec_dataset['P'] != -9999]
     # # You probably won't need these because Marcy Doesn't think they are valid for her towers
     # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
     # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
@@ -521,15 +604,19 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
     Rn = ec_dataset['NETRAD'].values
     H = ec_dataset['H'].values
     LE = ec_dataset['LE'].values
-    # P = ec_dataset['P']
+    P = precip_dataset['P'].values
+    print 'P \n', P
     # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
 
+    plt.plot(timeseries, P)
+    plt.show()
+
     # recreate a dataframe of the variables you want to time average on a monthly timestep
-    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
+    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H, 'P': P}) # took out precip. no good vals? 'P': P
 
     # set the timeseries column to the index so groupby function can group by year and month of the index.
     halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
-    # convert latent heat to mmH2O by multiplying by latent heat of vaporization.
+    # convert latent heat to mmH2O by dividing by latent heat of vaporization.
     halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
 
     if daily:

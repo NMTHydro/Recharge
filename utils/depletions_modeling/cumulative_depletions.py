@@ -112,7 +112,7 @@ def depletion_calc(f_out, f_in):
 
 # TODO - GENERATE ETRM DATASET to GAPFILL (etrm_daily_path)
 def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, output_folder=None, is_ssebop=False, is_jpl=False, shape=None,
-            start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None):
+            start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None, ratiomod=True):
     """
 
     :return:
@@ -163,7 +163,11 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
             eta_name = "ssebop_{}_{}_warped.tif"
         elif is_jpl:
             # year.zeropadmonth.zeropadday.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif
-            eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
+            if ratiomod:
+                eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm_ratiomod.tif"
+            else:
+
+                eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
             # TODO - GENERATE ETRM DATASET to GAPFILL
             ETRM_eta_name = ""
         else:
