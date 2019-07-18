@@ -56,8 +56,8 @@ resid_sorted = sorted(zip(resid_vals, resid_tseries))
 
 # TODO - Grab the PRISM data for the large values on either end of resid_sorted for the pixel...
 
-combined_timeseries_path = '/Users/dcadol/Desktop/academic_docs_II/combined_timeseries_Mpj_taw425.csv'
-
+# combined_timeseries_path = '/Users/dcadol/Desktop/academic_docs_II/combined_timeseries_Mpj_taw425_prismTZ.csv'
+combined_timeseries_path = '/Users/dcadol/Desktop/academic_docs_II/combined_timeseries_Mpj_taw425_plus19hrs.csv'
 combined_df = pd.read_csv(combined_timeseries_path, header=0)
 combined_df.rename(columns={combined_df.columns[0]: 'date_string'}, inplace=True)
 combined_df['dt'] = pd.to_datetime(combined_df.iloc[:, 0])
@@ -113,12 +113,29 @@ for i, d in enumerate(df_datelist):
 
 print high_outlier_indices
 
+# site_precip_dates = []
+# for precip_date in combined_df['amf_precip_dates']:
+#
+#     print precip_date
+#     print type(precip_date)
+#     # year = int(precip_date.split('-')[0])
+#     # month = int(precip_date.split('-')[1])
+#     # day = int(precip_date.split('-')[2])
+#
+#     # precip_dt = datetime.datetime(year, month, day)
+#     #
+#     # site_precip_dates.append(precip_dt)
+
+
+
 prism = combined_df['prism_values'].tolist()
 site_precip = combined_df['amf_precip_values'].tolist()
-site_precip_dates = combined_df['amf_precip_dates'].tolist()
+# site_precip_dates = pd.to_datetime(combined_df['amf_precip_dates']).tolist()
 etrm_et = combined_df['etrm_values'].tolist()
 amf_et = combined_df['amf_eta_values'].tolist()
 data_date = combined_df['dt'].tolist()
+
+# print 'site precip dates \n', site_precip_dates
 
 data_date = [d.to_pydatetime() for d in data_date]
 
@@ -141,59 +158,34 @@ for oi in high_outlier_indices:
 
 
 # # TODO - How can I plot a given number of days before and after the event?
+print len(data_date)
+print len(site_precip)
+print 'bothlens'
+
+# for i, dd_precip in enumerate(zip(data_date, site_precip)):
 #
-# # plot the variables
-# # plt.plot(resid_dates, resid_vals)
-# plt.plot(high_outlier_dates, high_outlier_prism)
-# plt.plot(high_outlier_dates, high_outlier_amf)
-# plt.plot(high_outlier_dates, high_outlier_etrm)
-# plt.show()
+#     dd, precip = dd_precip
+#     print 'index {}'.format(i)
+#     print 'dd: {}'.format(dd)
+#     print 'precip: {}'.format(precip)
 
-# for d in resid_dates:
-#     print type(d)
-# for i in data_date:
-#     print type(i)
-
-ax1 = plt.subplot(411)
+ax1 = plt.subplot(311)
 plt.scatter(resid_dates, resid_vals)
 # plt.setp(ax1.get_xticklabels(), fontsize=6)
 
-ax2 = plt.subplot(412, sharex=ax1)
+ax2 = plt.subplot(312, sharex=ax1)
 plt.plot(data_date, etrm_et, color='black')
 plt.plot(data_date, amf_et, color='green')
 # # make these tick labels invisible
 # plt.setp(ax2.get_xticklabels(), visible=False)
 
 # share x and y
-ax3 = plt.subplot(413, sharex=ax1)
-plt.plot(data_date, prism)
+ax3 = plt.subplot(313, sharex=ax1)
+plt.plot(data_date, prism, color='blue')
+plt.plot(data_date, site_precip, color='orange')
 # plt.xlim(0.01, 5.0)
 
+plt.title('plus19')
 
-ax4 = plt.subplot(414, sharex=ax1)
-plt.plot(site_precip_dates, site_precip)
-# plt.xlim(0.01, 5.0)
 plt.show()
-
-
-# #combined_timeseries_{}_taw{}
-# data_location = os.path.join(root, 'combined_timeseries_{}_taw{}.csv'.format(sitename, taw))
-#
-# data_df = pd.read_csv(data_location, header=0)
-#
-#
-# print type(data_df.columns[0])
-#
-# # this is how you rename columns
-# data_df.rename(columns={data_df.columns[0]: 'date_string'}, inplace=True)
-#
-# # here we make a new datetime column based on by indexing the dataframe, effectively selecting date_string col
-# data_df['dt'] = pd.to_datetime(data_df.iloc[:, 0])
-# # # we could do:
-# # data_df['dt'] = pd.to_datetime(data_df['date_string'])
-#
-# # set dt as the index
-# data_df.set_index('dt', drop=True, inplace=True)
-#
-# data_df.drop(['date_string'], axis=1, inplace=True)
 

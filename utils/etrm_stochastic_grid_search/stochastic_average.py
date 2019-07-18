@@ -488,7 +488,7 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 if __name__ == '__main__':
     # ================================= File Sorter ========================================
 
-    stochastic_csv_file = '/Users/dcadol/Desktop/mini_model_rsync/ses/ses_appended.csv'
+    stochastic_csv_file = '/Users/dcadol/Desktop/mini_model_rsync/seg/seg_appended.csv'
 
     # starting TAW value
     begin_taw = 25
@@ -509,30 +509,20 @@ if __name__ == '__main__':
 
     runs = 6
 
-    output = '/Users/dcadol/Desktop/mini_model_rsync/ses/'
+    output = '/Users/dcadol/Desktop/mini_model_rsync/seg/'
 
     stochastic_filesort(stochastic_csv_file, taw_tup, var_list, model_dates, runs, output)
 
     # ###### ========================== File Finder ===========================================
     # print datetime.now()
-    # output_name = 'ses'
+    # output_name = 'seg'
     #
     # print 'DOING {}'.format(output_name)
     #
-    # # base_dir = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/'
-    # # output_dir = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_stochastic_outputs'
-    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/mpj'
-    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/mpj'
-    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/seg'
-    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/seg'
-    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses'
-    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/ses'
-    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcm'
-    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcm'
-    # # base_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
-    # # output_dir = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/vcp'
-    # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
-    # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
+    # # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
+    # # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
+    # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/seg'
+    # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/seg'
     #
     # print base_dir
     # print output_dir

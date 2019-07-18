@@ -176,6 +176,6 @@ if __name__ == '__main__':
 
     # output the file
 
-    combined_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/combined_timeseries_{}_taw{}.csv'.format(sitename, taw))
+    combined_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/combined_timeseries_{}_taw{}_plus19hrs.csv'.format(sitename, taw))
 
 

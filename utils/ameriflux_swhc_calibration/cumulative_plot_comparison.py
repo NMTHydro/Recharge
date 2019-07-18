@@ -22,12 +22,12 @@ import datetime
 
 if __name__ == "__main__":
 
-    sitename = 'vcm'
-    taw = '625'
+    sitename = 'mpj'
+    taw = '425'
     root = '/Users/dcadol/Desktop/academic_docs_II/'
 
     #combined_timeseries_{}_taw{}
-    data_location = os.path.join(root, 'combined_timeseries_{}_taw{}.csv'.format(sitename, taw))
+    data_location = os.path.join(root, 'combined_timeseries_{}_taw{}_plus19hrs.csv'.format(sitename, taw))
 
     data_df = pd.read_csv(data_location, header=0)
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     data_df.drop(['date_string'], axis=1, inplace=True)
 
     # trim off the excess where JPL is not good and Amf is not good
-    data_df = data_df['2009-02-01': '2012-12-03']
+    data_df = data_df['2008-07-16': '2013-06-03']
     print data_df
 
     # data_df[]
@@ -69,6 +69,9 @@ if __name__ == "__main__":
     data_df['prism_cum'] = data_df['prism_values'].cumsum()
     # Here we use the akima interpolated AMF just to be extra conservative relative to JPL which we use un-interpolated
     data_df['amf_cum'] = data_df['amf_eta_values'].cumsum()
+
+    # sum precip
+    data_df['amf_cum_precip'] = data_df['amf_precip_values'].cumsum()
 
     # 30% increase in amf to account for possible closure error
     data_df['amf_30perc'] = data_df['amf_eta_values'] + (data_df['amf_eta_values'] * .30)
@@ -99,6 +102,9 @@ if __name__ == "__main__":
 
     ax.plot(data_df.index.values, data_df['amf_30perc_cum'], color='yellow')
     ax.plot_date(data_df.index.values, data_df['amf_30perc_cum'], fillstyle='none', color='yellow')
+
+    ax.plot(data_df.index.values, data_df['amf_cum_precip'], color='orange')
+    ax.plot_date(data_df.index.values, data_df['amf_cum_precip'], fillstyle='none', color='orange')
 
     ax.set_title('Cumulative ETa and Precip Site:{} ETRM TAW:{}'.format(sitename, taw))
     ax.set_ylabel('ETa or Precip in mm H20')
