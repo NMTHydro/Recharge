@@ -23,7 +23,7 @@ from utils.ameriflux_swhc_calibration.ameriflux_etrm_cum_swhc_calibration import
 from utils.TAW_optimization_subroutine.non_normalized_hist_analysis import geospatial_array_extract
 from utils.TAW_optimization_subroutine.chisquare_timeseries_analyst import raster_extract, x_y_extract
 
-def dataset_processor(jpl_dict, prism_dict):
+def dataset_processor(jpl_dict, prism_dict, x, y):
     """"""
 
     print 'processing jpl'
@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
 
     # process JPL and PRISM datasets [extract them from the .tif]
-    jpl_values, jpl_dates, prism_values, prism_dates = dataset_processor(jpl_dict=jpl_data_dict, prism_dict=prism_dict)
+    jpl_values, jpl_dates, prism_values, prism_dates = dataset_processor(jpl_dict=jpl_data_dict, prism_dict=prism_dict, x=x, y=y)
 
 
     # ==================================================

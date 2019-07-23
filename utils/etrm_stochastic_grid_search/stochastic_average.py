@@ -488,7 +488,7 @@ def stochastic_file_finder(output_name, base_dir, output_dir, taw_tup, runs, arr
 if __name__ == '__main__':
     # ================================= File Sorter ========================================
 
-    stochastic_csv_file = '/Users/dcadol/Desktop/mini_model_rsync/seg/seg_appended.csv'
+    stochastic_csv_file = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/seg_appended.csv'
 
     # starting TAW value
     begin_taw = 25
@@ -500,7 +500,7 @@ if __name__ == '__main__':
     # taw_tup = (25, 50, 25)
     start_date = date(2000, 1, 1)
 
-    end_date = date(2013, 12, 31)
+    end_date = date(2013, 12, 30)
 
     model_dates = (start_date, end_date)
 
@@ -509,20 +509,20 @@ if __name__ == '__main__':
 
     runs = 6
 
-    output = '/Users/dcadol/Desktop/mini_model_rsync/seg/'
+    output = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg'
 
     stochastic_filesort(stochastic_csv_file, taw_tup, var_list, model_dates, runs, output)
 
     # ###### ========================== File Finder ===========================================
     # print datetime.now()
-    # output_name = 'seg'
+    # output_name = 'wjs'
     #
     # print 'DOING {}'.format(output_name)
     #
     # # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
     # # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/ses'
-    # base_dir = '/Users/dcadol/Desktop/mini_model_rsync/seg'
-    # output_dir = '/Users/dcadol/Desktop/mini_model_rsync/seg'
+    # base_dir = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs'
+    # output_dir = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs'
     #
     # print base_dir
     # print output_dir

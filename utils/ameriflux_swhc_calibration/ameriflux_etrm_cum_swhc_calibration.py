@@ -211,9 +211,8 @@ if __name__ == "__main__":
 
     estimated_observational_error = 0.3
     chi_dictionary, dof_dict = get_chisquare_dict(model_dictionary=etrm_cum_dict, parameter_lst=taw_list,
-                                                  geo_info=geo_dict, x_y=x_y,
-                                                  percent_error=estimated_observational_error,
-                                                  outpath=etrm_dict_path, name=amf_name, cum_mode=True)
+                                                  percent_error=estimated_observational_error, outpath=etrm_dict_path,
+                                                  name=amf_name, cum_mode=True, geo_info=geo_dict, x_y=x_y)
 
     # get the number of observations out
     dof = dof_dict['{}'.format(taw_list[0])]

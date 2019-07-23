@@ -79,6 +79,8 @@ def taw_optimize_1d(parameter_lst, chi_dict, outpath, name, num_obs, name_extens
 
     chi_list = []
     for param in parameter_lst:
+        print 'param {}'.format(param)
+        print 'chi dictionary {}'.format(chi_dict['{}'.format(param)])
         chi_list.append(chi_dict['{}'.format(param)])
 
     chi_min = chi_list[0]
@@ -136,7 +138,7 @@ def etrm_value_extraction(x_y, param, model_dictionary, geo_info):
 
     return model_vals
 
-def get_chisquare_dict(model_dictionary, parameter_lst, geo_info, x_y, percent_error, outpath, name, cum_mode=False):
+def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, name, cum_mode=False, geo_info=None, x_y=None, rzsm=False):
     """
     Make a dict of the sum of squared normalized residuals indexed by parameter value.
     :param obs_dates_lst:
@@ -167,7 +169,11 @@ def get_chisquare_dict(model_dictionary, parameter_lst, geo_info, x_y, percent_e
 
         # extract the model values based on the model_dictionary which is etrm files corresponding to ameriflux
         #  observation dates.
-        if not cum_mode:
+
+        if rzsm:
+            model_vals = model_dictionary['{}'.format(param)][0]
+
+        elif not cum_mode:
             model_vals = etrm_value_extraction(x_y, param, model_dictionary, geo_info)
 
         else:
