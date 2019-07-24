@@ -23,16 +23,17 @@ from utils.ameriflux_swhc_calibration.ameriflux_etrm_swhc_calibration import get
 
 # =============== Specify the TYPE of Calibration ============
 # unless true we do the default, which is to run calibration agains eta which can be cumulative
-rzsm = True
+rzsm = False
 
 # If calibrating to ETa, i.e rzsm=False, an interger of the number of days to accumulate.
-cum_int = 14
+cum_int = 1
 
 # =============== Specify the output_path ============
-outpath = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/calibration_output'
-amf_name = 'US-Mpj'
+outpath = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output'
+sitename = 'wjs'
+amf_name = 'US-Wjs'
 
-# =========Modify Dates==============
+# =========Modify Dates============
 # Specify the growing season
 start_grow_month = 5
 start_grow_day = 15
@@ -49,7 +50,7 @@ end_taw = 925
 taw_step = 25
 # ==================================
 
-data_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/taw_{}_dataset.csv'
+data_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/taw_{}_dataset.csv'
 
 taw_list = []
 optimization_dict = {}
@@ -60,9 +61,9 @@ for i in range(0, ((end_taw - begin_taw) / taw_step)):
         current_taw += taw_step
 
     taw_list.append(current_taw)
-    data_df = pd.read_csv(data_path.format(current_taw), parse_dates=True, index_col=0)
+    data_df = pd.read_csv(data_path.format(sitename, current_taw), parse_dates=True, index_col=0)
 
-    timeseries = data_df.index.values
+
 
     if rzsm:
         # get rid of Nan Values for both datasets
@@ -70,11 +71,16 @@ for i in range(0, ((end_taw - begin_taw) / taw_step)):
         data_df = data_df[data_df['nrml_depth_avg_sm'].notnull()]
 
         # get rid of the zero values
-        data_df[data_df['average_vals_rzsm'] == 0] = 0.0001
-        data_df[data_df['nrml_depth_avg_sm'] == 0] = 0.0001
+        data_df = data_df[data_df['average_vals_rzsm'] != 0]
+        data_df = data_df[data_df['nrml_depth_avg_sm'] != 0]
 
-        print 'month range {}'.format(range(5, 9))
-        data_df = data_df[data_df.index.month.isin(range(5, 9))]
+        ## Eliminate date range from rzsm.
+        # print 'month range {}'.format(range(5, 9))
+        # data_df = data_df[data_df.index.month.isin(range(5, 9))]
+        timeseries = data_df.index.values
+
+        data_df.to_csv(
+            '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/calibration_output/cumulatives/rzsm_model_df_{}.csv'.format(sitename, current_taw))
 
 
 
@@ -96,18 +102,18 @@ for i in range(0, ((end_taw - begin_taw) / taw_step)):
 
         # TODO - filter out non-growing season dates [What is a better way to do this so i can get late may to mid september of each year]
         # WITHOUT hard coding it.
-        print 'month range {}'.format(range(5, 9))
+        # print 'month range {}'.format(range(5, 9))
         data_df = data_df[data_df.index.month.isin(range(5, 9))]
 
         data_df = accumulator(time_df=data_df, time_unit='days', cum_int=cum_int)
 
         # get rid of the zero values # TODO - be mindful that this does not cause issues when eta is zero at spinup or low TAW vals.
-        # data_df = data_df[data_df['average_vals_eta'] != 0]
-        # data_df = data_df[data_df['amf_eta_values'] != 0]
-        data_df[data_df['average_vals_eta'] == 0] = 0.0001
-        data_df[data_df['amf_eta_values'] == 0] = 0.0001
+        data_df = data_df[data_df['average_vals_eta'] != 0]
+        data_df = data_df[data_df['amf_eta_values'] != 0]
+        # data_df[data_df['average_vals_eta'] == 0] = 0.0001
+        # data_df[data_df['amf_eta_values'] == 0] = 0.0001
 
-        data_df.to_csv('/Users/dcadol/Desktop/cum_model_df_{}.csv'.format(current_taw))
+        data_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/calibration_output/cumulatives/cum_eta_model_df_{}_cum{}.csv'.format(sitename, current_taw, cum_int))
 
         # Observed ETa
         obs_eta = data_df['amf_eta_values']
@@ -123,9 +129,10 @@ for i in range(0, ((end_taw - begin_taw) / taw_step)):
 cumulative_mode = not rzsm
 
 if cumulative_mode:
-    name_ext = '_cum'
+    name_ext = 'cum_eta_{}'.format(cum_int)
+
 else:
-    name_ext = '_non_cum'
+    name_ext = 'non_cum_rzsm'
 
 if not rzsm:
     # for ameriflux
@@ -135,7 +142,8 @@ elif rzsm:
     estimated_observational_error = 0.4
 chi_dictionary, dof_dict = get_chisquare_dict(model_dictionary=optimization_dict, parameter_lst=taw_list,
                                               percent_error=estimated_observational_error,
-                                              outpath=outpath, name=amf_name, cum_mode=cumulative_mode, rzsm=rzsm)
+                                              outpath=outpath, name=amf_name, cum_mode=cumulative_mode, rzsm=rzsm,
+                                              name_extension=name_ext)
 
 # get the number of observations out
 dof = dof_dict['{}'.format(taw_list[0])]

@@ -138,7 +138,7 @@ def etrm_value_extraction(x_y, param, model_dictionary, geo_info):
 
     return model_vals
 
-def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, name, cum_mode=False, geo_info=None, x_y=None, rzsm=False):
+def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, name, cum_mode=False, geo_info=None, x_y=None, rzsm=False, name_extension=None):
     """
     Make a dict of the sum of squared normalized residuals indexed by parameter value.
     :param obs_dates_lst:
@@ -231,7 +231,7 @@ def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, 
 
     # output the resid dict to a yml
     print 'output residuals'
-    resid_storage_path = os.path.join(outpath, '{}_resid.yml'.format(name))
+    resid_storage_path = os.path.join(outpath, '{}_resid_{}.yml'.format(name, name_extension))
     with open(resid_storage_path, 'w') as wfile:
         yaml.dump(resid_dict, wfile)
 

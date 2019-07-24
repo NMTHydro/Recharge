@@ -117,6 +117,8 @@ if __name__ == '__main__':
     # # ===== Point Info - UTM Shapefile) =====
     #
     sitename = 'mpj'
+    # sitename = 'ses'
+    # sitename = 'wjs'
 
     # shapefile
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
@@ -138,8 +140,8 @@ if __name__ == '__main__':
     # ===== Precip Time Series =====
 
     # PRISM - format = 'precip_YYYYjjj.tif' where jjj is three digit day of year
-    prism_path = '/Volumes/Seagate_Blue/ameriflux_aoi/PRISM/precip/800m_std_all'
-
+    prism_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_inputs/{}_aoi/PRISM/precip/800m_std_all'.format(sitename)
+    # prism_path = '/Volumes/Seagate_Blue/ameriflux_aoi/PRISM/precip/800m_std_all'
     # dict with keys 'dates' for date objs and 'precips' for filepaths
     prism_dict = get_prism_results(prism_path)
 
@@ -213,7 +215,7 @@ if __name__ == '__main__':
     # inspired by the code in jornada_std_error.py
     rzsm_df = convert_sm_to_rzsm(rzsm_df, sitename, nrml=True)
 
-    rzsm_df.to_csv('/Users/dcadol/Desktop/rzsm_df_test.csv')
+    rzsm_df.to_csv('/Users/dcadol/Desktop/rzsm_df_test_{}.csv'.format(sitename))
 
 
 
@@ -253,7 +255,7 @@ if __name__ == '__main__':
 
     averaged_fmt = '{}_taw_{}_average.csv'
 
-    averaged_etrm_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/stochastic_csvs/averaged'
+    averaged_etrm_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/stochastic_csvs/averaged'.format(sitename)
 
     for i in range(0, ((end_taw - begin_taw) / taw_step)):
         if i == 0:
@@ -278,7 +280,7 @@ if __name__ == '__main__':
 
         big_df = reduced_df.merge(combined_df, how='outer', left_index=True, right_index=True)
 
-        big_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/taw_{}_dataset.csv'.format(current_taw))
+        big_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/taw_{}_dataset.csv'.format(sitename, current_taw))
 
 
 

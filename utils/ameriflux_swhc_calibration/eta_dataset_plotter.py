@@ -355,9 +355,10 @@ def ec_data_processor_precip(path, x='TIMESTAMP_END', y='LE', daily=True):
         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
         aa = precip_dataset[x].apply(lambda d: dt.strptime(str(d), '%Y%m%d%H%M'))
 
-        # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
-        a = [i + timedelta(hours=19) for i in a]
-        aa = [i + timedelta(hours=19) for i in aa]
+        # # TODO - if converting PRISM to MTN time.
+        # # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
+        # a = [i + timedelta(hours=19) for i in a]
+        # aa = [i + timedelta(hours=19) for i in aa]
 
 
     else:
@@ -441,8 +442,10 @@ def ec_data_processor(path, x='TIMESTAMP_END', y='LE', daily=True):
 
     if x.startswith("TIMESTAMP"):
         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
-        # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
-        a = [i + timedelta(hours=19) for i in a]
+
+        # # TODO - if you are adjusting PRISM to mountain Time
+        # # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
+        # a = [i + timedelta(hours=19) for i in a]
     else:
         a = ec_dataset[x]
 
