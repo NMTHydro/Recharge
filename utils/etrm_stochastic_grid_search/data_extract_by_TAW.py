@@ -116,17 +116,17 @@ if __name__ == '__main__':
     #
     # # ===== Point Info - UTM Shapefile) =====
     #
-    sitename = 'mpj'
+    # sitename = 'seg'
     # sitename = 'ses'
-    # sitename = 'wjs'
+    sitename = 'wjs'
 
     # shapefile
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
-    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcm_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
 
     # get the x and y from the shapefile in order to extract
     # ... from rasters raster_extract() and geospatial arrays geospatial_array_extract()
@@ -166,11 +166,11 @@ if __name__ == '__main__':
 
     # Ameriflux
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
-    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
+    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
-    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
+    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
 
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
     # daily_cum_ameriflux = ec_data_processor(ameriflux_path)
@@ -194,10 +194,11 @@ if __name__ == '__main__':
     # ========================== GET RZSM data ===========================
 
 
-    rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Mpj_daily_SWC.csv'
+    # rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Mpj_daily_SWC.csv'
     # rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Seg_daily_SWC.csv'
     # rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Ses_daily_SWC.csv'
-    # rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Wjs_daily_SWC.csv'
+    rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Wjs_daily_SWC.csv'
+    # rzsm_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/soil_moisture_data/amf_soil_moisture/US-Vcp_daily_SWC.csv'
     rzsm_df = pd.read_csv(rzsm_path, header=3)
 
     date_col = rzsm_df['date']
@@ -255,7 +256,7 @@ if __name__ == '__main__':
 
     averaged_fmt = '{}_taw_{}_average.csv'
 
-    averaged_etrm_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/stochastic_csvs/averaged'.format(sitename)
+    averaged_etrm_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_III/{}/stochastic_csvs/averaged'.format(sitename)
 
     for i in range(0, ((end_taw - begin_taw) / taw_step)):
         if i == 0:
@@ -280,7 +281,7 @@ if __name__ == '__main__':
 
         big_df = reduced_df.merge(combined_df, how='outer', left_index=True, right_index=True)
 
-        big_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/{}/taw_{}_dataset.csv'.format(sitename, current_taw))
+        big_df.to_csv('/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_III/{}/taw_{}_dataset.csv'.format(sitename, current_taw))
 
 
 

@@ -154,8 +154,11 @@ def raster_extract(raster_path, x, y):
     y_offset = int((y-yOrigin) / height_of_pixel)
 
     # is this a [rows, columns] thing?
-    value = data[y_offset, x_offset]
-
+    try:
+        value = data[y_offset, x_offset]
+    except IndexError:
+        print ('INDEX ERROR, ASSUMING that we are using mini-models and that the array is 3X3 and taking center value')
+        value = data[1, 1]
     # print "VALUE {}".format(value)
 
     # # housekeeping

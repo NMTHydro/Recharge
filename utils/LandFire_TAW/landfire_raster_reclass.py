@@ -28,6 +28,8 @@ def get_raster_geo(filepath):
     """
     dataset = gdal.Open(filepath)
 
+    print('dataset: ', dataset)
+
     band = dataset.GetRasterBand(1)
     raster_geo_dict = {'cols': dataset.RasterXSize, 'rows': dataset.RasterYSize, 'bands': dataset.RasterCount,
                        'data_type': band.DataType, 'projection': dataset.GetProjection(),
@@ -55,7 +57,7 @@ def read_codes(path, first_col_string):
                 vals = [i for i in vals if len(i) > 0 and not i.startswith('\r')]
 
                 # store the ecosystem name as the key to the dictionary with a value of (newcode, oldcode)
-                eco_dict['{}'.format(vals[-1])] = (vals[0], vals[1])
+                eco_dict['{}'.format(vals[4])] = (vals[0], vals[1])
 
     return eco_dict
 
@@ -119,14 +121,15 @@ if __name__ == "__main__":
 
     # path to the codes, counts and ecosystem names for the Landfire Dataset.
     # ...File produced by Landfire_Eco_Stringparse.py
-    eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig.csv'
+    # eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig.csv'
+    eco_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/landfire_reclassification/LandFire_Reclass_Combine_Sandvig_config_DGedit.csv'
 
     # path to new mexican landfire data.
     lf_path = '/Users/dcadol/Desktop/academic_docs_II/LandFire/CO_NM_Landfire_1_0_0_EVT/NM_Landfire_1.0.0_EVT_clip.tif'
 
     # ====== User-Defined Output path ======
-    outpath = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters'
-    outname = 'gabe_reclass_march_2.tif'
+    outpath = '/Users/dcadol/Desktop/academic_docs_II/LandFire/grouped_lf_rasters/grouped_landfire_rasters/'
+    outname = 'gabe_reclass_july_24.tif'
 
     # outfile = os.path.join(outpath, outname)
     outinfo = [outpath, outname]

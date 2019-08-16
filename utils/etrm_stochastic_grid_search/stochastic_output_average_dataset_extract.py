@@ -46,8 +46,8 @@ def df_averager(df, runs):
 if __name__ == "__main__":
 
     #### ====== Bit of Code to average sorted stochastic runs in csvs
-    stochastic_root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/stochastic_csvs/not_averaged'
-    output_root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/stochastic_csvs/averaged'
+    stochastic_root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_III/wjs/stochastic_csvs/not_averaged'
+    output_root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_III/wjs/stochastic_csvs/averaged'
 
     runs = 6
 

@@ -218,7 +218,7 @@ def stochastic_taw_grid_search(config_path, output_path, begin_taw, end_taw, taw
 def run():
     """Here we basically take an ETRM_CONFIG file and edit it to our specifications."""
 
-    site = 'Wjs'
+    site = 'Vcp'
     # path to the file
     # config_path = "/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_statewide.yml"
     # config_path = "/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi.yml"
@@ -228,7 +228,7 @@ def run():
     # path to directory where output config will go:
     output_path = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_configs'
     # name of output yaml
-    yaml_name = '{}_stochastic_6runs'.format(site)
+    yaml_name = '{}_stochastic_6runs_pValueReg_amf_precip'.format(site)
     # starting TAW value
     begin_taw = 25
     # ending TAW value

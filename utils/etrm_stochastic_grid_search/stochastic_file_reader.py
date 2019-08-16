@@ -32,7 +32,7 @@ def fubar_date_get(filenames):
 if __name__ == "__main__":
 
     site = 'ses'
-    stochastic_file_root = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs/{}'.format(site)
+    stochastic_file_root = '/Volumes/Seagate_Expansion_Drive/calibration_approach/mini_model_outputs_II/{}'.format(site)
     var = 'eta'
     taw = '425'
 

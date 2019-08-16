@@ -28,18 +28,27 @@ sitename = 'Wjs'
 # if applicable
 cum_days = '7'
 
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/calibration_output/mpj_7day_eta_cum'
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/calibration_output/mpj_rzsm'
+# triggers a specific daterange for plotting specified lower down in script
+date_range = True
 
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/calibration_output/seg_7day_eta_cum'
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/calibration_output/seg_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/calibration_output_II/mpj_7day_eta_cum'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/mpj/calibration_output_II/mpj_non_cum_rzsm'
 
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/calibration_output/ses_7day_eta_cum'
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/calibration_output/ses_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/calibration_output_II/seg_cum_eta_1day'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/calibration_output_II/seg_7day_eta_cum'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/seg/calibration_output_II/seg_non_cum_rzsm'
 
-root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output/wjs_7day_eta_cum'
-# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output/wjs_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/calibration_output_II/ses_7day_eta_cum'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/ses/calibration_output_II/ses_non_cum_rzsm'
 
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output_II/wjs_1day_eta_cum'
+root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output_II/wjs_cum_eta_7day'#wjs_cum_eta_7day
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs/wjs/calibration_output_II/wjs_non_cum_rzsm'
+
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_II/seg/calibration_output/seg_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_II/mpj/calibration_output/mpj_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_II/vcp/calibration_output/vcp_rzsm'
+# root = '/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_outputs_III/wjs/calibration_output/wjs_rzsm'
 
 chimin_path = os.path.join(root, 'US-{}_chimin_cum_eta_{}.yml'.format(sitename, cum_days))
 resid_path = os.path.join(root, 'US-{}_resid_cum_eta_{}.yml'.format(sitename, cum_days))
@@ -51,7 +60,7 @@ combined_timeseries_file = 'cum_eta_model_df_{}_cum7.csv'
 
 
 var = 'ETa'#'ETa' # 'RZSM'
-taw = '600'
+taw = '50'
 
 # starting TAW value
 begin_taw = 25
@@ -91,7 +100,12 @@ combined_timeseries_file = combined_timeseries_file.format(taw)
 
 combined_timeseries_path = os.path.join(root, combined_timeseries_file)
 combined_df = pd.read_csv(combined_timeseries_path, parse_dates=True, index_col=0, header=0)
+print combined_df.iloc[:, 0]
 
+start_date = datetime(2013, 6, 16)
+end_date = datetime(2013, 10, 20)
+if date_range:
+    combined_df = combined_df.loc[(combined_df.index >= start_date) & (combined_df.index <= end_date)]
 
 
 prism = combined_df['prism_values']
@@ -143,7 +157,7 @@ amf_et = combined_df['amf_eta_values'].tolist()
 if var == 'RZSM':
     amf_rzsm = combined_df['nrml_depth_avg_sm'].tolist()
     etrm_rzsm = combined_df['average_vals_rzsm'].tolist()
-    etrm_ro = combined_df['average_vals_ro'].tolist()
+etrm_ro = combined_df['average_vals_ro'].tolist()
 
 
 data_date = df_datelist
@@ -169,7 +183,7 @@ for oi in high_outlier_indices:
     high_outlier_amf.append(amf_et_outlier)
     high_outlier_dates.append(outlier_date)
 
-
+##### ================ RESIDUALS PLOT ========================
 ax1 = plt.subplot(411)
 ax1.set_title('Largest Normalized Residuals in Timeseires')
 ax1.set_xlabel('Date')
@@ -280,4 +294,84 @@ plt.grid()
 plt.legend(loc=(1.01, 0.5))
 
 plt.subplots_adjust(hspace=.75)
+plt.show()
+
+
+
+# ========================== Plotting Sans Residuals =======================
+
+
+# plt.setp(ax1.get_xticklabels(), fontsize=6)
+if var == 'ETa':
+    ax2 = plt.subplot(311)
+    ax2.set_title('Ameriflux {} and ETRM {}'.format(sitename, var))
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('ETa in mm')
+    plt.plot(data_date, etrm_et, color='black', label='ETRM')
+    plt.plot_date(data_date, etrm_et, color='black', fillstyle='none')
+    plt.plot(data_date, amf_et, color='green', label='AMF')
+    plt.plot_date(data_date, amf_et, color='green', fillstyle='none')
+    plt.grid()
+    plt.legend(loc=(1.01, 0.5))
+    # # make these tick labels invisible
+    # plt.setp(ax2.get_xticklabels(), visible=False)
+
+elif var == 'RZSM':
+    ax2 = plt.subplot(311)
+    ax2.set_title('Ameriflux {} and ETRM {}'.format(sitename, var))
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('RZSM Fraction')
+    plt.plot(data_date, etrm_rzsm, color='red', label='ETRM')
+    plt.plot_date(data_date, etrm_rzsm, color='red', fillstyle='none', label=None)
+    plt.plot(data_date, amf_rzsm, color='purple', label='AMF')
+    plt.plot_date(data_date, amf_rzsm, color='purple', fillstyle='none', label=None)
+    plt.grid()
+    plt.legend(loc=(1.01, 0.5))
+
+
+# share x and y
+ax3 = plt.subplot(312, sharex=ax2)
+ax3.set_title('PRISM and Site {} Precipitation'.format(sitename))
+ax3.set_xlabel('Date')
+ax3.set_ylabel(('Precipitation in mm'))
+plt.plot(data_date, prism, color='blue', label='PRISM')
+plt.plot_date(data_date, prism, color='blue', fillstyle='none')
+plt.plot(data_date, site_precip, color='orange', label='AMF')
+plt.plot_date(data_date, site_precip, color='orange', fillstyle='none')
+plt.grid()
+plt.legend(loc=(1.01, 0.5))
+
+
+if var == 'RZSM':
+    # ax4 = plt.subplot(313, sharex=ax2)
+    # ax4.set_title('ETRM {} Runoff'.format(sitename))
+    # ax4.set_xlabel('Date')
+    # ax4.set_ylabel('ETRM Runoff in mm')
+    # plt.plot(data_date, etrm_ro, color='brown', label='Runoff')
+    # plt.plot_date(data_date, etrm_ro, color='brown', fillstyle='none')
+    # plt.grid()
+    # plt.legend(loc=(1.01, 0.5))
+    # =====
+    ax4 = plt.subplot(313, sharex=ax2)
+    ax4.set_title('Ameriflux {} and ETRM {}'.format(sitename, var))
+    ax4.set_xlabel('Date')
+    ax4.set_ylabel('ETa in mm')
+    plt.plot(data_date, etrm_et, color='black', label='ETRM')
+    plt.plot_date(data_date, etrm_et, color='black', fillstyle='none')
+    plt.plot(data_date, amf_et, color='green', label='AMF')
+    plt.plot_date(data_date, amf_et, color='green', fillstyle='none')
+    plt.grid()
+    plt.legend(loc=(1.01, 0.5))
+
+else:
+    ax4 = plt.subplot(313, sharex=ax2)
+    ax4.set_title('ETRM {} Runoff'.format(sitename))
+    ax4.set_xlabel('Date')
+    ax4.set_ylabel('ETRM Runoff in mm')
+    plt.plot(data_date, etrm_ro, color='brown', label='Runoff')
+    plt.plot_date(data_date, etrm_ro, color='brown', fillstyle='none')
+    plt.grid()
+    plt.legend(loc=(1.01, 0.5))
+
+plt.subplots_adjust(hspace=.5) # left, right, bottom, top, wspace, hspace
 plt.show()

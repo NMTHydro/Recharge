@@ -20,10 +20,12 @@ import datetime
 # ============= standard library imports ========================
 
 
+
 if __name__ == "__main__":
 
-    sitename = 'Vcm'
-    taw = '625'
+    'combined_timeseries_Mpj_taw425_plus19hrs.csv'
+    sitename = 'Vcp'
+    taw = '325'
     root = '/Users/dcadol/Desktop/academic_docs_II/'
 
     #combined_timeseries_{}_taw{}
@@ -77,6 +79,8 @@ if __name__ == "__main__":
     data_df['amf_30perc'] = data_df['amf_eta_values'] + (data_df['amf_eta_values'] * .30)
     data_df['amf_30perc_cum'] = data_df['amf_30perc'].cumsum()
 
+    data_df['amf_cum_precip'] = data_df['amf_precip_values'].cumsum()
+
     print 'data df \n', data_df
 
     # # from the pandas cheatsheet
@@ -100,11 +104,11 @@ if __name__ == "__main__":
     ax.plot(data_df.index.values, data_df['amf_cum'], color='green')
     ax.plot_date(data_df.index.values, data_df['amf_cum'], fillstyle='none', color='green')
 
-    ax.plot(data_df.index.values, data_df['amf_30perc_cum'], color='yellow')
-    ax.plot_date(data_df.index.values, data_df['amf_30perc_cum'], fillstyle='none', color='yellow')
+    # ax.plot(data_df.index.values, data_df['amf_30perc_cum'], color='yellow')
+    # ax.plot_date(data_df.index.values, data_df['amf_30perc_cum'], fillstyle='none', color='yellow')
 
-    # ax.plot(data_df.index.values, data_df['amf_cum_precip'], color='orange')
-    # ax.plot_date(data_df.index.values, data_df['amf_cum_precip'], fillstyle='none', color='orange')
+    ax.plot(data_df.index.values, data_df['amf_cum_precip'], color='orange')
+    ax.plot_date(data_df.index.values, data_df['amf_cum_precip'], fillstyle='none', color='orange')
 
     ax.set_title('Cumulative ETa and Precip Site:{} ETRM TAW:{}'.format(sitename, taw))
     ax.set_ylabel('ETa or Precip in mm H20')

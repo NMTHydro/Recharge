@@ -60,7 +60,7 @@ def get_taw_list(etrm_dict):
     taw_lst = sorted(taw_lst)
     return taw_lst
 
-def taw_optimize_1d(parameter_lst, chi_dict, outpath, name, num_obs, name_extension='noncum'):
+def taw_optimize_1d(parameter_lst, chi_dict, outpath, name, num_obs, name_extension='noncum', swhc_vals=None, swhc_method=None):
     """
     Make a detailed optimization summary and output to yml file. Save a plot of the chi square vs swhc and display plot
     :param parameter_lst:
@@ -104,15 +104,43 @@ def taw_optimize_1d(parameter_lst, chi_dict, outpath, name, num_obs, name_extens
     with open(chimin_output, 'w') as wfile:
         yaml.dump(chimin_dict, wfile)
 
+    # get the index of the minimum value in the chi list for plotting
+    chimin_indx = chi_list.index(min(chi_list))
+
+
+
     print 'plotting'
-    fig, ax = plt.subplots()
-    ax.scatter(parameter_lst, chi_list, color='blue')
-    ax.axhline(y=delta_chi, color='r', linestyle='-', label='95% ci line')
-    ax.set_title('plot of chi square against SWHC for a pixel {}'.format(name))
-    ax.set_ylabel('chi square')
-    ax.set_xlabel('Soil Water Holding Capacity (mm)')
-    ax.grid(True)
-    ax.legend(loc='upper center')
+    fig = plt.figure(figsize=(12, 5))# TODO - Adjust Y lim for RZSM
+    ax1 = plt.subplot(111)
+    # print type(chi_list)
+    # print type(parameter_lst)
+    print chi_list
+    print parameter_lst
+    ax1.scatter(parameter_lst, chi_list, color='blue', label='Chi Square')
+    ax1.scatter(parameter_lst[chimin_indx], chi_list[chimin_indx], color='red')
+    ax1.axvline(x=parameter_lst[chimin_indx], color='red', label='SWHC of Min. Chi Square')
+    # ax1.axvline(y=min(chi_list), color='r', linestyle='-', label='Minimum Chi Squared')
+    #ax.axhline(y=delta_chi, color='r', linestyle='-', label='95% ci line')
+    ax1.axvline(x=swhc_vals[0], color='green', label='SWHC ' + swhc_method[0])
+    ax1.axvline(x=swhc_vals[1], color='purple', label='SWHC ' + swhc_method[1])
+    ax1.axvline(x=swhc_vals[2], color='black', label='SWHC ' + swhc_method[2])
+    ax1.axvline(x=swhc_vals[3], color='orange', label='SWHC ' + swhc_method[3])
+    ax1.axvline(x=swhc_vals[4], color='brown', label='SWHC ' + swhc_method[4])
+    # plt.xticks(wjs_taws, wjs_method, rotation='vertical')
+    ax1.set_title('Chi Square against SWHC for Ameriflux Site {}'.format(name))
+    ax1.set_ylabel('Chi Square')
+    ax1.set_xlabel('Soil Water Holding Capacity (mm)')
+    ax1.set_facecolor('xkcd:light grey')
+    # ax1.set_aspect(1)# only feasible for 14 day
+    # plt.ylim(0, 8000) # for 1 day
+    plt.ylim(0, 1500) # for 7 day
+    # plt.ylim(0, 450) # for 14_day
+    # plt.ylim(0, 760000) # for rzsm
+    plt.xlim(0, 925)
+    ax1.grid(True)
+    ax1.minorticks_on()
+    ax1.legend(loc='lower right')
+
     fig_output_path = os.path.join(outpath, '{}_chiplot_{}.png'.format(name, name_extension))
     plt.savefig(fig_output_path)
     plt.show()
@@ -138,7 +166,8 @@ def etrm_value_extraction(x_y, param, model_dictionary, geo_info):
 
     return model_vals
 
-def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, name, cum_mode=False, geo_info=None, x_y=None, rzsm=False, name_extension=None):
+def get_chisquare_dict(model_dictionary, parameter_lst, error, outpath, name, cum_mode=False, geo_info=None,
+                       x_y=None, rzsm=False, name_extension=None, cum_value=None, sitename=None):
     """
     Make a dict of the sum of squared normalized residuals indexed by parameter value.
     :param obs_dates_lst:
@@ -147,7 +176,7 @@ def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, 
     :param parameter_lst: the list of TAWs
     :param geo_info:
     :param x_y:
-    :param percent_error:
+    :param error:
     :param outpath:
     :param name:
     :return:
@@ -211,9 +240,76 @@ def get_chisquare_dict(model_dictionary, parameter_lst, percent_error, outpath, 
 
         for obs_val, mod_val in zip(obs_values_lst, model_vals):
 
-            residual_value = (obs_val - mod_val) / (percent_error * obs_val)
-            resid_lst.append(residual_value)
+            # === Switch to additive error assumption if observation is lower than a certain threshold ===
 
+            if cum_mode:
+                if cum_value == 7:
+                    if obs_val > 2.0:
+                        residual_value = (obs_val - mod_val) / (error * obs_val)
+                    else:
+                        residual_value = (obs_val - mod_val) / 2.0
+                elif cum_value == 14:
+                    if obs_val > 4.0:
+                        residual_value = (obs_val - mod_val) / (error * obs_val)
+                    else:
+                        residual_value = (obs_val - mod_val) / 4.0
+
+                elif cum_value == 1:
+                    if obs_val > 1.0:
+                        residual_value = (obs_val - mod_val) / (error * obs_val)
+                    else:
+                        residual_value = (obs_val - mod_val) / 1.0
+            else:
+                # Normailization
+                # [n0 + ((value - mi) * (n1 - n0)) / (ma - mi) where n1=1 and n0 = 0 value, mi and ma are tdr values with uncertainty
+                # (error + error) / (error + error)
+
+                residual_value = (obs_val - mod_val) / error
+                # if obs_val < 0.05:
+                #     residual_value = (obs_val - mod_val) / 0.05
+                # if sitename == 'wjs':
+                #
+                #     # shallow_flight = 80.0
+                #     # middle_flight = 170.0
+                #     # deep_flight = 200.0
+                #     #
+                #     # tdr_uncertainty = 0.015
+                #     #
+                #     # smoisture_uncertainty = (tdr_uncertainty * (shallow_flight + middle_flight + deep_flight)) / (shallow_flight + middle_flight + deep_flight)
+                #     #
+                #     # # smoisture_avg = ((shallow * shallow_flight) + (mid * middle_flight) + (deep * deep_flight)) / \
+                #     # #                 (shallow_flight + middle_flight + deep_flight)
+                #
+                #     residual_value = (obs_val - mod_val) / error
+                #
+                # elif sitename == 'ses' or sitename == 'seg':
+                #
+                #     shallow_flight = 80.0
+                #     middle_flight = 170.0
+                #     deep_flight = 300.0
+                #
+                #     residual_value = (obs_val - mod_val) / 0.015
+                #
+                # elif sitename == 'mpj':
+                #
+                #     shallow_flight = 80.0
+                #     middle_flight = 70.0
+                #     deep_flight = 200.0
+                #
+                #     residual_value = (obs_val - mod_val) / 0.015
+                #
+                # elif sitename == 'vcp' or sitename == 'vcs':
+                #
+                #     shallow_flight = 80.0
+                #     middle_flight = 170.0
+                #     deep_flight = 300.0
+                #
+                #     residual_value = (obs_val - mod_val) / 0.015
+
+
+
+
+            resid_lst.append(residual_value)
             # accrete the squared normalized residual to the chi square value
             chisquare_resid += residual_value ** 2
 
@@ -380,8 +476,8 @@ if __name__ == "__main__":
     print 'opt_dict\n', opt_dict
     chi_dictionary, dof_dict = get_chisquare_dict(model_dictionary=opt_dict, parameter_lst=taw_list,
                                                   geo_info=geo_dict, x_y=x_y,
-                                                  percent_error=estimated_observational_error,
-                                                  outpath=etrm_dict_path,name=amf_name)
+                                                  error=estimated_observational_error,
+                                                  outpath=etrm_dict_path, name=amf_name)
 
     # get the number of observations out
     dof = dof_dict['{}'.format(taw_list[0])]
