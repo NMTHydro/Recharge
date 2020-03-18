@@ -33,10 +33,18 @@ sys.path.append(os.path.dirname(os.path.dirname(pp)))
 
 
 def run_reps():
-    runs = 30  # user sets the number of repeated runs to be performed
+    runs = 0  # user sets the number of repeated runs to be performed
     for i in range(0, runs):
         # if multiple locations are to be analyzed, each will require a new yaml config file
-        run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff1.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff2.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff3.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff4.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff5.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff6.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff7.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff8.yml')
+        run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG_ceff9.yml')
         # run(cfg_path='C:\Users\Mike\ETRM_CONFIG_placitas.yml')
         # run(cfg_path='C:\Users\Mike\ETRM_CONFIG_picacho.yml')
         # run(cfg_path='C:\Users\Mike\ETRM_CONFIG_rincon.yml')
@@ -46,3 +54,4 @@ def run_reps():
 if __name__ == '__main__':
 
     run_reps()
+    # run(cfg_path='C:\Users\Mike\PyRANA\PYRANA_CONFIG.yml')
