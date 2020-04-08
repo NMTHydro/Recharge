@@ -37,6 +37,9 @@ def make_mask(shape_path, raster_out_path):
                 'F:/ETRM_Inputs/Masks/Sevilleta_Shrub_point.tif'
     call(rasterize)
 
+    # gdal_rasterize -a Mask -ts 2272 2525 -tr 250 250 -te 114757 3471163 682757 4102413 -ot "Byte" -l SaltBasin "C:/Users/Mike/PyRANA/HUCs & Model Bounds/SaltBasin.shp" F:/ETRM_inputs/Mask_Alternatives/SaltBasinNM.tif
+    # gdal_rasterize -a Mask -ts 2272 2525 -tr 250 250 -te 114757 3471163 682757 4102413 -ot "Byte" -l NorthernSaltBasinMerged C:/Users/Mike/PyRANA/SaltBasin/NorthernSaltBasinMerged.shp F:/ETRM_inputs/Mask_Alternatives/NorthernSaltBasinNM.tif
+
     in_shp = shape_path # e.g. F:/ETRM_Inputs/NDVI_oldPts/Sevilleta_Shrub_point.shp
     out_ras = raster_out_path # e.g. F:/ETRM_Inputs/Masks/Sevilleta_Shrub_point.tif
     raster_name = 'arb_mask' # e.g., Sevilleta_Shrub_point

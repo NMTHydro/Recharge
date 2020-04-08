@@ -352,7 +352,7 @@ def initialize_point_tracker(master, point_arr):
 
     # The master dictionary doesnt get populated with some of these headers until the daily timestep thing kicks in so
     #  we manually add them here.
-    columns = ['Date', 'albedo', 'de', 'dr', 'drew', 'dry_days', 'eta', 'etrs', 'evap', 'evap_1', 'evap_2',
+    columns = ['Date', 'albedo', 'de', 'dr', 'drew', 'dry_days', 'eta', 'etrs', 'evap', 'evap_ceff', 'evap_1', 'evap_2',
                'fcov', 'few', 'infil', 'kcb', 'ke', 'ke_init', 'kr', 'ks', 'mass', 'max_temp', 'melt',
                'min_temp', 'pde', 'pdr', 'pdrew', 'pkcb', 'precip', 'rain', 'rg', 'ro', 'rzsm', 'snow_fall',
                'soil_ksat', 'soil_storage', 'soil_storage_all', 'st_1_dur', 'st_2_dur', 'swe', 'taw', 'temp',
@@ -389,6 +389,7 @@ def initialize_point_tracker(master, point_arr):
 
     # Still send out the list of pixels and columns
     return tracker_list
+
 
 def initialize_master_tracker(master):
     """ Create DataFrame to plot point time series, these are empty lists that will

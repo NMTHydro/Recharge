@@ -192,7 +192,7 @@ class Processes(object):
 
             time_it(self._do_daily_raster_load, day)
 
-            a,b = None, None
+            a, b = None, None
 
             if self._cfg.use_monsoon_precip_correction:
                 # # modify the PRISM precipitation - Commented out by GELP 4/27/2019
@@ -212,7 +212,7 @@ class Processes(object):
                     b = 0.993831
 
             if a is not None:
-                m['precip'] = maximum((m['precip'] - a)/b)
+                m['precip'] = maximum((m['precip'] - a)/b, 0)
 
             m['inten'] = zeros_like(m['precip'])
             if self._cfg.use_walnut_gulch_ro:
@@ -367,23 +367,30 @@ class Processes(object):
 
         :return:
         """
-        # JIR
+
         initial = initialize_initial_conditions_dict(self._cfg.initial_pairs)
 
         self._info('Initialize initial model state')
         m = self._master
 
-        # option to force dry TAW start conditions
-        initial_state = 'wet'  # 'dry'
+        # option to force dry or half dry TAW start conditions; DDC Sept 2019
+        initial_state = 'half_dry'  # 'wet'   'dry'
         if initial_state is 'wet':
-            m['pdr'] = m['dr'] = initial['dr']
+            m['pdr'] = m['dr'] = initial['dr']  # This uses the initial-state rasters (given all-0 rasters; totally wet)
+            m['pde'] = m['de'] = initial['de']
+            m['pdrew'] = m['drew'] = initial['drew']
         elif initial_state is 'dry':
             m['pdr'] = m['dr'] = self._static['taw']  # This makes the whole state start totally dry
-        print 'initial dr {}'.format(initial['dr'])
+            m['pde'] = m['de'] = self._static['tew']
+            m['pdrew'] = m['drew'] = self._static['rew']
+        elif initial_state is 'half_dry':
+            m['pdr'] = m['dr'] = self._static['taw']/2  # This makes the whole state start half dry (half wet)
+            m['pde'] = m['de'] = self._static['tew']/2
+            m['pdrew'] = m['drew'] = self._static['rew']/2
+        print 'initial dr {}'.format(m['dr'])
 
         # JIR
-        m['pde'] = m['de'] = initial['de']
-        m['pdrew'] = m['drew'] = initial['drew']
+
 
         s = self._static
         for key in ('rew', 'tew', 'taw', 'soil_ksat'):
@@ -596,6 +603,7 @@ class Processes(object):
 
         taw = maximum(s['taw'], 0.001)
         m['taw'] = taw  # add taw to master dict - Jul 9 2017, GELP
+        m['evap_ceff'] = evap_ceff  # add evap_ceff to master dict - Mar 18 2020, DDC
         tew = maximum(s['tew'], 0.001)  # TEW is zero at lakes in our data set
         rew = s['rew']
 
@@ -954,7 +962,7 @@ class Processes(object):
         else:
             func = get_kcb
 
-        kcb = time_it(func, date, m['pkcb'])
+        kcb = time_it(func, date, m['pkcb']  )
 
         m['kcb'] = kcb
         min_temp, max_temp, temp, precip = time_it(get_prisms, date, self._cfg.is_reduced)
@@ -1115,10 +1123,10 @@ class Processes(object):
             if k in ('dry_days', 'kcb', 'kr', 'ks', 'ke', 'fcov', 'few', 'albedo',
                      'max_temp', 'min_temp', 'rg', 'st_1_dur', 'st_2_dur',):
                 v = v.mean()
-            elif k == 'transp_adj':
+            elif k in ('evap_ceff', 'transp_adj'):
                 v = median(v)
             else:
-                v = self._output_function(v)
+                v = self. _output_function(v)
             return v
 
         keys = sorted(m.keys())

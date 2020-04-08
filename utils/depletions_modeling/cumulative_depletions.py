@@ -1,5 +1,5 @@
 # ===============================================================================
-# Copyright 2018 gabe-parrish
+# Copyright 2018 gabe-parrish and Dan Cadol
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

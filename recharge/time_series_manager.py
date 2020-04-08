@@ -142,7 +142,7 @@ def amf_obs_time_series(dict_, save_cleaned_data_path=False, complete_days_only=
     columns = ['H', 'LE', 'RN', 'RG', 'RGout', 'RGL', 'RGLout']
     for key, val in dict_.iteritems():  # Changes here
         amf_name = val['Name']
-        path = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel/',
+        path = os.path.join('C:\Users\Mike\PyRANA',
                             'ETRM_inputs_Ameriflux','ameriflux_sites')
         folder = os.path.join(path,'AMF_Data',amf_name)
 

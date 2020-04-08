@@ -55,7 +55,7 @@ def run_iterate():
         # run_rename(param_path=monthly_raster_path, param='precip')
         # run_rename(param_path=monthly_raster_path, param='eta')
 
-        # Calculate th e max cumulative depletion
+        # Calculate the max cumulative depletion
         eta_path = os.path.join(output_root, 'monthly_rasters')
         pris_path = os.path.join(output_root, 'monthly_rasters')
         # output_folder = 'C:\Users\Mike\PyRANA\PyRANA_results\depletion_{}'.format(i)
@@ -64,14 +64,14 @@ def run_iterate():
             os.mkdir(output_folder)
 
         run_W_E(cfg.runspecs[0], eta_path=eta_path, pris_path=pris_path,
-                output_folder=output_folder, is_ssebop=False, shape=(2525, 2272))
+                output_folder=output_folder, is_ssebop=False, shape=(2525, 2272))  # Run Wang-Erlandsson method
         # Save the max depletion raster as the new TAW raster and
         # replace the old TAW raster in the static inputs folder with the new TAW raster
         start_date, end_date = cfg.runspecs[0].date_range
         # changed to look at depletion range (range_depletion_{}_{}.tif), not max depletion (max_depletion_{}_{}.tif)
         max_dep_file = 'range_depletion_{}_{}.tif'.format(start_date.year+2, end_date.year)
         max_dep_path = os.path.join(output_root, 'depletion_{:02n}'.format(i), max_dep_file)
-        taw_store_root = 'F:\ETRM_inputs'# 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI'
+        taw_store_root = 'F:\ETRM_inputs'  # 'C:\Users\Mike\PyRANA\PyRANA_inputs_recursive_AOI'
         taw_store_path = os.path.join(taw_store_root, 'TAWs', 'taw_range_{:02n}.tif'.format(i))
         shutil.copyfile(max_dep_path, taw_store_path)
 

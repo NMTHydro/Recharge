@@ -218,7 +218,7 @@ def get_prism(date_object, variable='precip', is_reduced = False):
             else:
                 root = os.path.join('Temp', 'Minimum_standard')
                 tail = '{}{:02n}{:02n}.tif'.format(year, date_object.month, date_object.day)
-                if year in PRISM_YEARS:
+                if year in  PRISM_YEARS:
                     name = 'cai_tmin_us_us_30s_{}'.format(tail)
                 else:
                     name = 'TempMin_NMHW2Buff_{}'.format(tail)

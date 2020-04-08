@@ -23,8 +23,8 @@ from app.paths import paths
 from app.generic_runner import run_model
 from app.config import Config
 
-BASE_AMF_DICT = {'1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
-                 # '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
+BASE_AMF_DICT = {# '1': {'Coords': '361716 3972654', 'Name': 'Valles_Coniferous'},
+                 '2': {'Coords': '355774 3969864', 'Name': 'Valles_Ponderosa'},
                  # '3': {'Coords': '339552 3800667', 'Name': 'Sevilleta_Shrub'},
                  # '4': {'Coords': '343495 3803640', 'Name': 'Sevilleta_Grass'},
                  # '5': {'Coords': '386288 3811461', 'Name': 'Heritage_Pinyon_Juniper'},
@@ -64,11 +64,11 @@ def run(input_root, simulation_period):
 
 
 def save_run(etrm, val):
+    # tracker is deprecated, try commenting this out
+    # path = os.path.join(paths.amf_output_root, '{}.csv'.format(val['Name']))
+    # etrm.tracker.to_csv(path, na_rep='nan', index_label='Date')
 
-    path = os.path.join(paths.amf_output_root, '{}.csv'.format(val['Name']))
-    etrm.tracker.to_csv(path, na_rep='nan', index_label='Date')
-
-    amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], etrm.tracker), axis=1, join='outer'))
+    amf_obs_etrm_combo = DataFrame(concat((val['AMF_Data'], etrm.point_tracker), axis=1, join='outer'))
     obs_etrm_comb_out = os.path.join(paths.amf_combo_root, '{}_Ceff.csv'.format(val['Name']))
 
     print 'this should be your combo csv: {}'.format(obs_etrm_comb_out)
@@ -78,7 +78,7 @@ def save_run(etrm, val):
 if __name__ == '__main__':
     # ir = os.path.join('/Volumes', 'Seagate Expansion Drive', 'ETRM_Inputs')
     # ir = os.path.join('/Volumes', 'Seagate Expansion Drive')
-    ir = os.path.join('/Users/dcadol/Documents/ResearchProjects/FocusedRechargeModel/ETRM_inputs_Ameriflux')
+    ir = os.path.join('C:\Users\Mike\PyRANA\ETRM_inputs_Ameriflux')
     sim = datetime(2007, 1, 1), datetime(2013, 12, 29)
 
     run(ir, sim)
