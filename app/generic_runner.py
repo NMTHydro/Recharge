@@ -138,7 +138,7 @@ if __name__ == '__main__':
     # run(cfg_path='/Volumes/Seagate_Expansion_Drive/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_statewide.yml')
     # run(cfg_path='/Users/dcadol/Desktop/academic_docs_II/ameriflux_aoi_qgis/ETRM_CONFIG_ameriflux_aoi.yml')
     # run(cfg_path='/Volumes/Seagate_Blue/taw_optimization_work_folder/ETRM_CONFIG_taw_grid_search_ameriflux_aoi.yml')
-    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
     # run(cfg_path='/Users/dcadol/Desktop/academic_docs_II/calibration_approach/mini_model_configs/Vcp_stochastic_6runs_pValueReg_amf_precip.yml')
+    run(cfg_path='C:\Users\Mike\ETRM_CONFIG.yml')
 
 # ============= EOF =============================================
