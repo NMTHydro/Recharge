@@ -16,7 +16,8 @@
 import os
 import pandas as pd
 from datetime import datetime as dt
-from datetime import date
+from datetime import date, timedelta
+from dateutil import relativedelta
 import yaml
 import numpy as np
 from matplotlib import pyplot as plt
@@ -108,6 +109,107 @@ def get_prism_results(prism_path):
 
     return all_data_dict
 
+
+def get_monthly_etrm_outputs(output_path, output_type):
+    """
+    For getting the paths and time series for monthly data outputs from ETRM
+    :param output_path:
+    :param output_type:
+    :return:
+    """
+    all_data_dict = {}
+
+    # for path, dirs, files in os.walk(output_path, topdown=False):
+    #     if path.endswith('numpy_arrays') and len(files) > 0:
+    #         # print 'path', path
+    #         # print 'dirs', dirs
+    #         # print 'files', files
+    #
+    #         example_file = files[0]
+    #
+    #         taw = example_file.split('_')[4]
+    #         print 'ex taw: ', taw
+
+    for path, dirs, files in os.walk(output_path, topdown=False):
+        if path.endswith('monthly_rasters') and len(files) > 0:
+
+            print 'path', path
+
+            # get the TAW value from the numpy arrays
+            results_path = os.path.split(path)[0]
+            numpy_path = os.path.join(results_path, 'numpy_arrays')
+            example_file = os.listdir(numpy_path)[0]
+            print example_file
+            taw = example_file.split('_')[4]
+            print 'ex taw: ', taw
+
+            print 'the taw of the monthly {}'.format(taw)
+
+            # if output_type == 'eta':
+
+            # NOW, get the files and timeseries for the monthlies from monthly_rasters
+            timeseries = []
+            fileseries = []
+
+            for f in files:
+                fname = f.split('.')[0]
+                flist = fname.split('_')
+
+                # to get the kind of monthly output you want i.e 'eta', or 'rzsm'
+                if flist[0] == output_type:
+
+                    yr = int(flist[-2])
+                    mnth = int(flist[-1])
+                    # set day to the first of the month automatically for monthly datasets so they can be put together with
+                    #  daily timeseries
+                    dy = 1
+
+
+                    first_of_the_month = date(yr, mnth, dy)
+
+                    first_of_next = first_of_the_month + relativedelta(months=+1)
+
+                    last_of_month = first_of_next - timedelta(days=1)
+
+
+                    timeseries.append(last_of_month)
+
+                    filepath = os.path.join(path, f)
+                    fileseries.append(filepath)
+
+            # do a nifty sort of file paths based on the dates
+            sorted_files = [f for _, f in sorted(zip(timeseries, fileseries))]
+
+            sorted_dates = sorted(timeseries)
+            print 'len sorted files {}, len sorted dates {}, taw {}'.format(len(sorted_files), len(sorted_dates), taw)
+
+            all_data_dict[taw] = (sorted_files, sorted_dates)
+
+    return all_data_dict
+
+
+# etrm_path = '/Volumes/Seagate_Blue/ameriflux_aoi_etrm_results_ceff_06'
+# etrm_taw = '425'
+#
+# geo_info_path = '/Volumes/Seagate_Blue/taw_optimization_work_folder/geo_info_ameriflux.yml'
+# with open(geo_info_path, mode='r') as geofile:
+#     geo_dict = yaml.load(geofile)
+#
+# shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+#
+# # get the x and y from the shapefile in order to extract
+# # ... from rasters raster_extract() and geospatial arrays geospatial_array_extract()
+# feature_dictionary = x_y_extract(shape_path)
+# # Use the feature dictionary to extract data from the rasters.
+# for feature, tup in feature_dictionary.iteritems():
+#     # Get the X and Y coords from the dictionary and unpack them
+#     x, y = tup
+#     print x, y
+#
+#
+# monthly_etrm_outputs = get_monthly_etrm_outputs(etrm_path, output_type='eta')
+
+# print 'outputs \n', monthly_etrm_outputs[etrm_taw]
 
 def get_etrm_results(etrm_results_path, rzsm=False, observation_dates=None):
     """
@@ -216,88 +318,100 @@ def daily_time_parse(timeseries):
 
     return daily_time
 
-# old version of ec_data_processor
-# def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True, cumulative_days=None):
-#     """
-#
-#     :param path: path to a csv containing Ameriflux Dataset
-#     :param x: default is the header string for the timestamps
-#     :param y: default is Latent Heat LE
-#     :param daily: if true, we convert the Eddy Covariance to a daily total
-#     :param cumulative_days: an interger number of days to be accumulated based on the daily total
-#     :return: a timeseries of
-#     """
-#     # Get the data from the path and turn the path into a data frame
-#     # ec_dataset = pd.read_csv(path, header=2)
-#     ec_dataset = pd.read_csv(path, header=2, engine='python')
-#
-#     # print ec_dataset.head()
-#     print ec_dataset['LE'].head()
-#     print ec_dataset[ec_dataset[y] != -9999].head()
-#     # === get rid of no data values in any category of the energy balance ===
-#     ec_dataset = ec_dataset[ec_dataset[y] != -9999]
-#     ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
-#     ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
-#     ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
-#     # ec_dataset = ec_dataset[ec_dataset['P'] != -9999]
-#     # # You probably won't need these because Marcy Doesn't think they are valid for her towers
-#     # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
-#     # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
-#
-#     if x.startswith("TIMESTAMP"):
-#         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
-#     else:
-#         a = ec_dataset[x]
-#
-#     # ===== Time Series Processing =====
-#
-#     timeseries = a.tolist()
-#     # print 'timeseries\n', timeseries
-#     Rn = ec_dataset['NETRAD'].values
-#     H = ec_dataset['H'].values
-#     LE = ec_dataset['LE'].values
-#     # P = ec_dataset['P']
-#     # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
-#
-#     # recreate a dataframe of the variables you want to time average on a monthly timestep
-#     halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
-#
-#     # set the timeseries column to the index so groupby function can group by year and month of the index.
-#     halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
-#     halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
-#
-#     # # ===== Check closure Error ======
-#     #
-#     # check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
-#     #
-#     # # check_energybal(ec_dataset, timeseries=a, dailyaverage=False)
-#
-#     if daily:
-#         # # === an example of # === accumulate mmh20 to make comparable to SSEBop ===
-#         #     timeseries = ec_data.timeseries.tolist()
-#         #     monthly_cumulative = ec_data.groupby([lambda x: x.year, lambda x: x.month]).sum()
-#         #     # the time series that matches the monthly cumulative dataframe
-#         #     monthly_list = monthly_time_parse(timeseries)arse(timeseries)
-#         daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
-#
-#         daily_cum_time = daily_time_parse(timeseries)
-#
-#         # # testing
-#         # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
-#
-#         # format daily_cum_data to have datetimes
-#         daily_cum_data['date'] = daily_cum_time
-#
-#         # # testing
-#         # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
-#
-#         return daily_cum_data
-#
-#     else:
-#         return halfhour_data
+
+
+# TODO - Timestamp_start vs TIMESTAMP_END
+def ec_data_processor_precip(path, x='TIMESTAMP_END', y='LE', daily=True):
+    """
+    Version of ec_data processor that returns a separate dataframe of precip values.
+    NANs totally cancel out precip for some reason if you try to use one dataframe.
+    :param path: path to a csv containing Ameriflux Dataset
+    :param x: default is the header string for the timestamps
+    :param y: default is Latent Heat LE
+    :param daily: if true, we convert the Eddy Covariance to a daily total
+    :param cumulative_days: an interger number of days to be accumulated based on the daily total
+    :return: a timeseries of
+    """
+
+
+    # Get the data from the path and turn the path into a data frame
+    # ec_dataset = pd.read_csv(path, header=2)
+
+    ec_dataset = pd.read_csv(path, header=2, engine='python')
+
+    # print ec_dataset.head()
+    print ec_dataset['LE'].head()
+    print ec_dataset[ec_dataset[y] != -9999].head()
+    # === get rid of no data values in any category of the energy balance ===
+    precip_dataset = ec_dataset[ec_dataset['P'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset[y] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
+    ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
+    # # You probably won't need these because Marcy Doesn't think they are valid for her towers
+    # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
+    # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
+
+    if x.startswith("TIMESTAMP"):
+        a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
+        aa = precip_dataset[x].apply(lambda d: dt.strptime(str(d), '%Y%m%d%H%M'))
+
+        # # TODO - if converting PRISM to MTN time.
+        # # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
+        # a = [i + timedelta(hours=19) for i in a]
+        # aa = [i + timedelta(hours=19) for i in aa]
+
+
+    else:
+        a = ec_dataset[x]
+
+    # ===== Time Series Processing =====
+
+    timeseries = a
+    p_timeseries = aa
+    # print 'timeseries\n', timeseries
+    Rn = ec_dataset['NETRAD'].values
+    H = ec_dataset['H'].values
+    LE = ec_dataset['LE'].values
+    P = precip_dataset['P']
+    print 'P \n', P
+    # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
+
+    # # testing
+    # plt.plot(timeseries, P, color='black')
+    # plt.show()
+
+    # recreate a dataframe of the variables you want to time average on a monthly timestep
+    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
+
+    halfhour_precip = pd.DataFrame({'timeseries': p_timeseries, 'P': P})
+    # set the timeseries column to the index so groupby function can group by year and month of the index.
+    halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
+    halfhour_precip = halfhour_precip.set_index(pd.DatetimeIndex(halfhour_precip['timeseries']))
+    # convert latent heat to mmH2O by dividing by latent heat of vaporization.
+    halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
+
+    if daily:
+
+        daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
+        daily_cum_precip = halfhour_precip.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
+
+        # get each day in the timeseries. there are duplicates from the groupby function, so use set() to get rid of
+        #  duplicates
+        daily_cum_time = daily_time_parse(timeseries)
+        daily_cum_precip_time = daily_time_parse(p_timeseries)
+
+        # # testing
+        # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
+
+        # format daily_cum_data to have datetimes
+        daily_cum_data['date'] = daily_cum_time
+        daily_cum_precip['date'] = daily_cum_precip_time
+
+        return daily_cum_data, daily_cum_precip
 
 # new version of ec_data_processor
-def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
+def ec_data_processor(path, x='TIMESTAMP_END', y='LE', daily=True):
     """
 
     :param path: path to a csv containing Ameriflux Dataset
@@ -307,87 +421,6 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
     :param cumulative_days: an interger number of days to be accumulated based on the daily total
     :return: a timeseries of
     """
-    # old version of ec_data_processor
-    # def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True, cumulative_days=None):
-    #     """
-    #
-    #     :param path: path to a csv containing Ameriflux Dataset
-    #     :param x: default is the header string for the timestamps
-    #     :param y: default is Latent Heat LE
-    #     :param daily: if true, we convert the Eddy Covariance to a daily total
-    #     :param cumulative_days: an interger number of days to be accumulated based on the daily total
-    #     :return: a timeseries of
-    #     """
-    #     # Get the data from the path and turn the path into a data frame
-    #     # ec_dataset = pd.read_csv(path, header=2)
-    #     ec_dataset = pd.read_csv(path, header=2, engine='python')
-    #
-    #     # print ec_dataset.head()
-    #     print ec_dataset['LE'].head()
-    #     print ec_dataset[ec_dataset[y] != -9999].head()
-    #     # === get rid of no data values in any category of the energy balance ===
-    #     ec_dataset = ec_dataset[ec_dataset[y] != -9999]
-    #     ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
-    #     ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
-    #     ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
-    #     # ec_dataset = ec_dataset[ec_dataset['P'] != -9999]
-    #     # # You probably won't need these because Marcy Doesn't think they are valid for her towers
-    #     # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
-    #     # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
-    #
-    #     if x.startswith("TIMESTAMP"):
-    #         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
-    #     else:
-    #         a = ec_dataset[x]
-    #
-    #     # ===== Time Series Processing =====
-    #
-    #     timeseries = a.tolist()
-    #     # print 'timeseries\n', timeseries
-    #     Rn = ec_dataset['NETRAD'].values
-    #     H = ec_dataset['H'].values
-    #     LE = ec_dataset['LE'].values
-    #     # P = ec_dataset['P']
-    #     # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
-    #
-    #     # recreate a dataframe of the variables you want to time average on a monthly timestep
-    #     halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
-    #
-    #     # set the timeseries column to the index so groupby function can group by year and month of the index.
-    #     halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
-    #     halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
-    #
-    #     # # ===== Check closure Error ======
-    #     #
-    #     # check_energybal(ec_dataset, timeseries=a, dailyaverage=True)
-    #     #
-    #     # # check_energybal(ec_dataset, timeseries=a, dailyaverage=False)
-    #
-    #     if daily:
-    #         # # === an example of # === accumulate mmh20 to make comparable to SSEBop ===
-    #         #     timeseries = ec_data.timeseries.tolist()
-    #         #     monthly_cumulative = ec_data.groupby([lambda x: x.year, lambda x: x.month]).sum()
-    #         #     # the time series that matches the monthly cumulative dataframe
-    #         #     monthly_list = monthly_time_parse(timeseries)arse(timeseries)
-    #         daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
-    #
-    #         daily_cum_time = daily_time_parse(timeseries)
-    #
-    #         # # testing
-    #         # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
-    #
-    #         # format daily_cum_data to have datetimes
-    #         daily_cum_data['date'] = daily_cum_time
-    #
-    #         # # testing
-    #         # daily_cum_data.to_csv('/Users/dcadol/Desktop/daily_cumulative_df.csv')
-    #
-    #         return daily_cum_data
-    #
-    #     else:
-    #         return halfhour_data
-
-
 
 
     # Get the data from the path and turn the path into a data frame
@@ -403,32 +436,40 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
     ec_dataset = ec_dataset[ec_dataset['NETRAD'] != -9999]
     ec_dataset = ec_dataset[ec_dataset['H'] != -9999]
     ec_dataset = ec_dataset[ec_dataset['LE'] != -9999]
-    # ec_dataset = ec_dataset[ec_dataset['P'] != -9999]
+    precip_dataset = ec_dataset[ec_dataset['P'] != -9999]
     # # You probably won't need these because Marcy Doesn't think they are valid for her towers
     # ec_dataset = ec_dataset[ec_dataset['SH'] != -9999]
     # ec_dataset = ec_dataset[ec_dataset['SLE'] != -9999]
 
     if x.startswith("TIMESTAMP"):
         a = ec_dataset[x].apply(lambda b: dt.strptime(str(b), '%Y%m%d%H%M'))
+
+        # # TODO - if you are adjusting PRISM to mountain Time
+        # # Convert to PRISM time (Mtn Standard + 5 hours) PRISM midnight is 12:00 UTC - 7 hours for mountain. Net +5 hrs
+        # a = [i + timedelta(hours=19) for i in a]
     else:
         a = ec_dataset[x]
 
     # ===== Time Series Processing =====
 
-    timeseries = a.tolist()
+    timeseries = a
     # print 'timeseries\n', timeseries
     Rn = ec_dataset['NETRAD'].values
     H = ec_dataset['H'].values
     LE = ec_dataset['LE'].values
-    # P = ec_dataset['P']
+    P = precip_dataset['P'].values
+    print 'P \n', P
     # indexed_datetimes = pd.DataFrame(pd.DatetimeIndex(timeseries))
 
+    plt.plot(timeseries, P)
+    plt.show()
+
     # recreate a dataframe of the variables you want to time average on a monthly timestep
-    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H}) # took out precip. no good vals? 'P': P
+    halfhour_data = pd.DataFrame({'timeseries': timeseries, 'Rn': Rn, 'LE': LE, 'H': H, 'P': P}) # took out precip. no good vals? 'P': P
 
     # set the timeseries column to the index so groupby function can group by year and month of the index.
     halfhour_data = halfhour_data.set_index(pd.DatetimeIndex(halfhour_data['timeseries']))
-    # convert latent heat to mmH2O by multiplying by latent heat of vaporization.
+    # convert latent heat to mmH2O by dividing by latent heat of vaporization.
     halfhour_data['mmh20'] = halfhour_data['LE'] * 7.962e-4
 
     if daily:
@@ -441,7 +482,8 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
 
         daily_cum_data = halfhour_data.groupby([lambda x: x.year, lambda x: x.month, lambda x: x.day]).sum()
 
-        # todo - what is done here?
+        # get each day in the timeseries. there are duplicates from the groupby function, so use set() to get rid of
+        #  duplicates
         daily_cum_time = daily_time_parse(timeseries)
 
         # # testing
@@ -460,7 +502,7 @@ def ec_data_processor(path, x='TIMESTAMP_START', y='LE', daily=True):
         return halfhour_data
 
 
-def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw):
+def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw, sitename=None):
     """
 
     :param shape_path: path to a shapefile where the values will be read from
@@ -548,7 +590,7 @@ def dataset_plot(shape_path, ameriflux_df, raster_datasets, geo_info, taw):
     ax.plot(etrm_dates, etrm_values, color='black')
     ax.plot_date(etrm_dates, etrm_values, fillstyle='none', color='black')
 
-    ax.set_title('Comprehensive ETa and Precip TAW:{}'.format(taw))
+    ax.set_title('Comprehensive ETa and Precip Site:{} TAW:{}'.format(sitename, taw))
     ax.set_ylabel('ETa or Precip in mm H20')
     ax.set_xlabel('Date')
     plt.grid(True)
@@ -569,7 +611,8 @@ if __name__ == '__main__':
     # shapefile
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
 
 
     # ===== Precip Time Series =====
@@ -585,8 +628,7 @@ if __name__ == '__main__':
     # ===== GADGET RefET Time Series =====
 
     # TODO - ADD in FluxTower daily RefET timeseries here
-
-    # TODO - ADD in
+    # ===== FluxTower daily PM RefET ======
 
 
     # ===== Observational ETa Time Series =====
@@ -602,10 +644,10 @@ if __name__ == '__main__':
     # Ameriflux
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
-    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
+    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
     # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
-    ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
+    # ameriflux_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
 
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
     daily_cum_ameriflux = ec_data_processor(ameriflux_path)
@@ -625,7 +667,9 @@ if __name__ == '__main__':
 
     raster_datasets = {'prism': prism_dict, 'jpl': jpl_data_dict, 'etrm': etrm_dict}
 
-    dataset_plot(shape_path, ameriflux_df=daily_cum_ameriflux, raster_datasets=raster_datasets, geo_info=geo_dict, taw='425')
+
+
+    dataset_plot(shape_path, ameriflux_df=daily_cum_ameriflux, raster_datasets=raster_datasets, geo_info=geo_dict, taw='225', sitename='Seg')
 
 
 

@@ -81,10 +81,6 @@ def raster_extract(raster_path):
 
     # # get georefference info
     transform = datasource_obj.GetGeoTransform()
-    # xOrigin = transform[0]
-    # yOrigin = transform[3]
-    # width_of_pixel = transform[1]
-    # height_of_pixel = transform[5]
 
     # read in a band (only one band)
     band = datasource_obj.GetRasterBand(1)
@@ -110,9 +106,9 @@ def depletion_calc(f_out, f_in):
 
     return depletion
 
-# TODO - GENERATE ETRM DATASET to GAPFILL (etrm_daily_path)
+
 def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, output_folder=None, is_ssebop=False, is_jpl=False, shape=None,
-            start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None):
+            start_date=None, end_date=None, time_step='monthly', eta_output=None, precip_output=None, ratiomod=True):
     """
 
     :return:
@@ -121,21 +117,18 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
 
     # path to monthly ETa
     if eta_path is None:
-        eta_path = "/Volumes/Seagate_Expansion_Drive/SSEBop_research/SSEBop/SSEBOP_Geotiff_warped"
+        eta_path = "yourpath"
 
     # path to monthly Prism
     if pris_path is None:
-        pris_path = "/Volumes/Seagate_Expansion_Drive/SSEBop_research/monthly_prism"
+        pris_path = "yourpath"
 
     # output path
     if output_folder is None:
-        output_folder = "/Volumes/Seagate_Expansion_Drive/SSEBop_research/cum_depletions_neg"
-
-    # seems like we need to start in Feb of 2000 (ETRM monthly precip outputs only start in Feb 2000...)
+        output_folder = "yourpath"
 
     # function to calculate the depletion at a monthly timestep
     #  within that function, output the running depletion raster that results from each month's F_in-F_out
-
     if is_ssebop:
         start_date = datetime.strptime("2000-2", "%Y-%m")
         end_date = datetime.strptime("2013-12", "%Y-%m")
@@ -163,7 +156,11 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
             eta_name = "ssebop_{}_{}_warped.tif"
         elif is_jpl:
             # year.zeropadmonth.zeropadday.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif
-            eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
+            if ratiomod:
+                eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm_ratiomod.tif"
+            else:
+
+                eta_name = "{}.{:02d}.{:02d}.PTJPL.ET_daily_kg.MODISsin1km_etrm.tif"
             # TODO - GENERATE ETRM DATASET to GAPFILL
             ETRM_eta_name = ""
         else:
@@ -216,32 +213,9 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
             print 'we will skip this day and continue accumulating'
             continue
 
-
-        # if not os.path.isfile(precip):
-        #     print 'that is not a file {} '.format(precip)
-        #     # TODO - why do you do this, Dan?
-        #     break
-
-        # if i > 0:
-        #     yesterday_eta_arr = raster_extract(yesterday_eta)
-
-
         # array, transform, dimensions, projection, data type
         precip_arr, transform, dim, proj, dt = raster_extract(precip)
         eta_arr, transform, dim, proj, dt = raster_extract(eta)
-
-        # where the eta values ar nan, so too are the prism values. Todo - if it's worth it find a better way to gapfill the eta dataset with a 2day prior average
-        # you could have an array that tracks the average of the two previous days and if zero then that's the value we gapfill with to not overly bias things
-        # OR just gapfill with ETRM ETa, but hold off for now.
-
-        # # todo - uncomment to backfill with ETa from yesterday (cannot figure out how to do this...)
-        # if i > 0:
-        #     condition = np.isnan(eta_arr)
-        #     # eta_arr[condition] = yesterday_eta_arr[condition]
-        #     print yesterday_eta_arr.shape
-        #     eta_arr = np.where(condition, eta_arr, yesterday_eta_arr)
-
-        # ACCOUNT for NaN values common in jpl datasets (YOU COULD get NaN values on back to back days, so ETRM is more attractive as a gapfiller in that case)
         eta_nan_bool = np.isnan(eta_arr)
 
         precip_arr[eta_nan_bool] = 0
@@ -249,7 +223,6 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
 
         # count how many NAN's occur for every pixel
         nan_counter[eta_nan_bool] += 1
-
 
         total_eta += eta_arr
 
@@ -259,19 +232,11 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
             # output the current timestep cumulative eta and precip
             eta_outname = 'cumulative_eta_{}_{}_{}.tif'.format(date.year, date.month, date.day)
             write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
-            # if os.path.isfile(os.path.join(eta_output, eta_outname)):
-            #     pass
-            # else:
-            #     write_raster(total_eta, transform, eta_output, eta_outname, dim, proj, dt)
 
         if time_step == 'daily' and precip_output != None:
             # output the current timestep cumulative eta and precip
             precip_outname = 'cumulative_prism_{}_{}_{}.tif'.format(date.year, date.month, date.day)
             write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
-            # if os.path.isfile(os.path.join(precip_output, precip_outname)):
-            #     pass
-            # else:
-            #     write_raster(total_precip, transform, precip_output, precip_outname, dim, proj, dt)
 
         # depletion for the current timestep
         depletion_delta = depletion_calc(eta_arr, precip_arr)
@@ -283,8 +248,6 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
         # todo - comment out to allow negative depletions (i.e., accumulation of water beyond storage)
         depletion_ledger[depletion_ledger < 0.0] = 0.0
 
-        # newmax_bool = [depletion_ledger > max_depletion]
-        # newmax = depletion_ledger[newmax_bool == True]
         max_depletion = np.maximum(depletion_ledger, max_depletion)
 
         if cfg != None:
@@ -292,8 +255,6 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
             if i is 24:
                 min_depletion = depletion_ledger
             min_depletion = np.minimum(depletion_ledger, min_depletion)
-
-        # print "is this messed up?", oldmax == newmax
 
         if time_step == 'monthly':
             # for each monthly timestep, take the cumulative depletion condition and output it as a raster
@@ -303,11 +264,7 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
         elif time_step == 'daily':
             depletion_name = "cumulative_depletion_{}_{}_{}.tif".format(date.year, date.month, date.day)
             write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
-            # if os.path.isfile(os.path.join(output_folder, depletion_name)):
-            #     pass
-            # else:
-            #     write_raster(depletion_ledger, transform, output_folder, depletion_name, dim, proj, dt)
-            # todo - pack stuff into a netcdf instead of a tiff
+
 
     print 'iterations finished'
     # output the maximum depletion
@@ -343,12 +300,29 @@ def run_W_E(cfg=None, eta_path=None, pris_path=None, etrm_daily_path=None, outpu
     nan_name = 'cumulative_nan_occurences_{}_{}.tif'.format(start_date.year, end_date.year)
     write_raster(nan_counter, transform, output_folder, nan_name, dim, proj, dt)
 
-    # # output the average ETa (i.e., SSEBop) to test whether it looks like the netcdf file
-    # average_eta = total_eta/float(months_in_series)
-    # average_eta_name = "average_ssebop_{}_{}.tif".format(start_date.year, end_date.year)
-    # write_raster(average_eta, transform, output_folder, average_eta_name, dim, proj, dt)
 
 
+
+
+if __name__ == "__main__":
+
+
+
+    """
+    At this time, I am running this script to output the depletions as wang-erlandsson did: simply neglecting runoff and
+    subrtracting ETa from Precip.
+    """
+    run_W_E()
+
+    """
+    COMPLETE WHEN PYRANA OUTPUTS ARE PREPROCESSED
+    """
+
+    # run_PyRANA_infil()
+
+
+# wanted to rename tot_precip_mm_yyyy ->to-> tot_precip_yyyy_mm. ONLY NEED TO RUN ONCE.
+# run_rename()
 def run_rename(param_path=None, param='precip'):
     """
     renames the files from ETRM to be easier to code up.
@@ -374,25 +348,3 @@ def run_rename(param_path=None, param='precip'):
             new_file = os.path.join(param_path, new_filename)
 
             os.rename(old_file, new_file)
-
-
-if __name__ == "__main__":
-
-    # wanted to rename tot_precip_mm_yyyy ->to-> tot_precip_yyyy_mm. ONLY NEED TO RUN ONCE.
-    # run_rename()
-
-    """
-    At this time, I am running this script to output the depletions as wang-erlandsson did: simply neglecting runoff and
-    subrtracting ETa from Precip. I'm doing this before taking into account Esther's runoff for simplicity's sake and to
-    avoid having one more pre-processing step of subracting Runoff from Precip and averaging for 22 runs of Esther's
-    model. I can simply have the monthly precip in a directory, and pre-processed SSEBop ETa in another and perform the
-    monthly depletion calculation
-    """
-    run_W_E()
-
-    """
-    COMPLETE WHEN PYRANA OUTPUTS ARE PREPROCESSED
-    """
-
-    # run_PyRANA_infil()
-

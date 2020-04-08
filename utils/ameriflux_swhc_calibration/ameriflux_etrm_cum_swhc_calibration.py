@@ -37,26 +37,26 @@ if __name__ == "__main__":
     # options: 'days', 'weeks', 'months', 'years'
     calibration_unit = 'days'
     # indicates that you will calibrate to 3 day cumulative ETa values
-    cumulative_int = 14
+    cumulative_int = 3
 
     # 1) choose the standardized ameriflux .csv dataset to calibrate to
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Seg_BASE_HH_10-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcm_BASE_HH_9-5.csv'
-    # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
+    amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Mpj_BASE_HH_8-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Wjs_BASE_HH_7-5.csv'
     # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Ses_BASE_HH_8-5.csv'
-    amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
+    # amf = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/AMF_US-Vcp_BASE_HH_6-5.csv'
 
 
     # 2) This name will pervade the naming of the output files.
-    amf_name = 'US-Vcp'
+    amf_name = 'US-Mpj'
 
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Sg_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcm_point_extract.shp'
-    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
+    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mpj_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Mjs_point_extract.shp'
     # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Ss_point_extract.shp'
-    shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
+    # shape_path = '/Users/dcadol/Desktop/academic_docs_II/Ameriflux_data/Vcp_point_extract.shp'
 
     # get a dataframe of daily cumulative ETa values in mm/day for the ameriflux path
     print 'processing ec data'
@@ -211,9 +211,8 @@ if __name__ == "__main__":
 
     estimated_observational_error = 0.3
     chi_dictionary, dof_dict = get_chisquare_dict(model_dictionary=etrm_cum_dict, parameter_lst=taw_list,
-                                                  geo_info=geo_dict, x_y=x_y,
-                                                  percent_error=estimated_observational_error,
-                                                  outpath=etrm_dict_path, name=amf_name, cum_mode=True)
+                                                  error=estimated_observational_error, outpath=etrm_dict_path,
+                                                  name=amf_name, cum_mode=True, geo_info=geo_dict, x_y=x_y)
 
     # get the number of observations out
     dof = dof_dict['{}'.format(taw_list[0])]

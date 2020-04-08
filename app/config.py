@@ -130,6 +130,7 @@ class RunSpec:
     seed = 123456789
     use_monsoon_precip_correction = True
     use_mountain_precip_correction = False
+    pvalue = None
 
     def __init__(self, obj):
         self._obj = obj
@@ -145,8 +146,8 @@ class RunSpec:
                  'use_walnut_gulch_ro',
                  'seed',
                  'use_monsoon_precip_correction',
-                 'use_mountain_precip_correction'
-                 ) # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
+                 'use_mountain_precip_correction',
+                 'pvalue') # GELP removed 'output_path', 'x_cord_name','y_cord_name', 5/4/2017
 
         # print 'the attributes', attrs
         for attr in attrs:

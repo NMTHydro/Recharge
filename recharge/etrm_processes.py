@@ -98,6 +98,12 @@ class Processes(object):
 
         self._constants = set_constants()
 
+        print 'default p value {}'.format(self._constants['p'])
+
+        if cfg.pvalue is not None:
+            self._constants['p'] = cfg.pvalue
+
+        print 'this is the p value from the config {}'.format(self._constants['p'])
         # Initialize point and raster dicts for static values (e.g. TAW) and initial conditions (e.g. de)
         # from spin up. Define shape of domain. Create a month and annual dict for output raster variables
         # as defined in self._outputs. Don't initialize point_tracker until a time step has passed #TODO - point_tracker?
@@ -257,6 +263,7 @@ class Processes(object):
 
             time_it(self._do_snow, m, c)
             # time_it(self._do_soil_ksat_adjustment, m, s) # forest litter adjustment is hard to justify
+            print 'Plant stress threshold p {} '.format(c['p'])
             time_it(self._do_dual_crop_transpiration, tm_yday, m, s, c)
             time_it(self._do_fraction_covered, m, s, c)
 
@@ -962,7 +969,7 @@ class Processes(object):
         else:
             func = get_kcb
 
-        kcb = time_it(func, date, m['pkcb']  )
+        kcb = time_it(func, date, m['pkcb'])
 
         m['kcb'] = kcb
         min_temp, max_temp, temp, precip = time_it(get_prisms, date, self._cfg.is_reduced)
@@ -1126,7 +1133,7 @@ class Processes(object):
             elif k in ('evap_ceff', 'transp_adj'):
                 v = median(v)
             else:
-                v = self. _output_function(v)
+                v = self._output_function(v)
             return v
 
         keys = sorted(m.keys())

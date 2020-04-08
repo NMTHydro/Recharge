@@ -61,7 +61,11 @@ class RasterManager(object):
 
         self._geo = get_raster_geo_attributes(paths.static_inputs)
         self._output_tracker = initialize_raster_tracker((self._geo['rows'], self._geo['cols']), cfg.daily_outputs)
+
+        # TODO - Gelp results dir, does this need to be here?
+
         self._results_dir = make_results_dir()
+        print 'results dir in raster manager {}'.format(self._results_dir)
         self._tabular_dict = initialize_tabular_dict(simulation_period, write_freq, cfg.daily_outputs)
 
     def set_save_dates(self, dates):
@@ -104,10 +108,13 @@ class RasterManager(object):
 
             # Subroutine -gelp changed from line 96 to current position Nov 18:
             if self.uniform_taw is not None:
+
+                #getting the seed
+                seed_val = self._cfg.seed
                 # getting the TAW value
                 taw_value = self.uniform_taw
                 # To generate .npy files for each day
-                self._set_daily_outputs(dailys, date_object, taw_value, 'daily')
+                self._set_daily_outputs(dailys, date_object, taw_value, 'daily', seed=seed_val)
 
         outputs = [(element, Raster.fromarray(master[element]).unmasked(tiff_shape=self._cfg.tiff_shape)) for element in
                    self._cfg.daily_outputs]
@@ -122,10 +129,10 @@ class RasterManager(object):
         if date_object.month == 12 and date_object.day == 31:
             self._set_outputs(outputs, date_object, 'annual')
 
-    def _set_daily_outputs(self, outputs, date_object, taw_value, period):
+    def _set_daily_outputs(self, outputs, date_object, taw_value, period, seed):
         for element, arr in outputs:
             self._update_raster_tracker(arr, element, period=period)
-            self._write_numpy_array(element, date_object, taw_value, period=period)
+            self._write_numpy_array(element, date_object, taw_value, period=period, seed=seed)
 
     def _set_outputs(self, outputs, date_object, period):
         for element, arr in outputs:
@@ -182,7 +189,7 @@ class RasterManager(object):
             tracker[lkey][var] = vv
 
 
-    def _write_numpy_array(self, key, date, taw_value, period=None, master=None):
+    def _write_numpy_array(self, key, date, taw_value, period=None, master=None, seed=None):
         """
         Writes a numpy array directly as a pickled .npy file for use in a TAW optimization subroutine. Enabled by the
          configuration uniform TAW being specified in ETRM_CONFIG.yml
@@ -194,12 +201,12 @@ class RasterManager(object):
         :param master: optional master dict?
         :return:
         """
-        # TODO - Subroutine:
+
         rd = self._results_dir
         tracker = self._output_tracker
 
         # filename containing the name of parameter saved, the taw value and the date
-        name = 'ETRM_daily_{}_taw_{}_{}_{}_{}.npy'.format(key, taw_value, date.year, date.month, date.day)
+        name = 'ETRM_daily_{}_taw_{}_seed_{}_{}_{}_{}.npy'.format(key, taw_value, seed, date.year, date.month, date.day)
         filename = os.path.join(rd['numpy_arrays'], name)
 
         array_to_save = tracker[CURRENT_DAY][key]
